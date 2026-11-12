@@ -1,0 +1,20 @@
+{
+  "type": "megatools:tool_repair",
+  "category": "equipment",
+  "pattern": [
+    "MMM",
+    "MTM",
+    "MMM"
+  ],
+  "key": {
+    "M": {
+      "item": "minecraft:cobblestone"
+    },
+    "T": {
+      "item": "megatools:stone_paxel"
+    }
+  },
+  "result": {
+    "id": "megatools:stone_paxel"
+  }
+}

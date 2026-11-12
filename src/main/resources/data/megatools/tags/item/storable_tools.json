@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "modern_industrialization:wrench", "required": false },
+    { "id": "integrateddynamics:labeller", "required": false }
+  ]
+}

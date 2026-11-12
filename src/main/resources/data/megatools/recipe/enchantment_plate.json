@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " G ",
+    "LBL",
+    " G "
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:book"
+    },
+    "L": {
+      "item": "minecraft:iron_ingot"
+    },
+    "B": {
+      "item": "minecraft:heavy_weighted_pressure_plate"
+    }
+  },
+  "result": {
+    "id": "megatools:enchantment_plate",
+    "count": 1
+  }
+}
