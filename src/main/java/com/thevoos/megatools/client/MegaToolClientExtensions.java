@@ -6,9 +6,11 @@ import com.thevoos.megatools.items.ModItems;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.tool.MegaToolMining;
 import com.thevoos.megatools.tool.MegaToolPoke;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,7 +27,15 @@ import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsE
  *     turn has finished, so it's always "turn, then prod".
  *  3. While left click stays held, the tool stays turned and just jabs again on every break.
  *  4. Release -> after the last jab it turns back upright.
- * Looking at a block without clicking does nothing, and vanilla's arm swing is ignored entirely.
+ * Looking at a block without clicking does nothing, and vanilla's arm swing is ignored while mining.
+ * Right-click abilities (till, strip, path, shear, ignite, place torch...) play vanilla's normal tool
+ * swing instead (MegaToolPoke#isUseSwing tells the two apart).
+ *
+ * Equip animation: vanilla's equipProcess also dips every time the attack cooldown restarts (each
+ * click), which pushed the tool off screen while mining, so it isn't used directly. Instead:
+ *  - Switching TO the Mega Tool: it slides up from below over EQUIP_MS (own timer, clicks don't touch it).
+ *  - Switching AWAY: vanilla keeps drawing the Mega Tool while lowering it; only then is
+ *    equipProcess followed, so it slides down instead of vanishing.
  *
  * The first-person constants below control the look; adjust them if the tips don't line up with
  * the crosshair (they depend on the model's first-person display settings in mega_tool.json).
@@ -42,6 +52,26 @@ public final class MegaToolClientExtensions
     private static final float THRUST_DISTANCE = 0.35F;
     /** Raise the tool while tilted so the tips sit near the crosshair (blocks). */
     private static final float LIFT = 0.12F;
+
+    // ---- equip slide ----
+    /** How long the slide up takes when the tool is equipped. */
+    private static final long EQUIP_MS = 300;
+    /** How far below its resting place an un-equipped item sits (vanilla's value). */
+    private static final float EQUIP_DROP = 0.6F;
+    /** Only slide in if the tool was selected this recently (not when coming back from third person / F1). */
+    private static final long EQUIP_WINDOW_MS = 1000;
+    /** A gap in first-person drawing longer than this counts as the tool being shown anew. */
+    private static final long SHOWN_GAP_MS = 250;
+    private static final long NEVER = Long.MIN_VALUE / 4;
+
+    // client tick: when the Mega Tool became the selected main-hand item
+    private static long selectedAtMs = NEVER;
+    private static int trackedSlot = -1;
+    private static boolean trackedMega;
+    // first-person drawing: which hotbar slot the drawn Mega Tool belongs to, and the slide timer
+    private static int shownSlot = -1;
+    private static long lastShownMs = NEVER;
+    private static long equipStartMs = NEVER;
 
     private MegaToolClientExtensions() {}
 
@@ -61,11 +91,16 @@ public final class MegaToolClientExtensions
 
                 int side = arm == HumanoidArm.RIGHT ? 1 : -1;
 
-                // Resting position: vanilla's ItemInHandRenderer#applyItemArmTransform with equip = 0.
-                // equipProcess is ignored on purpose: vanilla lowers the item while the attack cooldown
-                // recovers, which pushed the tool almost off screen when clicking rapidly.
+                // Resting position: vanilla's ItemInHandRenderer#applyItemArmTransform, lowered only by our
+                // own equip slide (see equipDown). Vanilla's equipProcess also dips on every click while
+                // the attack cooldown recovers, which pushed the tool almost off screen when clicking rapidly.
                 // swingProcess is ignored too, so held-click arm swings never move the tool.
-                poseStack.translate(side * 0.56F, -0.52F, -0.72F);
+                float down = equipDown(player, arm, itemInHand, equipProcess);
+                poseStack.translate(side * 0.56F, -0.52F - EQUIP_DROP * down, -0.72F);
+
+                // Right-click ability: vanilla's tool swing (ItemInHandRenderer, default item branch).
+                if (swingProcess > 0.0F && arm == player.getMainArm() && MegaToolPoke.isUseSwing())
+                    applyVanillaSwing(poseStack, side, swingProcess);
 
                 MegaToolPoke.State state = MegaToolPoke.updateLocal(localWantsTilt());
                 float tilt = ease(state.tilt());
@@ -93,6 +128,70 @@ public final class MegaToolClientExtensions
                 return MegaToolArmPose.poke();
             }
         }, ModItems.MEGA_TOOL.get());
+    }
+
+    /** Vanilla's first-person tool swing: the arm offset plus ItemInHandRenderer#applyItemArmAttackTransform. */
+    private static void applyVanillaSwing(PoseStack poseStack, int side, float swing)
+    {
+        float root = Mth.sqrt(swing);
+        poseStack.translate(side * -0.4F * Mth.sin(root * Mth.PI),
+                0.2F * Mth.sin(root * Mth.PI * 2.0F),
+                -0.2F * Mth.sin(swing * Mth.PI));
+        float f = Mth.sin(swing * swing * Mth.PI);
+        float f1 = Mth.sin(root * Mth.PI);
+        poseStack.mulPose(Axis.YP.rotationDegrees(side * (45.0F + f * -20.0F)));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(side * f1 * -20.0F));
+        poseStack.mulPose(Axis.XP.rotationDegrees(f1 * -80.0F));
+        poseStack.mulPose(Axis.YP.rotationDegrees(side * -45.0F));
+    }
+
+    /** Client tick (ClientEvents): remember when the Mega Tool becomes the selected main-hand item. */
+    public static void tickEquip(Minecraft mc)
+    {
+        if (mc.player == null)
+        {
+            trackedMega = false;
+            trackedSlot = -1;
+            return;
+        }
+        boolean mega = MegaToolMining.isMegaTool(mc.player.getMainHandItem());
+        int slot = mc.player.getInventory().selected;
+        if (mega && (!trackedMega || slot != trackedSlot))
+            selectedAtMs = Util.getMillis();
+        trackedMega = mega;
+        trackedSlot = slot;
+    }
+
+    /**
+     * How far the drawn tool is lowered: 0 = in place, 1 = fully below (vanilla's scale).
+     * Main hand only; the off hand stays in place as before.
+     */
+    private static float equipDown(LocalPlayer player, HumanoidArm arm, ItemStack itemInHand, float equipProcess)
+    {
+        if (arm != player.getMainArm())
+            return 0.0F;
+        long now = Util.getMillis();
+        ItemStack actual = player.getMainHandItem();
+        int slot = player.getInventory().selected;
+
+        // Switching away: vanilla still draws this Mega Tool while lowering it. Follow its drop.
+        // (Same item in the same slot with a new stack object is just a data update, not a switch.)
+        boolean leaving = itemInHand != actual && (!ItemStack.isSameItem(itemInHand, actual) || slot != shownSlot);
+        if (leaving)
+        {
+            lastShownMs = now;
+            return equipProcess;
+        }
+
+        // Newly drawn (other slot, or after not being drawn for a while) right after being selected: slide in.
+        boolean newlyShown = slot != shownSlot || now - lastShownMs > SHOWN_GAP_MS;
+        shownSlot = slot;
+        lastShownMs = now;
+        if (newlyShown && now - selectedAtMs <= EQUIP_WINDOW_MS)
+            equipStartMs = now;
+
+        float progress = (now - equipStartMs) / (float) EQUIP_MS;
+        return progress >= 1.0F ? 0.0F : 1.0F - ease(Math.max(0.0F, progress));
     }
 
     /**

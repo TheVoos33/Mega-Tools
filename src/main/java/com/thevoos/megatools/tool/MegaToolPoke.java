@@ -17,6 +17,11 @@ import java.util.Map;
  *    prod, whatever direction the player looks. While left click stays held the tool stays tilted,
  *    and every following break just plays another jab.
  *
+ * RIGHT-CLICK swings (till, strip, path, shear, ignite, place torch...): the first-person renderer ignores
+ * vanilla's arm swing so held mining doesn't chop up and down, which also hid the swing of right-click
+ * abilities. A swing that starts right after the use key was pressed is marked as a "use swing" and
+ * the renderer plays vanilla's normal tool swing for it (see isUseSwing).
+ *
  * The local player is driven by input (attack key held). Other players are driven by
  * MegaToolPokePayload, sent by the server whenever they break a block or hit something; they stay
  * tilted for REMOTE_HOLD_MS after each poke, so they keep the pose while holding left click.
@@ -39,6 +44,9 @@ public final class MegaToolPoke
     /** Other players stay tilted this long after their last poke (longer than the default hold delay). */
     private static final long REMOTE_HOLD_MS = 700;
     private static final long NEVER = Long.MIN_VALUE / 4;
+    /** Other players' states are forgotten after this long without a poke (left, out of view...). */
+    private static final long REMOTE_FORGET_MS = 30_000;
+    private static long lastPrune;
 
     /** Animation state of one player. */
     public static final class State
@@ -99,6 +107,11 @@ public final class MegaToolPoke
         }
     }
 
+    /** A swing starting this soon after the use key counts as a right-click swing. */
+    private static final long USE_SWING_WINDOW_MS = 150;
+    private static long useInputAt = NEVER;
+    private static boolean useSwing;
+
     private static final State LOCAL = new State();
     private static final Map<Integer, State> REMOTE = new HashMap<>();
 
@@ -125,6 +138,32 @@ public final class MegaToolPoke
         return LOCAL;
     }
 
+    // ---- Local right-click swing ----
+
+    /** The use key (right click) was just processed with the Mega Tool in the main hand. */
+    public static void markUseInput()
+    {
+        useInputAt = Util.getMillis();
+    }
+
+    /** The attack key was processed: any swing from now on belongs to mining / hitting. */
+    public static void markAttackInput()
+    {
+        useSwing = false;
+    }
+
+    /** The local player started a main-hand swing with the Mega Tool (MultiToolItem#onEntitySwing). */
+    public static void onLocalSwing()
+    {
+        useSwing = Util.getMillis() - useInputAt <= USE_SWING_WINDOW_MS;
+    }
+
+    /** True while the current local swing comes from a right-click ability. */
+    public static boolean isUseSwing()
+    {
+        return useSwing;
+    }
+
     /** Current local state without advancing it (used while rendering the held item). */
     public static State peekLocal()
     {
@@ -137,6 +176,13 @@ public final class MegaToolPoke
     public static void triggerRemote(int entityId)
     {
         long now = Util.getMillis();
+        // Players who logged out or moved out of view are never drawn again, so updateRemote can't
+        // forget them; drop states that haven't poked in a while (at most every few seconds).
+        if (now - lastPrune > 5_000)
+        {
+            lastPrune = now;
+            REMOTE.values().removeIf(s -> now - s.lastPoke > REMOTE_FORGET_MS);
+        }
         State state = REMOTE.computeIfAbsent(entityId, id -> new State());
         state.lastPoke = now;
         state.trigger(now);

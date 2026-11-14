@@ -14,12 +14,12 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -34,6 +34,7 @@ public final class ClientEvents
     public static void onRegisterScreens(RegisterMenuScreensEvent event)
     {
         event.register(ModMenus.TOOL_MENU.get(), ToolScreen::new);
+        event.register(ModMenus.SWAP_RULES_MENU.get(), SwapRulesScreen::new);
     }
 
     /** Game bus: start of the client tick. Vanilla mining happens between this and Post. */
@@ -48,6 +49,8 @@ public final class ClientEvents
         MegaToolMining.setClientInTick(false); // anything after this (e.g. HUD rendering) isn't mining
 
         Minecraft mc = Minecraft.getInstance();
+        MegaToolClientExtensions.tickEquip(mc); // Mega Tool equip slide (first person)
+        ShaderLightClient.tick(mc);              // shader pack active? -> server skips light blocks
         if (mc.player == null || mc.level == null)
         {
             AutoSwapClient.clear();
@@ -57,10 +60,11 @@ public final class ClientEvents
         AutoSwapClient.update(mc);
 
         // Drain all click counters every tick so presses don't queue up.
-        boolean openGui = false, switchPlate = false, swapTool = false;
+        boolean openGui = false, switchPlate = false, swapTool = false, swapLast = false;
         while (ModKeyMappings.OPEN_GUI.consumeClick()) openGui = true;
         while (ModKeyMappings.SWITCH_PLATE.consumeClick()) switchPlate = true;
         while (ModKeyMappings.SWAP_TOOL.consumeClick()) swapTool = true;
+        while (ModKeyMappings.SWAP_LAST.consumeClick()) swapLast = true;
 
         if (mc.screen != null)
             return;
@@ -75,11 +79,21 @@ public final class ClientEvents
             return;
         }
 
-        // Shift + R : switch enchantment plate
+        // Alt + R : switch enchantment plate
         if (switchPlate && ModKeyMappings.modifierMatches(ModKeyMappings.SWITCH_PLATE))
         {
             if (held.getItem() instanceof MultiToolItem multiTool && multiTool.getTier().hasEnchantPlates())
                 PacketDistributor.sendToServer(SwitchPlatePayload.INSTANCE);
+            return;
+        }
+
+        // Shift + R : swap to the last tool swapped to; holding a swapped-out tool, swap back (like R)
+        if (swapLast && ModKeyMappings.modifierMatches(ModKeyMappings.SWAP_LAST))
+        {
+            if (held.has(ModDataComponents.SWAP_ORIGIN.get()))
+                PacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
+            else if (held.getItem() instanceof MultiToolItem multiTool && multiTool.getTier().hasAutoSwap())
+                PacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_LAST));
             return;
         }
 
@@ -126,6 +140,22 @@ public final class ClientEvents
     }
 
     /**
+     * Game bus: vanilla is about to process the attack or use key. Remember a right click with the Mega
+     * Tool, so the swing that follows a successful ability plays in first person (see MegaToolPoke).
+     */
+    public static void onInteractionKey(InputEvent.InteractionKeyMappingTriggered event)
+    {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || event.getHand() != InteractionHand.MAIN_HAND
+                || !MegaToolMining.isMegaTool(mc.player.getMainHandItem()))
+            return;
+        if (event.isUseItem())
+            MegaToolPoke.markUseInput();
+        else if (event.isAttack())
+            MegaToolPoke.markAttackInput();
+    }
+
+    /**
      * Game bus: Shift + mouse wheel cycles through the pre-selected tools when more than one
      * stored tool matches the targeted block. The scroll is cancelled so the hotbar doesn't move.
      */
@@ -139,19 +169,6 @@ public final class ClientEvents
             event.setCanceled(true);
     }
 
-    /**
-     * Game bus, HIGHEST priority: key presses inside screens, BEFORE the screen and before other mods.
-     * JEI listens to this same event to show recipes on R; by running first and cancelling only
-     * when a stored tool in the Mega Tools GUI is hovered, our quick swap wins there and JEI keeps
-     * its R key everywhere else (including the player inventory part of our GUI).
-     */
-    public static void onScreenKeyPressed(ScreenEvent.KeyPressed.Pre event)
-    {
-        if (event.getScreen() instanceof ToolScreen toolScreen
-                && toolScreen.tryQuickSwap(event.getKeyCode(), event.getScanCode()))
-            event.setCanceled(true); // cancelled events are not passed on to JEI
-    }
-
     /** Game bus: hitting an entity with the Mega Tool also plays the poke (client side only). */
     public static void onAttackEntity(AttackEntityEvent event)
     {
@@ -160,12 +177,15 @@ public final class ClientEvents
             MegaToolPoke.triggerLocal();
     }
 
-    /** Game bus: re-read the alias file on every world/server join, so edits apply without a restart. */
+    /** Game bus: re-read the alias and default rule files on every world/server join, so edits apply without a restart. */
     public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event)
     {
         ToolAliases.reload();
-        AutoSwapClient.clear(); // forces a fresh pre-selection scan with the new aliases
+        DefaultSwapRules.reload();
+        AutoSwapClient.clear(); // forces a fresh pre-selection scan with the new aliases and default rules
         MegaToolPoke.clearRemote();
+        MegaToolMining.resetClient();   // hold-delay timers use the old world's game time
+        ShaderLightClient.reset();
     }
 
     /** Game bus: warn players that a swapped-out tool is carrying their Mega Tools tool. */

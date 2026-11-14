@@ -2,19 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    " G ",
-    "LBL",
-    " G "
+    "III",
+    "IBI",
+    "III"
   ],
   "key": {
-    "G": {
-      "item": "minecraft:book"
-    },
-    "L": {
+    "I": {
       "item": "minecraft:iron_ingot"
     },
     "B": {
-      "item": "minecraft:heavy_weighted_pressure_plate"
+      "item": "minecraft:book"
     }
   },
   "result": {

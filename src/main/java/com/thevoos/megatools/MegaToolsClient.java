@@ -4,10 +4,12 @@ import com.thevoos.megatools.client.ClientEvents;
 import com.thevoos.megatools.client.MegaToolClientExtensions;
 import com.thevoos.megatools.client.ModKeyMappings;
 import com.thevoos.megatools.client.ToolHudOverlay;
+import com.thevoos.megatools.client.ToolScreen;
+import com.thevoos.megatools.client.ToolStatsAccess;
+import com.thevoos.megatools.menu.ToolMenu;
 import com.thevoos.megatools.tool.MegaToolMining;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -35,8 +37,13 @@ public class MegaToolsClient
             return mc.options != null && mc.screen == null && mc.options.keyAttack.isDown();
         });
 
-        // Mods screen > Mega Tools > Config  (NeoForge's auto-generated config screen)
-        container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+        // Tool GUI: size the toggle buttons to their labels with the client font (see GuiLayout).
+        ToolMenu.setClientLayoutFactory(ToolScreen::createLayout);
+
+        // Mods screen > Mega Tools > Config  (NeoForge's auto-generated config screen). The Tool Stats
+        // section needs cheats / operator in a hosted world (see ToolStatsAccess).
+        container.registerExtensionPoint(IConfigScreenFactory.class,
+                (mod, parent) -> new ConfigurationScreen(mod, parent, ToolStatsAccess::section));
 
         // ---- Mod bus: one-time client registration -------------------------------------------
         modEventBus.addListener(ModKeyMappings::onRegisterKeyMappings);                 // Ctrl+R / Shift+R / R
@@ -48,11 +55,10 @@ public class MegaToolsClient
         NeoForge.EVENT_BUS.addListener(ClientEvents::onClientTickPre);   // marks "inside the game tick"
         NeoForge.EVENT_BUS.addListener(ClientEvents::onClientTick);
         NeoForge.EVENT_BUS.addListener(ClientEvents::onMouseButton);
+        NeoForge.EVENT_BUS.addListener(ClientEvents::onInteractionKey); // Mega Tool right-click swing
         NeoForge.EVENT_BUS.addListener(ClientEvents::onMouseScroll);   // Shift + scroll between pre-selected tools
         NeoForge.EVENT_BUS.addListener(ClientEvents::onItemTooltip);
         NeoForge.EVENT_BUS.addListener(ClientEvents::onLoggingIn);     // reload tool aliases
         NeoForge.EVENT_BUS.addListener(ClientEvents::onAttackEntity);  // Mega Tool poke on hits
-        // HIGHEST so the GUI quick swap (hover a stored tool + R) runs before JEI's R key.
-        NeoForge.EVENT_BUS.addListener(EventPriority.HIGHEST, ClientEvents::onScreenKeyPressed);
     }
 }

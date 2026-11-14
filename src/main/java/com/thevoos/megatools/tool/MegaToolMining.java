@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.common.util.TriState;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -30,7 +31,8 @@ import java.util.function.BooleanSupplier;
  *  - While left click is HELD, a delay (Config: megaToolHoldDelayTicks) separates breaks. That delay
  *    is the "Delayed Break" toggle (ON by default); turning it OFF removes the delay.
  *  - Every NEW click breaks a block immediately.
- *  - Zero-hardness blocks (grass, flowers, torches...) always break instantly, like with any tool.
+ *  - Zero-hardness blocks (grass, flowers, torches...) follow the same delay. Their speed can't be 0
+ *    (see onBreakSpeed), so on the client the delay is applied in onLeftClickBlock instead.
  *  - Blocks in the #megatools:mega_tool_unbreakable tag can never be broken with the Mega Tool.
  *
  * WHO DECIDES: the client. It knows about held vs. fresh clicks and is the side that shows the break
@@ -96,28 +98,37 @@ public final class MegaToolMining
             return; // creative already breaks instantly
 
         boolean client = player.level().isClientSide();
+        // Zero-hardness blocks (short grass, flowers...): vanilla computes progress as speed / hardness,
+        // so speed 0 gives 0 / 0 = NaN. On the client that NaN sticks in the dig progress and the block
+        // can never break again, so these blocks must never get speed 0.
+        boolean zeroHardness = isZeroHardness(player, state, event.getPosition());
 
-        // Zero-hardness blocks (short grass, flowers...) break instantly with any tool. They must never
-        // get speed 0: vanilla computes progress as speed / hardness, and 0 / 0 is NaN, which made such
-        // blocks impossible to break while the delay was running. They don't use up the delay.
-        if (isZeroHardness(player, state, event.getPosition()))
+        if (!client)
         {
-            if (client && isClientMining(player))
-                MegaToolPoke.triggerLocal();
+            // Server: only the break the client just announced (or no delay at all). The server checks
+            // each dig packet on its own, so for zero hardness -1 is safe: -1 / 0 = -Infinity, never >= 1.
+            boolean granted = !ToolData.hasFlag(held, ToolSettings.DELAYED_BREAK)
+                    || player.level().getGameTime() <= SERVER_PERMIT_UNTIL.getOrDefault(player.getUUID(), NEVER);
+            event.setNewSpeed(granted ? INSTANT_SPEED : zeroHardness ? -1.0F : 0.0F);
+            return;
+        }
+
+        if (zeroHardness)
+        {
+            // Client: the delay for these blocks is applied in onLeftClickBlock, before vanilla asks for the speed.
             event.setNewSpeed(INSTANT_SPEED);
             return;
         }
 
-        if (!client)
-        {
-            // Server: only the break the client just announced (or no delay at all).
-            boolean granted = !ToolData.hasFlag(held, ToolSettings.DELAYED_BREAK)
-                    || player.level().getGameTime() <= SERVER_PERMIT_UNTIL.getOrDefault(player.getUUID(), NEVER);
-            event.setNewSpeed(granted ? INSTANT_SPEED : 0.0F);
-            return;
-        }
+        event.setNewSpeed(clientPermitsBreak(player, held) ? INSTANT_SPEED : 0.0F);
+    }
 
-        // ---------------- client: decide ----------------
+    /**
+     * Client: may a block break right now? If it may and this is real mining, the break is recorded
+     * (the hold delay starts), the jab plays and the server is told to grant it.
+     */
+    private static boolean clientPermitsBreak(Player player, ItemStack held)
+    {
         boolean delayed = ToolData.hasFlag(held, ToolSettings.DELAYED_BREAK);
         long now = player.level().getGameTime();
         int delay = Config.MEGA_TOOL_HOLD_DELAY_TICKS.get();
@@ -136,7 +147,7 @@ public final class MegaToolMining
             if (delayed)
                 PacketDistributor.sendToServer(MegaToolBreakPayload.INSTANCE);
         }
-        event.setNewSpeed(permitted ? INSTANT_SPEED : 0.0F);
+        return permitted;
     }
 
     private static boolean isZeroHardness(Player player, BlockState state, Optional<BlockPos> pos)
@@ -149,6 +160,16 @@ public final class MegaToolMining
     {
         return clientInTick
                 && (clientAttackDown.getAsBoolean() || player.level().getGameTime() <= clientFreshUntil);
+    }
+
+    /**
+     * Client, on joining a world: the timers use the world's game time, and the new world's time can be
+     * lower than the old one's, which made the hold delay behave oddly until the first break.
+     */
+    public static void resetClient()
+    {
+        clientLastBreak = NEVER;
+        clientFreshUntil = NEVER;
     }
 
     /** Client: the attack button was freshly pressed with a Mega Tool. */
@@ -167,12 +188,35 @@ public final class MegaToolMining
     //  Other events
     // =====================================================================================
 
-    /** Both sides: cancelling stops a tagged block from even starting to break (also in creative). */
+    /**
+     * Both sides: cancelling stops a tagged block from even starting to break (also in creative).
+     * Client: applies the hold delay to zero-hardness blocks. Vanilla fires this event right before it
+     * asks for the dig progress; useItem = FALSE makes it skip the mining (no break) for this tick.
+     */
     public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event)
     {
-        if (isMegaTool(event.getEntity().getMainHandItem())
-                && event.getLevel().getBlockState(event.getPos()).is(ModTags.MEGA_TOOL_UNBREAKABLE))
+        Player player = event.getEntity();
+        ItemStack held = player.getMainHandItem();
+        if (!isMegaTool(held))
+            return;
+
+        BlockState state = event.getLevel().getBlockState(event.getPos());
+        if (state.is(ModTags.MEGA_TOOL_UNBREAKABLE))
+        {
             event.setCanceled(true);
+            return;
+        }
+
+        if (!event.getLevel().isClientSide() || player.getAbilities().instabuild || MultiToolItem.isBroken(held))
+            return;
+        PlayerInteractEvent.LeftClickBlock.Action action = event.getAction();
+        if (action != PlayerInteractEvent.LeftClickBlock.Action.START && action != PlayerInteractEvent.LeftClickBlock.Action.CLIENT_HOLD)
+            return;
+        if (event.getUseItem().isFalse() || !isZeroHardness(player, state, Optional.of(event.getPos())))
+            return;
+
+        if (!clientPermitsBreak(player, held))
+            event.setUseItem(TriState.FALSE);
     }
 
     /** Server: a block is about to be broken. */

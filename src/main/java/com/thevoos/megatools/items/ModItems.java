@@ -37,6 +37,10 @@ public class ModItems
     public static final DeferredItem<EnchantmentPlateItem> ENCHANTMENT_PLATE = ITEMS.register("enchantment_plate",
             () -> new EnchantmentPlateItem(new Item.Properties()));
 
+    /** Shears + brush + flint and steel; adds those abilities to a tool when placed in its Support Tool slot. */
+    public static final DeferredItem<SupportToolItem> SUPPORT_TOOL = ITEMS.register("support_tool",
+            () -> new SupportToolItem(new Item.Properties()));
+
     public static void register(IEventBus eventBus)
     {
         ITEMS.register(eventBus);

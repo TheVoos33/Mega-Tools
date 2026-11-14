@@ -2,14 +2,16 @@ package com.thevoos.megatools.menu;
 
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.StoredTorches;
+import com.thevoos.megatools.component.ToolSettings;
 import com.thevoos.megatools.items.EnchantmentPlateItem;
 import com.thevoos.megatools.items.ModTags;
 import com.thevoos.megatools.items.MultiToolItem;
+import com.thevoos.megatools.items.SupportToolItem;
 import com.thevoos.megatools.items.ToolTier;
 import com.thevoos.megatools.tool.LightSources;
+import com.thevoos.megatools.tool.StorageWhitelist;
 import com.thevoos.megatools.tool.ToolData;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
@@ -20,6 +22,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.function.Function;
 
 /**
  * Server + client container for the tool GUI (opened with Ctrl + R).
@@ -35,9 +39,16 @@ public class ToolMenu extends AbstractContainerMenu
 {
     private final Player player;
     private final int toolSlot;          // hotbar index of the held tool
+    /**
+     * The exact tool stack the GUI was opened for. If anything replaces it (another stack object in that
+     * slot), the GUI closes: the containers below hold that tool's contents, and writing them into a
+     * different stack, or taking items out of them, would duplicate items.
+     */
+    private final ItemStack openedTool;
     private final ToolTier tier;
     private final GuiLayout layout;
     private final SimpleContainer plates = new SimpleContainer(ToolData.PLATE_SLOTS);
+    private final SimpleContainer support = new SimpleContainer(1);
     private final SimpleContainer storage;
     /** Torch slot: a one-slot container that allows up to 256 items instead of the usual 64/99. */
     private final SimpleContainer light = new SimpleContainer(1)
@@ -55,41 +66,60 @@ public class ToolMenu extends AbstractContainerMenu
         }
     };
 
+    private final int supportIndex;     // -1 if the tier has no Support Tool slot
     private final int lightIndex;
     private final int storageStart;
     private final int containerSlotCount;
+
+    /**
+     * Client: builds the layout with the real label widths (set by MegaToolsClient, because only the
+     * client has a font). The server keeps GuiLayout's defaults: it never uses slot pixel positions.
+     */
+    private static Function<ToolTier, GuiLayout> clientLayoutFactory = GuiLayout::of;
+
+    public static void setClientLayoutFactory(Function<ToolTier, GuiLayout> factory) { clientLayoutFactory = factory; }
 
     /** Client side factory - called by the MenuType with the extra data written in ServerPayloadHandler. */
     public static ToolMenu fromNetwork(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData)
     {
         int toolSlot = extraData.readVarInt();
-        return new ToolMenu(containerId, playerInventory, toolSlot);
+        return new ToolMenu(containerId, playerInventory, toolSlot, clientLayoutFactory);
     }
 
-    /** Server constructor (and the real implementation). */
+    /** Server constructor. */
     public ToolMenu(int containerId, Inventory playerInventory, int toolSlot)
+    {
+        this(containerId, playerInventory, toolSlot, GuiLayout::of);
+    }
+
+    private ToolMenu(int containerId, Inventory playerInventory, int toolSlot, Function<ToolTier, GuiLayout> layoutFactory)
     {
         super(ModMenus.TOOL_MENU.get(), containerId);
         this.player = playerInventory.player;
         this.toolSlot = Mth.clamp(toolSlot, 0, Inventory.getSelectionSize() - 1);
 
         ItemStack tool = playerInventory.getItem(this.toolSlot);
+        this.openedTool = tool;
         this.tier = tool.getItem() instanceof MultiToolItem multiTool ? multiTool.getTier() : ToolTier.STONE;
-        this.layout = GuiLayout.of(tier);
+        this.layout = layoutFactory.apply(tier);
         this.storage = new SimpleContainer(tier.storageSlots());
 
         // ---- Load the tool's data into the temporary containers ----
         if (tier.hasEnchantPlates())
         {
+            ToolData.syncLoadedPlate(tool); // enchantments removed from the tool by other mods leave the plate too
             NonNullList<ItemStack> savedPlates = ToolData.getPlates(tool);
             for (int i = 0; i < ToolData.PLATE_SLOTS; i++) plates.setItem(i, savedPlates.get(i));
         }
         NonNullList<ItemStack> savedStorage = ToolData.getStorage(tool, tier.storageSlots());
         for (int i = 0; i < tier.storageSlots(); i++) storage.setItem(i, savedStorage.get(i));
         light.setItem(0, ToolData.getTorches(tool));
+        if (tier.supportTools())
+            support.setItem(0, ToolData.getSupportTool(tool));
 
         // Listeners are added AFTER loading so loading doesn't trigger a save.
         plates.addListener(this::onContainerChanged);
+        support.addListener(this::onContainerChanged);
         storage.addListener(this::onContainerChanged);
         light.addListener(this::onContainerChanged);
 
@@ -100,11 +130,16 @@ public class ToolMenu extends AbstractContainerMenu
             addSlot(new PlateSlot(plates, ToolData.SECONDARY, layout.plateX(), layout.plateY1()));
         }
 
-        // ---- Light source slot (every tier) ----
+        // ---- Support Tool slot (left of the Shear / Brush / Ignite buttons) ----
+        supportIndex = tier.supportTools() ? slots.size() : -1;
+        if (tier.supportTools())
+            addSlot(new SupportSlot(support, 0, layout.supportX(), layout.supportY()));
+
+        // ---- Torch slot (every tier, left of the Place Torch button) ----
         lightIndex = slots.size();
         addSlot(new LightSlot(light, 0, layout.lightX(), layout.lightY()));
 
-        // ---- Wrench storage slots (bottom of the tool section, 8 per row) ----
+        // ---- Wrench storage slots (bottom of the tool section, 9 per row like the inventory) ----
         storageStart = slots.size();
         for (int i = 0; i < tier.storageSlots(); i++)
         {
@@ -117,15 +152,15 @@ public class ToolMenu extends AbstractContainerMenu
         // ---- Player inventory ----
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, layout.invY() + row * 18));
+                addSlot(new Slot(playerInventory, col + row * 9 + 9, layout.invX() + col * 18, layout.invY() + row * 18));
 
         // ---- Hotbar (the held tool is locked) ----
         for (int col = 0; col < 9; col++)
         {
             if (col == this.toolSlot)
-                addSlot(new LockedSlot(playerInventory, col, 8 + col * 18, layout.hotbarY()));
+                addSlot(new LockedSlot(playerInventory, col, layout.invX() + col * 18, layout.hotbarY()));
             else
-                addSlot(new Slot(playerInventory, col, 8 + col * 18, layout.hotbarY()));
+                addSlot(new Slot(playerInventory, col, layout.invX() + col * 18, layout.hotbarY()));
         }
     }
 
@@ -147,16 +182,23 @@ public class ToolMenu extends AbstractContainerMenu
     //  Saving
     // =====================================================================================
 
+    /**
+     * Writes back only the container that changed: moving a torch no longer re-copies all 27 stored
+     * tools (and re-sends them to the client), and the enchantments are only reloaded when a plate moved.
+     */
     private void onContainerChanged(Container container)
     {
         ItemStack tool = getTool();
         if (!(tool.getItem() instanceof MultiToolItem))
             return;
 
-        ToolData.setTorches(tool, light.getItem(0)); // ToolLightManager picks the change up next tick
-        if (tier.storageSlots() > 0)
+        if (container == light)
+            ToolData.setTorches(tool, light.getItem(0));         // ToolLightManager picks the change up next tick
+        else if (container == support)
+            ToolData.setSupportTool(tool, support.getItem(0));   // abilities + their buttons follow immediately
+        else if (container == storage)
             ToolData.setStorage(tool, storage.getItems());
-        if (tier.hasEnchantPlates())
+        else if (container == plates)
         {
             ToolData.setPlates(tool, plates.getItems());
             ToolData.applyActivePlate(tool); // putting/removing a plate updates enchantments immediately
@@ -167,15 +209,20 @@ public class ToolMenu extends AbstractContainerMenu
     //  Toggle buttons (button id = bit index in ToolSettings)
     // =====================================================================================
 
+    private static final int SUPPORT_FLAGS = ToolSettings.SHEAR | ToolSettings.BRUSH | ToolSettings.IGNITE;
+
     @Override
     public boolean clickMenuButton(Player player, int id)
     {
-        // stone: strip/path/till/torch, iron & diamond: + shear/brush/ignite, mega: + delayed break
+        // all tiers: strip/path/till, shear/brush/ignite, place torch, light; mega: + delayed break
         if (!tier.hasToggle(id))
             return false;
 
         ItemStack tool = getTool();
         if (!(tool.getItem() instanceof MultiToolItem))
+            return false;
+        // Shear / Brush / Ignite only exist while a Support Tool is in its slot.
+        if ((1 << id & SUPPORT_FLAGS) != 0 && !ToolData.hasSupportTool(tool))
             return false;
 
         ToolData.setSettings(tool, ToolData.getSettings(tool).toggle(1 << id));
@@ -192,6 +239,15 @@ public class ToolMenu extends AbstractContainerMenu
         // Pressing the number key of the tool's own hotbar slot would swap the tool out - block it.
         if (clickType == ClickType.SWAP && button == toolSlot)
             return;
+        // A number key / the off-hand key moves a slot's WHOLE stack into the inventory, past LightSlot#remove.
+        // More torches than one normal stack must leave by clicking (64 at a time): an over-sized stack in
+        // the inventory can't be saved.
+        if (clickType == ClickType.SWAP && slotId == lightIndex)
+        {
+            ItemStack torches = light.getItem(0);
+            if (torches.getCount() > torches.getMaxStackSize())
+                return;
+        }
         super.clicked(slotId, button, clickType, player);
     }
 
@@ -215,10 +271,12 @@ public class ToolMenu extends AbstractContainerMenu
         }
         else
         {
-            // Player inventory -> plate slots (plates), torch slot (torches) or storage (tools)
+            // Player inventory -> plate slots (plates), Support Tool slot, torch slot (torches) or storage (tools)
             boolean moved = false;
             if (tier.hasEnchantPlates() && stack.getItem() instanceof EnchantmentPlateItem)
                 moved = moveItemStackTo(stack, 0, ToolData.PLATE_SLOTS, false);
+            if (!moved && supportIndex >= 0 && stack.getItem() instanceof SupportToolItem)
+                moved = moveItemStackTo(stack, supportIndex, supportIndex + 1, false);
             if (!moved && LightSources.isTorch(stack))
                 moved = moveItemStackTo(stack, lightIndex, lightIndex + 1, false);
             if (!moved && StorageSlot.canStore(stack))
@@ -239,10 +297,12 @@ public class ToolMenu extends AbstractContainerMenu
         return original;
     }
 
+    /** Server only (vanilla checks this every tick). The same tool stack must still be held. */
     @Override
     public boolean stillValid(Player player)
     {
-        return player.getInventory().selected == toolSlot && getTool().getItem() instanceof MultiToolItem;
+        return player.getInventory().selected == toolSlot && getTool() == openedTool
+                && openedTool.getItem() instanceof MultiToolItem;
     }
 
     // =====================================================================================
@@ -261,6 +321,27 @@ public class ToolMenu extends AbstractContainerMenu
         public boolean mayPlace(ItemStack stack)
         {
             return stack.getItem() instanceof EnchantmentPlateItem;
+        }
+
+        @Override
+        public int getMaxStackSize()
+        {
+            return 1;
+        }
+    }
+
+    /** Accepts only the Support Tool. */
+    public static class SupportSlot extends Slot
+    {
+        public SupportSlot(Container container, int index, int x, int y)
+        {
+            super(container, index, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack)
+        {
+            return stack.getItem() instanceof SupportToolItem;
         }
 
         @Override
@@ -308,14 +389,15 @@ public class ToolMenu extends AbstractContainerMenu
     }
 
     /**
-     * Wrench storage filter.
+     * Tool storage filter. Only items that are known to be tools are allowed, so the storage can't
+     * be used as a general backpack.
      *
      * Never allowed (prevents recursive storage and item loss):
      *   Mega Tools tools, Enchantment Plates, tools that are currently swapped out.
-     * Always allowed: anything in the #megatools:storable_tools item tag.
-     * Otherwise allowed: unstackable items (tools, wrenches, hammers...) that don't hold other
-     *   items (shulker boxes and bundles are refused to keep item data small).
-     * Each slot holds one item (getMaxStackSize below), even for stackable tagged items.
+     * Allowed:
+     *   #c:tools/wrench, #megatools:storable_item (which includes shears, screwdrivers, crowbars...),
+     *   and items listed in config/megatools-storage-whitelist.json for mods that are installed.
+     * Each slot holds one item (getMaxStackSize below).
      */
     public static class StorageSlot extends Slot
     {
@@ -326,21 +408,16 @@ public class ToolMenu extends AbstractContainerMenu
 
         public static boolean canStore(ItemStack stack)
         {
-            // ---- hard rules, the tag can't override these ----
+            // ---- hard rules, nothing can override these ----
             if (stack.isEmpty()
                     || stack.getItem() instanceof MultiToolItem
                     || stack.getItem() instanceof EnchantmentPlateItem
                     || stack.has(ModDataComponents.SWAP_ORIGIN.get()))
                 return false;
 
-            // ---- explicitly allowed by the tag (e.g. stackable wrenches, labellers) ----
-            if (stack.is(ModTags.STORABLE_TOOLS))
-                return true;
-
-            // ---- default rule ----
-            return stack.getMaxStackSize() == 1
-                    && !stack.has(DataComponents.CONTAINER)
-                    && !stack.has(DataComponents.BUNDLE_CONTENTS);
+            return stack.is(ModTags.WRENCHES)
+                    || stack.is(ModTags.STORABLE_ITEM)
+                    || StorageWhitelist.contains(stack);
         }
 
         @Override

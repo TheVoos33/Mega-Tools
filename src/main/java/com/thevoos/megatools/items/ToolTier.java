@@ -20,6 +20,8 @@ import java.util.function.Supplier;
  *     IRON    : 5 iron tools   x 250 (1250) + brush 64 + flint&steel 64 + shears 238  = 1616
  *     DIAMOND : 5 diamond tools x 1561 (7805) + brush 64 + flint&steel 64 + shears 238 = 8171
  *     MEGA    : 0 = unbreakable
+ *   (The shears/brush/flint and steel abilities come from a Support Tool in the tool's Support Tool
+ *   slot, on every tier; the iron/diamond default durability still includes those tools.)
  *   Mining speed = vanilla tier speed (stone 4.0, iron 6.0, diamond 8.0) x miningSpeedMultiplier (1.2).
  *   Attack damage = the TOTAL shown in the tooltip (10 / 14 / 18 / 22).
  *   Attack speed = attacks per second shown in the tooltip (1.6 / 2.0 / 2.5 / 3.0).
@@ -27,11 +29,11 @@ import java.util.function.Supplier;
  */
 public enum ToolTier
 {
-    //      config section               vanilla speed storage support plates incorrect-for-drops tag             ench  GUI accent   repair item
-    STONE  (StartupConfig.STONE_PAXEL,   4.0F,  0,      false,  false, BlockTags.INCORRECT_FOR_STONE_TOOL,     5,   0xFF5E5E5E, () -> Ingredient.of(ItemTags.STONE_TOOL_MATERIALS)),
-    IRON   (StartupConfig.IRON_PAXEL,    6.0F,  8,      true,   true,  BlockTags.INCORRECT_FOR_IRON_TOOL,      14,  0xFF6B7782, () -> Ingredient.of(Items.IRON_INGOT)),
-    DIAMOND(StartupConfig.DIAMOND_PAXEL, 8.0F,  16,     true,   true,  BlockTags.INCORRECT_FOR_DIAMOND_TOOL,   10,  0xFF1D8A86, () -> Ingredient.of(Items.DIAMOND)),
-    MEGA   (StartupConfig.MEGA_TOOL,     12.0F, 24,     true,   true,  BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 15,  0xFF3E2050, () -> Ingredient.EMPTY);
+    //      config section               vanilla speed storage support plates incorrect-for-drops tag             GUI accent   repair item
+    STONE  (StartupConfig.STONE_PAXEL,   4.0F,  0,      true,   true,  BlockTags.INCORRECT_FOR_STONE_TOOL,     0xFF5E5E5E, () -> Ingredient.of(ItemTags.STONE_TOOL_MATERIALS)),
+    IRON   (StartupConfig.IRON_PAXEL,    6.0F,  9,      true,   true,  BlockTags.INCORRECT_FOR_IRON_TOOL,      0xFF6B7782, () -> Ingredient.of(Items.IRON_INGOT)),
+    DIAMOND(StartupConfig.DIAMOND_PAXEL, 8.0F,  18,     true,   true,  BlockTags.INCORRECT_FOR_DIAMOND_TOOL,   0xFF1D8A86, () -> Ingredient.of(Items.DIAMOND)),
+    MEGA   (StartupConfig.MEGA_TOOL,     12.0F, 27,     true,   true,  BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF3E2050, () -> Ingredient.EMPTY);
 
     private final StartupConfig.ToolValues config;
     private final float vanillaSpeed;
@@ -39,13 +41,12 @@ public enum ToolTier
     private final boolean supportTools;
     private final boolean enchantPlates;
     private final TagKey<Block> incorrectBlocksForDrops;
-    private final int enchantmentValue;
     private final int accentColor;
     private final Supplier<Ingredient> repairIngredient;
 
     ToolTier(StartupConfig.ToolValues config, float vanillaSpeed, int storageSlots,
              boolean supportTools, boolean enchantPlates, TagKey<Block> incorrectBlocksForDrops,
-             int enchantmentValue, int accentColor, Supplier<Ingredient> repairIngredient)
+             int accentColor, Supplier<Ingredient> repairIngredient)
     {
         this.config = config;
         this.vanillaSpeed = vanillaSpeed;
@@ -53,7 +54,6 @@ public enum ToolTier
         this.supportTools = supportTools;
         this.enchantPlates = enchantPlates;
         this.incorrectBlocksForDrops = incorrectBlocksForDrops;
-        this.enchantmentValue = enchantmentValue;
         this.accentColor = accentColor;
         this.repairIngredient = repairIngredient;
     }
@@ -82,20 +82,26 @@ public enum ToolTier
     // ---- Fixed per tier ----
 
     public int storageSlots() { return storageSlots; }
-    /** Shears + brush + flint and steel abilities. */
+    /**
+     * Has a Support Tool slot. The shears + brush + flint and steel abilities (and their GUI buttons)
+     * are only active while a Support Tool is in it: see ToolData#hasSupportTool.
+     */
     public boolean supportTools() { return supportTools; }
-    /** Primary/secondary enchantment plate slots and Shift+R switching. */
+    /**
+     * Primary/secondary enchantment plate slots and Shift+R switching (every tier). The tools themselves
+     * can't be enchanted; their enchantments always come from the loaded plate.
+     */
     public boolean hasEnchantPlates() { return enchantPlates; }
     /**
      * Whether this tier has the GUI toggle for ToolSettings bit {@code bit} (button id = bit):
-     * 0-2 strip/path/till (all), 3-5 shear/brush/ignite (iron, diamond, mega),
-     * 6 delayed break (mega), 7 place torch (all).
+     * 0-2 strip/path/till (all), 3-5 shear/brush/ignite (all tiers; shown while a Support Tool is in),
+     * 6 delayed break (mega), 7 place torch (all), 8 light on/off (all; stored inverted as LIGHT_OFF).
      */
     public boolean hasToggle(int bit)
     {
         return switch (bit)
         {
-            case 0, 1, 2, 7 -> true;
+            case 0, 1, 2, 7, 8 -> true;
             case 3, 4, 5 -> supportTools;
             case 6 -> isMega();
             default -> false;
@@ -107,7 +113,6 @@ public enum ToolTier
     /** Auto-swap only makes sense when there is wrench storage to swap from. */
     public boolean hasAutoSwap() { return storageSlots > 0; }
     public TagKey<Block> incorrectBlocksForDrops() { return incorrectBlocksForDrops; }
-    public int enchantmentValue() { return enchantmentValue; }
     /** Colour of the title bar in the GUI, so every tool's GUI looks different. */
     public int accentColor() { return accentColor; }
     public Ingredient repairIngredient() { return repairIngredient.get(); }

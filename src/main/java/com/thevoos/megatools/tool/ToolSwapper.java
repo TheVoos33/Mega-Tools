@@ -1,8 +1,10 @@
 package com.thevoos.megatools.tool;
 
+import com.thevoos.megatools.component.LastSwap;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.SwapOrigin;
 import com.thevoos.megatools.items.MultiToolItem;
+import com.thevoos.megatools.menu.ToolMenu;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,6 +13,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.event.entity.player.PlayerDestroyItemEvent;
 
 /**
@@ -27,6 +30,8 @@ public final class ToolSwapper
      * Slot value the client sends when it wants to swap back.
      */
     public static final int SWAP_BACK = -1;
+    /** Slot value for "swap to the last tool swapped to" (Space + R), whatever block is targeted. */
+    public static final int SWAP_LAST = -2;
 
     private ToolSwapper()
     {
@@ -34,6 +39,11 @@ public final class ToolSwapper
 
     public static void handleSwap(ServerPlayer player, int requestedSlot)
     {
+        // The tool GUI holds a copy of the storage. The client closes it before sending this, but a
+        // modified client could swap and take the same stored tool out of the still-open GUI in one tick.
+        if (player.containerMenu instanceof ToolMenu)
+            player.closeContainer();
+
         ItemStack held = player.getMainHandItem();
 
         SwapOrigin origin = held.get(ModDataComponents.SWAP_ORIGIN.get());
@@ -49,10 +59,22 @@ public final class ToolSwapper
             return;
 
         int size = multiTool.getTier().storageSlots();
+        NonNullList<ItemStack> storage = ToolData.getStorage(held, size);
+        if (requestedSlot == SWAP_LAST)
+        {
+            requestedSlot = findLastSwapped(held, storage);
+            if (requestedSlot < 0)
+            {
+                LastSwap last = held.get(ModDataComponents.LAST_SWAP.get());
+                player.displayClientMessage(last == null || last.item() == Items.AIR
+                        ? Component.translatable("message.megatools.no_last_tool")
+                        : Component.translatable("message.megatools.last_tool_gone", last.item().getDescription()), true);
+                return;
+            }
+        }
         if (requestedSlot < 0 || requestedSlot >= size)
             return; // never trust slot indices from the client
 
-        NonNullList<ItemStack> storage = ToolData.getStorage(held, size);
         ItemStack stored = storage.get(requestedSlot);
         if (stored.isEmpty())
             return;
@@ -61,6 +83,7 @@ public final class ToolSwapper
         ItemStack megaTool = held.copy();
         storage.set(requestedSlot, ItemStack.EMPTY);
         ToolData.setStorage(megaTool, storage);
+        megaTool.set(ModDataComponents.LAST_SWAP.get(), new LastSwap(requestedSlot, stored.getItem()));
 
         // ...travels inside the swapped-out tool.
         ItemStack swappedOut = stored.copy();
@@ -115,6 +138,20 @@ public final class ToolSwapper
             giveOrDrop(player, megaTool);
 
         player.displayClientMessage(Component.translatable("message.megatools.swap_restored", megaTool.getHoverName()), true);
+    }
+
+    /** Storage slot of the last swapped-to tool: its old slot if it's still there, else the first of that item. */
+    private static int findLastSwapped(ItemStack tool, NonNullList<ItemStack> storage)
+    {
+        LastSwap last = tool.get(ModDataComponents.LAST_SWAP.get());
+        if (last == null || last.item() == Items.AIR) // air: the tool's mod was removed (empty slots "are" air)
+            return -1;
+        if (last.slot() >= 0 && last.slot() < storage.size() && storage.get(last.slot()).is(last.item()))
+            return last.slot();
+        for (int i = 0; i < storage.size(); i++)
+            if (storage.get(i).is(last.item()))
+                return i;
+        return -1;
     }
 
     private static int firstEmpty(NonNullList<ItemStack> items)

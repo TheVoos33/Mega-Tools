@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "#c:tools/wrench", "required": false },
+    { "id": "#c:wrenches", "required": false },
+    { "id": "#forge:tools/wrench", "required": false },
+    { "id": "#c:tools/shear", "required": false },
+    { "id": "#immersiveengineering:tools/screwdrivers", "required": false },
+    { "id": "#railcraft:crowbar", "required": false }
+  ]
+}

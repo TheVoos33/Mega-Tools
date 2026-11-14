@@ -18,6 +18,10 @@ description='''Paxels and the Mega Tool: every tool in one, with wrench storage,
 # Adds the Mega Tool's third-person arm pose (see client/MegaToolArmPose.java). Required.
 enumExtensions="META-INF/enumextensions.json"
 
+# Client: the swap key in the tool GUI comes before recipe viewers (EMI)
+[[mixins]]
+config="${mod_id}.mixins.json"
+
 [[dependencies.${mod_id}]]
     modId="neoforge"
     type="required"

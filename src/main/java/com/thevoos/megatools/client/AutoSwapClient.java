@@ -1,8 +1,8 @@
 package com.thevoos.megatools.client;
 
-import com.thevoos.megatools.Config;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.SwapOrigin;
+import com.thevoos.megatools.component.SwapRules;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.tool.ToolData;
 import net.minecraft.client.Minecraft;
@@ -26,13 +26,19 @@ import java.util.Objects;
  * Tool auto-swap pre-selection (client side).
  *
  * WHEN it searches: only when the targeted block changes (a different block type, or looking
- * away from / back at a block) or when the held tool or its storage changes (hotbar scroll,
- * GUI edit, swap). Each tick only does a few cheap "did anything change?" comparisons; the
+ * away from / back at a block) or when the held tool, its storage or its swap rules change (hotbar
+ * scroll, GUI edit, swap). Each tick only does a few cheap "did anything change?" comparisons; the
  * storage scan itself does not run every tick.
  *
- * WHAT it finds: every stored tool, in storage order, whose mod id (registry namespace) equals
- * the block's mod id, or that config/megatools-tool-aliases.json maps to the block's mod id
- * (see ToolAliases). The first is selected; Shift + mouse wheel cycles the selection (see
+ * WHAT it finds, in this order:
+ *  1. Stored tools that one of the tool's custom swap rules (Swap Rules GUI, see SwapRules) names for
+ *     the block: rules for exactly that block first, then tag rules, then whole-mod rules. These also work on vanilla blocks.
+ *     The default rules of config/megatools-default-rules.json are among them: they are copied onto
+ *     the tool when it is first held with the named tool in storage (see DefaultSwapRules#offer).
+ *  2. Every other stored tool, in storage order, whose mod id (registry namespace) equals the block's
+ *     mod id, or that config/megatools-tool-aliases.json maps to the block's mod id (see ToolAliases).
+ *     Vanilla (minecraft:) blocks are skipped here: the paxel itself is the tool for those.
+ * The first is selected; Shift + mouse wheel cycles the selection (see
  * ClientEvents#onMouseScroll) and R swaps to the selected one.
  */
 public final class AutoSwapClient
@@ -47,6 +53,7 @@ public final class AutoSwapClient
     private static int lastHotbarSlot = -1;
     private static ItemStack lastHeld = ItemStack.EMPTY;
     private static ItemContainerContents lastStorage = null;
+    private static SwapRules lastRules = SwapRules.EMPTY;
 
     private AutoSwapClient() {}
 
@@ -63,18 +70,30 @@ public final class AutoSwapClient
         Block block = targetedBlock(mc);
         int hotbarSlot = mc.player.getInventory().selected;
         ItemContainerContents storage = held.get(ModDataComponents.TOOL_STORAGE.get());
+        SwapRules rules = ToolData.getSwapRules(held);
 
         boolean changed = block != lastBlock
                 || hotbarSlot != lastHotbarSlot
                 || held.getItem() != lastHeld.getItem()
-                || !Objects.equals(storage, lastStorage);
+                || !Objects.equals(storage, lastStorage)
+                || !rules.equals(lastRules);
         if (!changed)
+        {
+            // Same contents, maybe a new object (the server re-sent the tool): keep the newest one, so
+            // the next ticks hit equals()' identity check instead of comparing every stored item again.
+            lastStorage = storage;
+            lastRules = rules;
             return;
+        }
 
         lastBlock = block;
         lastHotbarSlot = hotbarSlot;
         lastHeld = held;
         lastStorage = storage;
+        lastRules = rules;
+        // Not while the Custom Rules GUI is open: it sends complete rule lists of its own.
+        if (!(mc.screen instanceof SwapRulesScreen))
+            DefaultSwapRules.offer(held, storage);
         rescan(held, block);
     }
 
@@ -95,25 +114,55 @@ public final class AutoSwapClient
         if (block == null || !(held.getItem() instanceof MultiToolItem multiTool) || !multiTool.getTier().hasAutoSwap())
             return;
 
-        String blockMod = BuiltInRegistries.BLOCK.getKey(block).getNamespace();
-        // With autoSwapIgnoreVanilla, vanilla blocks only match tools explicitly aliased to "minecraft".
-        boolean sameModMatches = !("minecraft".equals(blockMod) && Config.AUTO_SWAP_IGNORE_VANILLA.get());
-
+        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(block);
+        String blockMod = blockId.getNamespace();
         NonNullList<ItemStack> storage = ToolData.getStorage(held, multiTool.getTier().storageSlots());
+
+        // ---- 1. This tool's custom rules (default rules are copied into them) ----
+        addRuleMatches(ToolData.getSwapRules(held), storage, block, blockId);
+
+        // ---- 2. Automatic matches (same mod / aliases), after the custom ones ----
+        if (ResourceLocation.DEFAULT_NAMESPACE.equals(blockMod))
+            return; // vanilla blocks only pre-select a stored tool through a custom rule
         for (int i = 0; i < storage.size(); i++)
         {
             ItemStack stored = storage.get(i);
-            if (stored.isEmpty())
+            if (stored.isEmpty() || candidateSlots.contains(i))
                 continue;
             ResourceLocation toolId = BuiltInRegistries.ITEM.getKey(stored.getItem());
-            boolean match = (sameModMatches && blockMod.equals(toolId.getNamespace()))
-                    || ToolAliases.matches(toolId, blockMod);
-            if (match)
-            {
-                candidateSlots.add(i);
-                candidates.add(stored);
-            }
+            if (blockMod.equals(toolId.getNamespace()) || ToolAliases.matches(toolId, blockMod))
+                addCandidate(i, stored);
         }
+    }
+
+    /** Stored tools these rules name for the block: exact block first, then tag rules, then whole-mod rules. */
+    private static void addRuleMatches(SwapRules rules, NonNullList<ItemStack> storage, Block block, ResourceLocation blockId)
+    {
+        if (rules.isEmpty())
+            return;
+        ResourceLocation blockItemId = BuiltInRegistries.ITEM.getKey(block.asItem());
+        for (SwapRules.Mode mode : SwapRules.Mode.values())
+            for (SwapRules.Rule rule : rules.rules())
+                if (rule.mode() == mode && rule.matches(block, blockId, blockItemId))
+                    addStoredTool(storage, rule.tool());
+    }
+
+    /** Adds every stored tool with this item id (normally one) that isn't a candidate yet. */
+    private static void addStoredTool(NonNullList<ItemStack> storage, ResourceLocation toolId)
+    {
+        for (int i = 0; i < storage.size(); i++)
+        {
+            ItemStack stored = storage.get(i);
+            if (!stored.isEmpty() && !candidateSlots.contains(i)
+                    && BuiltInRegistries.ITEM.getKey(stored.getItem()).equals(toolId))
+                addCandidate(i, stored);
+        }
+    }
+
+    private static void addCandidate(int slot, ItemStack stored)
+    {
+        candidateSlots.add(slot);
+        candidates.add(stored);
     }
 
     /**
@@ -160,5 +209,6 @@ public final class AutoSwapClient
         lastHotbarSlot = -1;
         lastHeld = ItemStack.EMPTY;
         lastStorage = null;
+        lastRules = SwapRules.EMPTY;
     }
 }

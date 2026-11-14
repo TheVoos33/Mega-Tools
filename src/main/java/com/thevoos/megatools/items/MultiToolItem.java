@@ -1,15 +1,18 @@
 package com.thevoos.megatools.items;
 
+import com.thevoos.megatools.KeyNames;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.StoredTorches;
 import com.thevoos.megatools.component.ToolSettings;
 import com.thevoos.megatools.tool.LightSources;
+import com.thevoos.megatools.tool.MegaToolPoke;
 import com.thevoos.megatools.tool.ToolData;
+import com.thevoos.megatools.tool.ToolLightManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.stats.Stats;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -17,7 +20,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Shearable;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -35,9 +37,9 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.entity.BrushableBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.common.ItemAbilities;
 import net.neoforged.neoforge.common.ItemAbility;
@@ -58,16 +60,22 @@ import java.util.function.Consumer;
  *    and NeoForge asks our {@link #canPerformAction} whether the action is allowed - which is where
  *    the GUI toggles are enforced.
  *  - Brushing: we start "using" the item and forward onUseTick() to the vanilla BrushItem.
- *  - Shearing mobs: vanilla {@link Shearable} interface (sheep, mooshroom, snow golem, bogged).
+ *  - Shearing mobs: delegated to the vanilla ShearsItem (NeoForge IShearable: sheep, mooshroom,
+ *    snow golem, bogged and modded mobs).
+ *  - Shears, brush and flint and steel only work while a Support Tool is in the tool's Support Tool
+ *    slot (ToolData#hasSupportTool), each with its own GUI toggle.
  */
 public class MultiToolItem extends Item
 {
     private final ToolTier tier;
+    /** Mining rules without the shears speeds, used while no Support Tool (or Shear toggle) is active. */
+    private final Tool toolWithoutShears;
 
     public MultiToolItem(ToolTier tier, Item.Properties properties)
     {
         super(applyTier(tier, properties));
         this.tier = tier;
+        this.toolWithoutShears = createToolComponent(tier, false);
     }
 
     public ToolTier getTier()
@@ -125,7 +133,7 @@ public class MultiToolItem extends Item
 
     private static Item.Properties applyTier(ToolTier tier, Item.Properties properties)
     {
-        properties.component(DataComponents.TOOL, createToolComponent(tier))
+        properties.component(DataComponents.TOOL, createToolComponent(tier, tier.supportTools()))
                   .attributes(createAttributes(tier));
 
         if (tier.durability() > 0)
@@ -142,7 +150,7 @@ public class MultiToolItem extends Item
     /**
      * Mining rules (first matching rule wins for speed; first rule with a drop flag wins for drops).
      */
-    private static Tool createToolComponent(ToolTier tier)
+    private static Tool createToolComponent(ToolTier tier, boolean withShears)
     {
         List<Tool.Rule> rules = new ArrayList<>();
         // Blocks this tier is too weak for (e.g. obsidian for stone) mine but do not drop.
@@ -150,8 +158,8 @@ public class MultiToolItem extends Item
             rules.add(Tool.Rule.deniesDrops(tier.incorrectBlocksForDrops()));
         // Sword ability: cobwebs break fast and drop string.
         rules.add(Tool.Rule.minesAndDrops(List.<Block>of(Blocks.COBWEB), 15.0F));
-        // Shears ability: same speeds as vanilla shears.
-        if (tier.supportTools())
+        // Shears ability: same speeds as vanilla shears (only used while a Support Tool is in, see getDestroySpeed).
+        if (withShears)
         {
             rules.add(Tool.Rule.overrideSpeed(BlockTags.LEAVES, 15.0F));
             rules.add(Tool.Rule.overrideSpeed(BlockTags.WOOL, 5.0F));
@@ -179,6 +187,52 @@ public class MultiToolItem extends Item
     // =====================================================================================
     //  Mining / combat
     // =====================================================================================
+
+    /**
+     * Only a real switch (other hotbar slot or other item) plays the lower-and-raise equip animation.
+     * NeoForge's default re-equips whenever the stack object is replaced, which for these tools happens on
+     * every data update (torch count, toggles, plates, durability sync).
+     */
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged)
+    {
+        return slotChanged || !ItemStack.isSameItem(oldStack, newStack);
+    }
+
+    /**
+     * Shader handheld light (Iris / Oculus 1.8+). Iris mixes its IrisItemLightProvider interface into every
+     * Item and asks this method how much light a held item gives; shader packs with "handheld lighting"
+     * then light the area smoothly around the player, without placing blocks. This method has exactly that
+     * interface method's signature, so it is used when Iris is installed and simply unused otherwise (no
+     * dependency on Iris). While a shader pack is active the client also tells the server to stop placing
+     * light blocks for this player (see ShaderLightClient / ToolLightManager).
+     */
+    public int getLightEmission(Player player, ItemStack stack)
+    {
+        return LightSources.givesLight(stack) ? ToolLightManager.LIGHT_LEVEL : 0;
+    }
+
+    /**
+     * Called whenever a swing starts (both sides). Client, local player, Mega Tool: lets the first-person
+     * renderer tell a right-click ability swing from a mining swing (MegaToolPoke#onLocalSwing). The
+     * vanilla swing itself always continues (false), so third person and other players see it as usual.
+     */
+    @Override
+    public boolean onEntitySwing(ItemStack stack, LivingEntity entity, InteractionHand hand)
+    {
+        if (tier.isMega() && hand == InteractionHand.MAIN_HAND && entity instanceof Player player && player.isLocalPlayer())
+            MegaToolPoke.onLocalSwing();
+        return false;
+    }
+
+    /** Shears speeds (leaves, wool, vines) only while the shears ability is active. */
+    @Override
+    public float getDestroySpeed(ItemStack stack, BlockState state)
+    {
+        if (tier.supportTools() && !ToolData.supportAbility(stack, ToolSettings.SHEAR))
+            return toolWithoutShears.getMiningSpeed(state);
+        return super.getDestroySpeed(stack, state);
+    }
 
     /** The Mega Tool counts as the correct tool for every block, so everything drops. */
     @Override
@@ -215,8 +269,13 @@ public class MultiToolItem extends Item
             return settings.has(ToolSettings.PATH);
         if (ability == ItemAbilities.HOE_TILL)
             return settings.has(ToolSettings.TILL);
-        if (tier.supportTools() && ItemAbilities.DEFAULT_SHEARS_ACTIONS.contains(ability))
-            return settings.has(ToolSettings.SHEAR);
+        // Support Tool abilities: other mods' blocks and loot tables ask for these too.
+        if (ItemAbilities.DEFAULT_SHEARS_ACTIONS.contains(ability))
+            return ToolData.supportAbility(stack, ToolSettings.SHEAR);
+        if (ItemAbilities.DEFAULT_BRUSH_ACTIONS.contains(ability))
+            return ToolData.supportAbility(stack, ToolSettings.BRUSH);
+        if (ItemAbilities.DEFAULT_FLINT_ACTIONS.contains(ability))
+            return ToolData.supportAbility(stack, ToolSettings.IGNITE);
 
         return ItemAbilities.DEFAULT_PICKAXE_ACTIONS.contains(ability)
                 || ItemAbilities.DEFAULT_AXE_ACTIONS.contains(ability)
@@ -226,7 +285,7 @@ public class MultiToolItem extends Item
     }
 
     // =====================================================================================
-    //  Right click on a block: strip -> path/till -> brush -> ignite
+    //  Right click on a block: strip -> path/till -> brush -> trim -> TNT -> torch -> ignite
     // =====================================================================================
 
     @Override
@@ -260,31 +319,68 @@ public class MultiToolItem extends Item
         result = tryDigAction(second, settings, context);
         if (result.consumesAction()) return result;
 
+        boolean support = ToolData.hasSupportTool(stack);
+
         // 3. Brush: start "using" the item; brushing happens in onUseTick.
-        if (tier.supportTools() && settings.has(ToolSettings.BRUSH) && player != null
+        if (support && settings.has(ToolSettings.BRUSH) && player != null
                 && level.getBlockEntity(pos) instanceof BrushableBlockEntity)
         {
             player.startUsingItem(context.getHand());
             return InteractionResult.CONSUME;
         }
 
-        // 4. Place Torch: put one torch from the torch slot on the clicked face.
+        // 4. Shears: trim growing plants (cave vines, kelp, weeping/twisting vines) so they stop growing,
+        //    plus anything other mods add through the SHEARS_TRIM ability.
+        if (support && settings.has(ToolSettings.SHEAR))
+        {
+            InteractionResult trim = Items.SHEARS.useOn(context);
+            if (trim.consumesAction()) return trim;
+        }
+
+        // 5. Flint and steel on TNT: vanilla TNT only accepts the real flint and steel item.
+        if (support && settings.has(ToolSettings.IGNITE))
+        {
+            InteractionResult tnt = tryIgniteTnt(context, stack);
+            if (tnt.consumesAction()) return tnt;
+        }
+
+        // 6. Place Torch: put one torch from the torch slot on the clicked face.
         if (settings.has(ToolSettings.PLACE_TORCH))
         {
             InteractionResult torch = tryPlaceTorch(context, stack);
             if (torch.consumesAction()) return torch;
         }
 
-        if (tier.supportTools())
+        // 7. Flint and steel: light campfires/candles or place fire.
+        if (support && settings.has(ToolSettings.IGNITE))
         {
-            // 5. Flint and steel: light campfires/candles or place fire.
-            if (settings.has(ToolSettings.IGNITE))
-            {
-                InteractionResult ignite = Items.FLINT_AND_STEEL.useOn(context);
-                if (ignite.consumesAction()) return ignite;
-            }
+            InteractionResult ignite = Items.FLINT_AND_STEEL.useOn(context);
+            if (ignite.consumesAction()) return ignite;
         }
         return InteractionResult.PASS;
+    }
+
+    /** Lights TNT exactly like flint and steel does (TntBlock checks for the flint and steel item itself). */
+    private static InteractionResult tryIgniteTnt(UseOnContext context, ItemStack tool)
+    {
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState state = level.getBlockState(pos);
+        if (!(state.getBlock() instanceof TntBlock))
+            return InteractionResult.PASS;
+
+        Player player = context.getPlayer();
+        if (!level.isClientSide())
+        {
+            state.onCaughtFire(level, pos, context.getClickedFace(), player);
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL_IMMEDIATE);
+            if (player != null)
+            {
+                tool.hurtAndBreak(1, player, LivingEntity.getSlotForHand(context.getHand()));
+                player.awardStat(Stats.ITEM_USED.get(Items.FLINT_AND_STEEL));
+            }
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
     /**
@@ -349,20 +445,20 @@ public class MultiToolItem extends Item
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity entity)
     {
-        return tier.supportTools() ? 200 : 0; // same duration as the vanilla brush
+        return ToolData.hasSupportTool(stack) ? 200 : 0; // same duration as the vanilla brush
     }
 
     @Override
     public UseAnim getUseAnimation(ItemStack stack)
     {
-        return tier.supportTools() ? UseAnim.BRUSH : UseAnim.NONE;
+        return ToolData.hasSupportTool(stack) ? UseAnim.BRUSH : UseAnim.NONE;
     }
 
     /** Forward each use tick to the vanilla brush logic (raycast, particles, sound, BrushableBlockEntity#brush). */
     @Override
     public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remainingUseDuration)
     {
-        if (tier.supportTools() && ToolData.hasFlag(stack, ToolSettings.BRUSH) && !isBroken(stack))
+        if (ToolData.supportAbility(stack, ToolSettings.BRUSH) && !isBroken(stack))
             Items.BRUSH.onUseTick(level, entity, stack, remainingUseDuration);
         else
             entity.releaseUsingItem();
@@ -375,40 +471,46 @@ public class MultiToolItem extends Item
     @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand)
     {
-        if (!tier.supportTools() || !ToolData.hasFlag(stack, ToolSettings.SHEAR))
+        if (!ToolData.supportAbility(stack, ToolSettings.SHEAR))
             return InteractionResult.PASS;
         if (isBroken(stack))
         {
             showBrokenMessage(player);
             return InteractionResult.PASS;
         }
-
-        if (target instanceof Shearable shearable && shearable.readyForShearing())
-        {
-            if (!player.level().isClientSide())
-            {
-                shearable.shear(SoundSource.PLAYERS);              // drops wool/mushrooms/pumpkin
-                target.gameEvent(GameEvent.SHEAR, player);
-                stack.hurtAndBreak(1, player, LivingEntity.getSlotForHand(hand));
-            }
-            return InteractionResult.sidedSuccess(player.level().isClientSide());
-        }
-        return InteractionResult.PASS;
+        // Vanilla shears logic with our stack: works for every IShearable mob, vanilla or modded.
+        return Items.SHEARS.interactLivingEntity(stack, player, target, hand);
     }
 
     // =====================================================================================
     //  Enchanting / repair / tooltip
     // =====================================================================================
 
-    /**
-     * Enchantment table value. Only the stone paxel is in the vanilla tool tags (see data/minecraft/tags/item),
-     * so only it can use the table/anvil. The other tools get enchantments from Enchantment Plates only,
-     * because loading a plate replaces the tool's enchantments.
+    /*
+     * The tools themselves are never enchanted (enchanting table, anvil + book): their enchantments come
+     * only from the loaded Enchantment Plate, because loading a plate replaces the tool's enchantments.
+     * They are also kept out of the vanilla tool item tags (#minecraft:pickaxes etc.), which is what
+     * makes vanilla enchantments apply to an item.
      */
+
+    /** Enchanting table: never accepts the tool. */
+    @Override
+    public boolean isEnchantable(ItemStack stack)
+    {
+        return false;
+    }
+
     @Override
     public int getEnchantmentValue()
     {
-        return tier.hasEnchantPlates() ? 0 : tier.enchantmentValue();
+        return 0;
+    }
+
+    /** Anvil: enchanted books can't be put on the tool (use a plate instead). */
+    @Override
+    public boolean isBookEnchantable(ItemStack stack, ItemStack book)
+    {
+        return false;
     }
 
     @Override
@@ -434,23 +536,11 @@ public class MultiToolItem extends Item
                 tooltip.add(Component.translatable("tooltip.megatools.repair_hint", new ItemStack(material).getHoverName())
                         .withStyle(ChatFormatting.RED));
         }
-        tooltip.add(Component.translatable("tooltip.megatools.open_gui").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.megatools.open_gui", Component.keybind(KeyNames.OPEN_GUI)).withStyle(ChatFormatting.GRAY));
 
-        ItemStack torches = ToolData.getTorches(stack);
-        if (!torches.isEmpty())
-            tooltip.add(Component.translatable("tooltip.megatools.torches", torches.getCount(), torches.getHoverName())
-                    .withStyle(ChatFormatting.YELLOW));
-
-        if (tier.hasEnchantPlates())
-        {
-            boolean primary = ToolData.getSettings(stack).activePlate() == 0;
-            tooltip.add(Component.translatable("tooltip.megatools.active_plate",
-                    Component.translatable(primary ? "gui.megatools.primary" : "gui.megatools.secondary"))
-                    .withStyle(ChatFormatting.DARK_PURPLE));
-        }
         if (tier.storageSlots() > 0)
         {
-            long used = ToolData.getStorage(stack, tier.storageSlots()).stream().filter(s -> !s.isEmpty()).count();
+            int used = ToolData.countStoredItems(stack);
             tooltip.add(Component.translatable("tooltip.megatools.storage", used, tier.storageSlots())
                     .withStyle(ChatFormatting.GRAY));
         }

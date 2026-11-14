@@ -1,0 +1,6 @@
+{
+  "item_settings": {
+    "display_name": { "translate": "item.megatools.guide" },
+    "tooltip_lines": [ { "translate": "item.megatools.guide.tooltip", "color": "gray" } ]
+  }
+}

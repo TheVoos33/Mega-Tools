@@ -1,6 +1,7 @@
 package com.thevoos.megatools.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.thevoos.megatools.KeyNames;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
@@ -9,24 +10,28 @@ import net.neoforged.neoforge.client.settings.KeyModifier;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Three key bindings on the same physical key, separated by NeoForge key modifiers.
- * All three are rebindable under Options > Controls > Key Binds > "Mega Tools".
+ * Four key bindings on the same physical key, separated by NeoForge key modifiers.
+ * All four are rebindable under Options > Controls > Key Binds > "Mega Tools".
  */
 public final class ModKeyMappings
 {
     public static final String CATEGORY = "key.categories.megatools";
 
     /** Ctrl + R: open the tool GUI. */
-    public static final KeyMapping OPEN_GUI = new KeyMapping("key.megatools.open_gui",
+    public static final KeyMapping OPEN_GUI = new KeyMapping(KeyNames.OPEN_GUI,
             KeyConflictContext.IN_GAME, KeyModifier.CONTROL, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
 
-    /** Shift + R: load the other enchantment plate. */
-    public static final KeyMapping SWITCH_PLATE = new KeyMapping("key.megatools.switch_plate",
-            KeyConflictContext.IN_GAME, KeyModifier.SHIFT, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
+    /** Alt + R: load the other enchantment plate. */
+    public static final KeyMapping SWITCH_PLATE = new KeyMapping(KeyNames.SWITCH_PLATE,
+            KeyConflictContext.IN_GAME, KeyModifier.ALT, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
 
     /** R: swap to the pre-selected stored tool / swap back. */
-    public static final KeyMapping SWAP_TOOL = new KeyMapping("key.megatools.swap_tool",
+    public static final KeyMapping SWAP_TOOL = new KeyMapping(KeyNames.SWAP_TOOL,
             KeyConflictContext.IN_GAME, KeyModifier.NONE, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
+
+    /** Shift + R: swap to the last stored tool swapped to, whatever block is targeted. */
+    public static final KeyMapping SWAP_LAST = new KeyMapping(KeyNames.SWAP_LAST,
+            KeyConflictContext.IN_GAME, KeyModifier.SHIFT, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
 
     private ModKeyMappings() {}
 
@@ -35,17 +40,18 @@ public final class ModKeyMappings
         event.register(OPEN_GUI);
         event.register(SWITCH_PLATE);
         event.register(SWAP_TOOL);
+        event.register(SWAP_LAST);
     }
 
     /**
      * True if the binding's modifier is actually held right now. Guards against a plain "R"
-     * press being counted for the Ctrl/Shift variants (and vice versa).
+     * press being counted for the Ctrl/Shift/Alt variants (and vice versa).
      */
     public static boolean modifierMatches(KeyMapping mapping)
     {
         KeyModifier modifier = mapping.getKeyModifier();
         if (modifier == KeyModifier.NONE)
-            return !Screen.hasControlDown() && !Screen.hasShiftDown();
+            return !Screen.hasControlDown() && !Screen.hasShiftDown() && !Screen.hasAltDown();
         return modifier.isActive(mapping.getKeyConflictContext());
     }
 }

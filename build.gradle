@@ -27,7 +27,18 @@ sourceSets.main.resources {
 }
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    // Recipe viewer APIs, compile time only (see dependencies): items can be dragged from JEI / EMI
+    // onto the filter slots of the Swap Rules GUI.
+    maven {
+        name = 'Jared (JEI)'
+        url = 'https://maven.blamejared.com/'
+        content { includeGroup 'mezz.jei' }
+    }
+    maven {
+        name = 'TerraformersMC (EMI)'
+        url = 'https://maven.terraformersmc.com/'
+        content { includeGroup 'dev.emi' }
+    }
 }
 
 base {
@@ -128,6 +139,13 @@ configurations {
 }
 
 dependencies {
+    // Optional recipe viewer support (compat/MegaToolsJeiPlugin, compat/MegaToolsEmiPlugin). Only the
+    // APIs, only at compile time: Mega Tools runs without JEI and EMI, and their classes are only
+    // loaded when the viewer itself asks for our plugin.
+    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
+
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"

@@ -21,7 +21,7 @@ public record ToolSettings(int flags, int activePlate)
     public static final int STRIP  = 1;       // axe: strip logs / scrape / un-wax
     public static final int PATH   = 1 << 1;  // shovel: make dirt path / douse campfire
     public static final int TILL   = 1 << 2;  // hoe: till farmland
-    // ---- Support tool abilities (iron, diamond, mega) ----
+    // ---- Support Tool abilities (all tiers; only while a Support Tool is in its slot) ----
     public static final int SHEAR  = 1 << 3;  // shears: shear sheep/mooshroom/snow golem, shear-drops from leaves etc.
     public static final int BRUSH  = 1 << 4;  // brush: brush suspicious sand/gravel
     public static final int IGNITE = 1 << 5;  // flint and steel: light fires, campfires, candles
@@ -29,6 +29,11 @@ public record ToolSettings(int flags, int activePlate)
     public static final int DELAYED_BREAK = 1 << 6; // ON: hold-delay between breaks. OFF: break as fast as possible
     // ---- All tools ----
     public static final int PLACE_TORCH = 1 << 7;   // right click places a torch from the torch slot (OFF by default)
+    /**
+     * Held-tool light switched OFF (small button under the torch slot). Stored inverted, so tools saved
+     * before this button existed (and fresh tools) keep their light on.
+     */
+    public static final int LIGHT_OFF = 1 << 8;
 
     /** Flags enabled on a fresh tool: every toggle is ON, including Delayed Break (hold delay, see Config). */
     public static final int ALL = STRIP | PATH | TILL | SHEAR | BRUSH | IGNITE | DELAYED_BREAK;

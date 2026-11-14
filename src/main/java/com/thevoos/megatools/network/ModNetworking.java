@@ -16,17 +16,25 @@ public final class ModNetworking
     public static void onRegisterPayloads(RegisterPayloadHandlersEvent event)
     {
         // "1" = protocol version; bump it if packet formats change.
-        PayloadRegistrar registrar = event.registrar("1");
+        PayloadRegistrar registrar = event.registrar("4");
 
         registrar.playToServer(OpenToolGuiPayload.TYPE, OpenToolGuiPayload.STREAM_CODEC, ServerPayloadHandler::handleOpenGui);
         registrar.playToServer(SwitchPlatePayload.TYPE, SwitchPlatePayload.STREAM_CODEC, ServerPayloadHandler::handleSwitchPlate);
         registrar.playToServer(SwapToolPayload.TYPE, SwapToolPayload.STREAM_CODEC, ServerPayloadHandler::handleSwapTool);
         registrar.playToServer(RenameToolPayload.TYPE, RenameToolPayload.STREAM_CODEC, ServerPayloadHandler::handleRename);
         registrar.playToServer(MegaToolBreakPayload.TYPE, MegaToolBreakPayload.STREAM_CODEC, ServerPayloadHandler::handleMegaToolBreak);
+        registrar.playToServer(OpenSwapRulesPayload.TYPE, OpenSwapRulesPayload.STREAM_CODEC, ServerPayloadHandler::handleOpenSwapRules);
+        registrar.playToServer(SetSwapRulesPayload.TYPE, SetSwapRulesPayload.STREAM_CODEC, ServerPayloadHandler::handleSetSwapRules);
+        registrar.playToServer(ApplyDefaultRulesPayload.TYPE, ApplyDefaultRulesPayload.STREAM_CODEC, ServerPayloadHandler::handleApplyDefaultRules);
+        registrar.playToServer(ShaderLightPayload.TYPE, ShaderLightPayload.STREAM_CODEC, ServerPayloadHandler::handleShaderLight);
 
         // Server -> client: another player's Mega Tool poke (third-person animation).
         // MegaToolPoke has no client-only imports, so this is safe to register on a dedicated server.
         registrar.playToClient(MegaToolPokePayload.TYPE, MegaToolPokePayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> MegaToolPoke.triggerRemote(payload.entityId())));
+        // Server -> client: the server's tool stats, so the client can warn about a mismatch.
+        registrar.playToClient(ToolStatsPayload.TYPE, ToolStatsPayload.STREAM_CODEC, ToolStatsPayload::handle);
+        // Server -> client: the storage whitelist file as the server loaded it.
+        registrar.playToClient(StorageWhitelistPayload.TYPE, StorageWhitelistPayload.STREAM_CODEC, StorageWhitelistPayload::handle);
     }
 }

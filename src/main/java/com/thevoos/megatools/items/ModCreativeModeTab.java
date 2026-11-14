@@ -32,6 +32,7 @@ public class ModCreativeModeTab
                         output.accept(ModItems.NETHERITE_HEAD);
                         // Upgrade
                         output.accept(ModItems.ENCHANTMENT_PLATE);
+                        output.accept(ModItems.SUPPORT_TOOL);
                     }).build());
 
     public static void register(IEventBus eventBus)

@@ -37,17 +37,28 @@ public final class PlateHelper
             return;
 
         ItemEnchantments base = EnchantmentPlateItem.getStoredEnchantments(left);
-        ItemEnchantments added = right.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+        // Only tool enchantments (sword, shovel, axe, pickaxe, hoe, shears, brush, flint and steel) go on a plate.
+        ItemEnchantments added = EnchantmentPlateItem.onlyAllowed(
+                right.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY));
+        // No result: cancel, which empties the output. Vanilla's own anvil logic must never run for a plate:
+        // it adds the book to the plate's NORMAL enchantments and checks compatibility against those
+        // (always empty on a plate), so a Fortune book went onto a Silk Touch plate, or a book was used up
+        // for nothing (same level already on the plate).
         if (added.isEmpty())
+        {
+            event.setCanceled(true); // e.g. a Protection book
             return;
+        }
 
         ItemEnchantments merged = merge(base, added);
         if (merged.equals(base))
-            return; // nothing new (e.g. everything conflicted) -> let vanilla show no result
+        {
+            event.setCanceled(true); // nothing new: everything conflicted or is already at that level
+            return;
+        }
 
         ItemStack output = left.copy();
-        output.remove(DataComponents.ENCHANTMENTS); // table enchantments are included in 'merged'
-        output.set(DataComponents.STORED_ENCHANTMENTS, merged);
+        EnchantmentPlateItem.setStored(output, merged); // normal enchantments are included in 'merged'
 
         // Our output replaces vanilla's, so apply the rename typed in the anvil ourselves.
         String name = event.getName();
@@ -59,7 +70,7 @@ public final class PlateHelper
                 output.set(DataComponents.CUSTOM_NAME, Component.literal(name));
         }
 
-        // XP cost: one level per enchantment level on the book, capped below "Too Expensive!".
+        // XP cost: one level per accepted enchantment level on the book, capped below "Too Expensive!".
         int cost = 1;
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : added.entrySet())
             cost += Math.max(1, entry.getIntValue());
@@ -114,6 +125,7 @@ public final class PlateHelper
 
         ToolSettings settings = ToolData.getSettings(tool);
         int target = settings.activePlate() == ToolData.PRIMARY ? ToolData.SECONDARY : ToolData.PRIMARY;
+        ToolData.syncLoadedPlate(tool); // the plate being unloaded keeps only what the tool still has
         NonNullList<ItemStack> plates = ToolData.getPlates(tool);
         ItemStack plate = plates.get(target);
 

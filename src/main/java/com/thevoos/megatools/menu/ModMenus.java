@@ -16,6 +16,9 @@ public final class ModMenus
     public static final DeferredHolder<MenuType<?>, MenuType<ToolMenu>> TOOL_MENU = MENUS.register("tool_menu",
             () -> IMenuTypeExtension.create(ToolMenu::fromNetwork));
 
+    public static final DeferredHolder<MenuType<?>, MenuType<SwapRulesMenu>> SWAP_RULES_MENU = MENUS.register("swap_rules_menu",
+            () -> IMenuTypeExtension.create(SwapRulesMenu::fromNetwork));
+
     private ModMenus() {}
 
     public static void register(IEventBus eventBus)
