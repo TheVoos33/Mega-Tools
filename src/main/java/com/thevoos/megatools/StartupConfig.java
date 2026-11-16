@@ -49,7 +49,7 @@ public final class StartupConfig
 
             attackDamage = builder
                     .comment("Total attack damage, as shown in the tooltip.")
-                    .defineInRange("attackDamage", defaultDamage, 1.0, 1000.0);
+                    .defineInRange("attackDamage", defaultDamage, 1.0, 10_000.0);
 
             attackSpeed = builder
                     .comment("Attacks per second, as shown in the tooltip. 1.6 = sword speed,",

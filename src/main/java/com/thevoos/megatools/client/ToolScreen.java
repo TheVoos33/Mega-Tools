@@ -1,14 +1,17 @@
 package com.thevoos.megatools.client;
 
+import com.thevoos.megatools.Config;
 import com.thevoos.megatools.GuideCompat;
 import com.thevoos.megatools.items.ModItems;
 import com.thevoos.megatools.items.ToolTier;
 import com.thevoos.megatools.menu.GuiLayout;
+import com.thevoos.megatools.menu.MenuStyle;
 import com.thevoos.megatools.menu.ToolMenu;
 import com.thevoos.megatools.network.OpenSwapRulesPayload;
 import com.thevoos.megatools.network.RenameToolPayload;
 import com.thevoos.megatools.network.SwapToolPayload;
 import com.thevoos.megatools.tool.ToolData;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -18,6 +21,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -35,23 +39,33 @@ import java.util.List;
  *    or closing the screen sends the new name to the server.
  *  - Toggle buttons: "[check] Strip" (green) = enabled, "[cross] Strip" (red) = disabled. The check/cross
  *    symbol carries the state on its own, so colour is never the only cue (colourblind friendly).
- *    Row 1 = paxel abilities, row 2 = Support Tool abilities (only shown while a Support Tool is in
- *    the slot beside them), last row = Delayed Break (Mega Tool only) + Place Torch.
+ *    Row 1 = Break + Attack (what left click does), row 2 = paxel abilities, row 3 = Support Tool
+ *    abilities (only shown while a Support Tool is in the slot beside them), last row = Delayed Break
+ *    (Mega Tool only) + Place Torch.
  *  - Left of the buttons: Support Tool slot (row 2) and torch slot (last row). Right column: plate
  *    slots (the active plate is outlined in gold). Empty special slots show a faded placeholder icon.
  *  - Wrench storage at the bottom of the tool section, then the player inventory. The "Custom Rule"
  *    button on its label row opens the Swap Rules GUI (SwapRulesScreen).
  *    Hover a stored tool and press R to close the GUI and swap straight to it.
  *
- * Everything is drawn with fills (no texture file needed). The title bar colour comes from
- * ToolTier#accentColor, and the layout height depends on the tier, so every tool's GUI is unique.
+ * ICON MENU (MenuStyle.ICONS, the player's choice): the same screen with GuiLayout#ofIcons. Every toggle
+ * is an IconToggleButton (an item icon; green frame = on, red frame + dimmed + struck through = off) with
+ * its name in the tooltip, and all slots sit in a 2x2 block at the right. Only the positions and the look
+ * of the toggles differ: slots, button ids and everything sent to the server are the same.
+ *
+ * The panel and the slots are cut out of vanilla's chest GUI texture (see drawPanel), so resource packs
+ * that restyle the GUIs (dark themes...) restyle this one too; no texture file of our own. The title
+ * bar colour comes from ToolTier#accentColor, and the layout height depends on the tier, so every tool's GUI is unique.
  */
 public class ToolScreen extends AbstractContainerScreen<ToolMenu>
 {
     // Index i = button id = ToolSettings flag (1 << i)
-    private static final String[] TOGGLE_KEYS = {"strip", "path", "till", "shear", "brush", "ignite", "delayed_break", "place_torch", "light"};
+    private static final String[] TOGGLE_KEYS = {"strip", "path", "till", "shear", "brush", "ignite", "delayed_break", "place_torch", "light", "break", "attack"};
     /** Button id of the small light on/off button under the torch slot (flag LIGHT_OFF, stored inverted). */
     private static final int LIGHT_BUTTON = 8;
+    /** Button ids of the first row (flags BREAK_OFF / ATTACK_OFF, stored inverted). */
+    private static final int BREAK_BUTTON = 9;
+    private static final int ATTACK_BUTTON = 10;
     private static final int LIGHT_BUTTON_W = 18;
     private static final int LIGHT_BUTTON_H = 10;
     /** Fits between the last button row and the storage slots. */
@@ -90,9 +104,14 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
      */
     public static GuiLayout createLayout(ToolTier tier)
     {
+        // The player's choice of menu (asked the first time, see MenuStyleScreen). Not chosen yet: classic.
+        if (Config.MENU_STYLE.get() == MenuStyle.ICONS)
+            return GuiLayout.ofIcons(tier);
+
         Font font = Minecraft.getInstance().font;
         int gridW = 0;
         int lastRowW = 0;
+        int topRowW = 0;
         for (int i = 0; i < TOGGLE_KEYS.length; i++)
         {
             if (!tier.hasToggle(i) || i == LIGHT_BUTTON)
@@ -100,11 +119,13 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
             int w = Math.max(font.width(toggleLabel(i, true)), font.width(toggleLabel(i, false)));
             if (i < 6)
                 gridW = Math.max(gridW, w);
+            else if (isTopRowToggle(i))
+                topRowW = Math.max(topRowW, w);
             else
                 lastRowW = Math.max(lastRowW, w);
         }
         int hintW = tier.supportTools() ? font.width(SUPPORT_HINT) : 0;
-        return GuiLayout.of(tier, gridW, lastRowW, hintW);
+        return GuiLayout.of(tier, gridW, lastRowW, hintW, topRowW);
     }
 
     /** "[check] Strip" in green when enabled, "[cross] Strip" in red when disabled. */
@@ -145,14 +166,17 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
         addRenderableWidget(nameField);
 
         // ---- Ability toggles ----
-        // Ability toggles 0-5 fill a 3-wide grid. The last row holds Place Torch (all tools), shared
-        // with Delayed Break on the Mega Tool (two half-width buttons).
+        // First row: Break and Attack (two half-width buttons). Ability toggles 0-5 fill a 3-wide grid
+        // under it. The last row holds Place Torch (all tools), shared with Delayed Break on the Mega
+        // Tool (two half-width buttons).
         // Widths come from the layout, which measured the labels (see createLayout).
         ToolTier tier = menu.getTier();
         GuiLayout layout = menu.getLayout();
+        if (layout.icons())
+            addIconToggles(tier);
         int lastRowY = topPos + GuiLayout.TOP + (tier.toggleRows() - 1) * GuiLayout.ROW;
         int lastRowIndex = 0;
-        for (int i = 0; i < TOGGLE_KEYS.length; i++)
+        for (int i = 0; i < TOGGLE_KEYS.length && !layout.icons(); i++)
         {
             if (!tier.hasToggle(i) || i == LIGHT_BUTTON)
                 continue;
@@ -161,8 +185,14 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
             if (i < 6)
             {
                 x = leftPos + layout.toggleX() + (i % 3) * (layout.toggleW() + GuiLayout.TOGGLE_GAP);
-                y = topPos + GuiLayout.TOP + (i / 3) * GuiLayout.ROW;
+                y = topPos + GuiLayout.TOP + (GuiLayout.GRID_ROW + i / 3) * GuiLayout.ROW;
                 width = layout.toggleW();
+            }
+            else if (isTopRowToggle(i))
+            {
+                x = leftPos + layout.toggleX() + (i - BREAK_BUTTON) * (layout.halfToggleW() + GuiLayout.TOGGLE_GAP);
+                y = topPos + GuiLayout.TOP;
+                width = layout.halfToggleW();
             }
             else
             {
@@ -197,6 +227,48 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
         refreshToggles();
     }
 
+    /** Icon menu, row 1: what the tool itself does. Delayed Break is skipped on the paxels, the rest moves up. */
+    private static final int[] ICON_ROW_0_BUTTONS = {BREAK_BUTTON, ATTACK_BUTTON, 6, 0, 1, 2};
+    /** Icon menu, row 2: Place Torch, then the three Support Tool abilities. */
+    private static final int[] ICON_ROW_1_BUTTONS = {7, 3, 4, 5};
+
+    /** The icon menu's toggles: one 18x18 item icon each, side by side like slots (see GuiLayout#ofIcons). */
+    private void addIconToggles(ToolTier tier)
+    {
+        int[][] rows = {ICON_ROW_0_BUTTONS, ICON_ROW_1_BUTTONS};
+        for (int row = 0; row < rows.length; row++)
+        {
+            int column = 0;
+            for (int buttonId : rows[row])
+            {
+                if (!tier.hasToggle(buttonId))
+                    continue;
+                int x = leftPos + GuiLayout.ICON_X + column++ * 18;
+                int y = topPos + (row == 0 ? GuiLayout.ICON_ROW_0 : GuiLayout.ICON_ROW_1);
+                toggleButtons[buttonId] = addRenderableWidget(new IconToggleButton(x, y, toggleIcon(buttonId, tier),
+                        Component.translatable("gui.megatools.toggle." + TOGGLE_KEYS[buttonId]), b -> onToggle(buttonId)));
+            }
+        }
+    }
+
+    /** The item that stands for a toggle in the icon menu; the paxel abilities show the tool of the menu's own tier. */
+    private static ItemStack toggleIcon(int buttonId, ToolTier tier)
+    {
+        return new ItemStack(switch (buttonId)
+        {
+            case BREAK_BUTTON -> switch (tier) { case STONE -> Items.STONE_PICKAXE; case IRON -> Items.IRON_PICKAXE; case DIAMOND -> Items.DIAMOND_PICKAXE; case MEGA -> Items.NETHERITE_PICKAXE; };
+            case ATTACK_BUTTON -> switch (tier) { case STONE -> Items.STONE_SWORD; case IRON -> Items.IRON_SWORD; case DIAMOND -> Items.DIAMOND_SWORD; case MEGA -> Items.NETHERITE_SWORD; };
+            case 0 -> switch (tier) { case STONE -> Items.STONE_AXE; case IRON -> Items.IRON_AXE; case DIAMOND -> Items.DIAMOND_AXE; case MEGA -> Items.NETHERITE_AXE; };
+            case 1 -> switch (tier) { case STONE -> Items.STONE_SHOVEL; case IRON -> Items.IRON_SHOVEL; case DIAMOND -> Items.DIAMOND_SHOVEL; case MEGA -> Items.NETHERITE_SHOVEL; };
+            case 2 -> switch (tier) { case STONE -> Items.STONE_HOE; case IRON -> Items.IRON_HOE; case DIAMOND -> Items.DIAMOND_HOE; case MEGA -> Items.NETHERITE_HOE; };
+            case 3 -> Items.SHEARS;
+            case 4 -> Items.BRUSH;
+            case 5 -> Items.FLINT_AND_STEEL;
+            case 6 -> Items.CLOCK;
+            default -> Items.TORCH; // 7: Place Torch
+        });
+    }
+
     /** The server closes this menu and opens the Swap Rules GUI of the same tool (see SwapRulesScreen). */
     private void openSwapRules()
     {
@@ -222,6 +294,18 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     private static boolean isSupportToggle(int buttonId)
     {
         return buttonId >= 3 && buttonId <= 5;
+    }
+
+    /** Button ids 9-10 (Break, Attack) share the first row. */
+    private static boolean isTopRowToggle(int buttonId)
+    {
+        return buttonId == BREAK_BUTTON || buttonId == ATTACK_BUTTON;
+    }
+
+    /** Light, Break and Attack are stored inverted (LIGHT_OFF, BREAK_OFF, ATTACK_OFF). */
+    private static boolean isInvertedToggle(int buttonId)
+    {
+        return buttonId == LIGHT_BUTTON || isTopRowToggle(buttonId);
     }
 
     /** Sends a vanilla "menu button" packet; the server flips the flag in ToolMenu#clickMenuButton. */
@@ -251,14 +335,27 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
             if (button == null)
                 continue;
             boolean set = (flags & (1 << i)) != 0; // button i <-> ToolSettings flag (1 << i)
-            boolean enabled = i == LIGHT_BUTTON ? !set : set; // the light flag is stored as LIGHT_OFF
+            boolean enabled = isInvertedToggle(i) != set; // e.g. the light flag is stored as LIGHT_OFF
             String key = "gui.megatools.toggle." + TOGGLE_KEYS[i];
+            Component description = Component.translatable(key + ".desc",
+                    Component.translatable(enabled ? "gui.megatools.enabled" : "gui.megatools.disabled"));
+            if (button instanceof IconToggleButton icon)
+            {
+                // No words on the button, so its name leads the tooltip. Without a Support Tool the three
+                // buttons it unlocks stay in place, greyed out, and say what is missing.
+                boolean unlocked = !isSupportToggle(i) || support;
+                icon.setOn(enabled);
+                icon.active = unlocked;
+                Component name = Component.translatable(key).withStyle(ChatFormatting.BOLD);
+                icon.setTooltip(Tooltip.create(Component.empty().append(name).append("\n")
+                        .append(unlocked ? description : SUPPORT_HINT)));
+                continue;
+            }
             button.visible = !isSupportToggle(i) || support;
             button.setMessage(i == LIGHT_BUTTON
                     ? Component.literal(enabled ? ON_SYMBOL.trim() : OFF_SYMBOL.trim()).withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.RED)
                     : toggleLabel(i, enabled));
-            button.setTooltip(Tooltip.create(Component.translatable(key + ".desc",
-                    Component.translatable(enabled ? "gui.megatools.enabled" : "gui.megatools.disabled"))));
+            button.setTooltip(Tooltip.create(description));
         }
     }
 
@@ -423,8 +520,9 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
         if (menu.getTier().hasEnchantPlates())
         {
             int active = ToolData.getSettings(menu.getTool()).activePlate();
-            int plateY = active == ToolData.PRIMARY ? layout.plateY0() : layout.plateY1();
-            graphics.renderOutline(x + layout.plateX() - 2, y + plateY - 2, 20, 20, 0xFFE8B923);
+            int plateX = active == ToolData.PRIMARY ? layout.plate0X() : layout.plate1X();
+            int plateY = active == ToolData.PRIMARY ? layout.plate0Y() : layout.plate1Y();
+            graphics.renderOutline(x + plateX - 2, y + plateY - 2, 20, 20, 0xFFE8B923);
         }
     }
 
@@ -434,7 +532,7 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     {
         GuiLayout layout = menu.getLayout();
         // Empty Support Tool slot: a hint where the Shear / Brush / Ignite buttons would be.
-        if (menu.getTier().supportTools() && !lastSupport)
+        if (menu.getTier().supportTools() && !lastSupport && !layout.icons())
         {
             int rowY = GuiLayout.TOP + GuiLayout.SUPPORT_ROW * GuiLayout.ROW;
             graphics.drawString(font, SUPPORT_HINT, layout.toggleX() + (layout.gridW() - font.width(SUPPORT_HINT)) / 2,
@@ -451,34 +549,68 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
         graphics.drawString(font, playerInventoryTitle, layout.invLabelX(), layout.invLabelY(), LABEL_COLOR, false);
     }
 
-    /** Vanilla-style bevelled grey panel. */
+    /**
+     * Vanilla's chest GUI (176 x 222 on a 256 x 256 sheet). The panel and slots are assembled from its
+     * pieces, so whatever a resource pack does to the chest GUI (dark themes...) applies here as well.
+     */
+    private static final ResourceLocation CONTAINER_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+    private static final int TEX_W = 176;
+    private static final int TEX_H = 222;
+    /** Border thickness, including the rounded corners. */
+    private static final int EDGE = 7;
+    /** Plain background without slots: the title strip, right under the top border. */
+    private static final int PLAIN_U = EDGE;
+    private static final int PLAIN_V = EDGE;
+    private static final int PLAIN_W = TEX_W - 2 * EDGE;
+    private static final int PLAIN_H = 10;
+    /** First slot of the chest GUI (18 x 18 with its frame). */
+    private static final int SLOT_U = 7;
+    private static final int SLOT_V = 17;
+
+    /** A panel of any size in the style of the vanilla container GUIs: corners, tiled edges, tiled plain middle. */
     static void drawPanel(GuiGraphics g, int x, int y, int w, int h)
     {
-        g.fill(x, y, x + w, y + h, 0xFFC6C6C6);
-        g.fill(x, y, x + w - 1, y + 1, 0xFFFFFFFF);          // top highlight
-        g.fill(x, y, x + 1, y + h - 1, 0xFFFFFFFF);          // left highlight
-        g.fill(x + 1, y + h - 1, x + w, y + h, 0xFF555555);  // bottom shadow
-        g.fill(x + w - 1, y + 1, x + w, y + h, 0xFF555555);  // right shadow
-        g.renderOutline(x - 1, y - 1, w + 2, h + 2, 0xFF000000);
+        int right = x + w - EDGE;
+        int bottom = y + h - EDGE;
+        // Middle and the four edges, tiled from the plain strip and the border beside it
+        for (int ty = y + EDGE; ty < bottom; ty += PLAIN_H)
+        {
+            int th = Math.min(PLAIN_H, bottom - ty);
+            for (int tx = x + EDGE; tx < right; tx += PLAIN_W)
+                g.blit(CONTAINER_TEXTURE, tx, ty, PLAIN_U, PLAIN_V, Math.min(PLAIN_W, right - tx), th);
+            g.blit(CONTAINER_TEXTURE, x, ty, 0, PLAIN_V, EDGE, th);
+            g.blit(CONTAINER_TEXTURE, right, ty, TEX_W - EDGE, PLAIN_V, EDGE, th);
+        }
+        for (int tx = x + EDGE; tx < right; tx += PLAIN_W)
+        {
+            int tw = Math.min(PLAIN_W, right - tx);
+            g.blit(CONTAINER_TEXTURE, tx, y, PLAIN_U, 0, tw, EDGE);
+            g.blit(CONTAINER_TEXTURE, tx, bottom, PLAIN_U, TEX_H - EDGE, tw, EDGE);
+        }
+        // Corners
+        g.blit(CONTAINER_TEXTURE, x, y, 0, 0, EDGE, EDGE);
+        g.blit(CONTAINER_TEXTURE, right, y, TEX_W - EDGE, 0, EDGE, EDGE);
+        g.blit(CONTAINER_TEXTURE, x, bottom, 0, TEX_H - EDGE, EDGE, EDGE);
+        g.blit(CONTAINER_TEXTURE, right, bottom, TEX_W - EDGE, TEX_H - EDGE, EDGE, EDGE);
     }
 
-    /** Draws an item, then a translucent slot-coloured layer over it so it reads as a placeholder. */
+    /** Draws an item, then the slot's own background half-transparent over it, so it reads as a placeholder. */
     static void drawGhostItem(GuiGraphics g, ItemStack stack, int x, int y)
     {
         g.renderFakeItem(stack, x, y);
         g.pose().pushPose();
         g.pose().translate(0.0F, 0.0F, 200.0F); // above the item, which renders at a raised depth
-        g.fill(x, y, x + 16, y + 16, 0xA08B8B8B);
+        RenderSystem.enableBlend();
+        g.setColor(1.0F, 1.0F, 1.0F, 0.63F);
+        g.blit(CONTAINER_TEXTURE, x, y, SLOT_U + 1, SLOT_V + 1, 16, 16);
+        g.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        RenderSystem.disableBlend();
         g.pose().popPose();
     }
 
-    /** Vanilla-style 18x18 inset slot. */
+    /** An 18x18 slot, the same one the vanilla chest GUI shows. */
     static void drawSlot(GuiGraphics g, int x, int y)
     {
-        g.fill(x, y, x + 18, y + 18, 0xFF8B8B8B);
-        g.fill(x, y, x + 17, y + 1, 0xFF373737);
-        g.fill(x, y, x + 1, y + 17, 0xFF373737);
-        g.fill(x + 1, y + 17, x + 18, y + 18, 0xFFFFFFFF);
-        g.fill(x + 17, y + 1, x + 18, y + 18, 0xFFFFFFFF);
+        g.blit(CONTAINER_TEXTURE, x, y, SLOT_U, SLOT_V, 18, 18);
     }
 }

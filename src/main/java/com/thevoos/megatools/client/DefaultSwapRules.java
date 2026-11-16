@@ -52,7 +52,8 @@ import java.util.Optional;
  * }
  *
  * Each rule names the stored "tool" and exactly one of:
- *   "block": "modid:block"   only that block
+ *   "block": "modid:block"   only that block (or, with the item id of a part such as an AE2 P2P tunnel,
+ *                            that part of a block made of parts)
  *   "tag":   "#modid:tag"    every block with that block tag
  *   "mod":   "modid"         every block from that mod
  *
@@ -68,6 +69,8 @@ import java.util.Optional;
 public final class DefaultSwapRules
 {
     private static final String FILE_NAME = "megatools-default-rules.json";
+    /** Format of the file. 1 (no "version" key): Mega Tools 1.0. */
+    private static final int VERSION = 2;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     private static SwapRules rules = SwapRules.EMPTY;
@@ -175,7 +178,7 @@ public final class DefaultSwapRules
         try
         {
             if (Files.notExists(path))
-                writeDefault(path);
+                write(path, defaultFile());
 
             JsonObject root;
             try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8))
@@ -183,6 +186,13 @@ public final class DefaultSwapRules
                 JsonReader json = new JsonReader(reader);
                 json.setLenient(true); // tolerate // comments and trailing commas typed by hand
                 root = JsonParser.parseReader(json).getAsJsonObject();
+            }
+
+            if (version(root) < VERSION)
+            {
+                upgrade(root);
+                write(path, root);
+                MegaTools.LOGGER.info("[{}] updated to format {}: new default rules were added", FILE_NAME, VERSION);
             }
 
             List<SwapRules.Rule> result = new ArrayList<>();
@@ -263,17 +273,57 @@ public final class DefaultSwapRules
         return ResourceLocation.tryParse(text.startsWith("#") ? text.substring(1) : text);
     }
 
-    private static void writeDefault(Path path) throws Exception
+    private static int version(JsonObject root)
+    {
+        try
+        {
+            return root.has("version") ? root.get("version").getAsInt() : 1;
+        }
+        catch (RuntimeException e)
+        {
+            return 1;
+        }
+    }
+
+    /**
+     * One-time update of a file written by an older version: adds the default rules that are new since
+     * then. Everything already in the file is kept.
+     */
+    private static void upgrade(JsonObject root)
+    {
+        JsonObject defaults = defaultFile();
+        root.add("_help", defaults.get("_help"));
+        root.addProperty("version", VERSION);
+        if (!root.has("rules") || !root.get("rules").isJsonObject())
+            root.add("rules", new JsonObject());
+        JsonObject groups = root.getAsJsonObject("rules");
+        for (Map.Entry<String, JsonElement> group : defaults.getAsJsonObject("rules").entrySet())
+        {
+            if (!groups.has(group.getKey()) || !groups.get(group.getKey()).isJsonArray())
+            {
+                groups.add(group.getKey(), group.getValue());
+                continue;
+            }
+            JsonArray existing = groups.getAsJsonArray(group.getKey());
+            for (JsonElement rule : group.getValue().getAsJsonArray())
+                if (!existing.contains(rule))
+                    existing.add(rule);
+        }
+    }
+
+    private static JsonObject defaultFile()
     {
         JsonObject root = new JsonObject();
         root.addProperty("_help",
                 "Default custom rules of Mega Tools: which stored tool is pre-selected for which block. Rules are "
               + "grouped by mod id; a group is only used if that mod is installed. Each rule has a 'tool' (item id of "
-              + "the stored tool) and exactly one of 'block' (a block id), 'tag' (a block tag, like #c:chests) or 'mod' "
+              + "the stored tool) and exactly one of 'block' (a block id, or the item id of a part such as a P2P "
+              + "tunnel), 'tag' (a block tag, like #c:chests) or 'mod' "
               + "(a mod id: every block of that mod). A rule is added to a paxel or Mega Tool by itself, once, when the "
               + "tool is put in its tool storage. After that it is a normal filter in the Custom Rules menu and can be "
               + "changed or removed there; a removed one does not come back on that tool. This file is yours: edit it "
               + "to set the defaults you like. Use F3+H in game to see ids. Read when you join a world.");
+        root.addProperty("version", VERSION);
 
         JsonObject exampleRule = new JsonObject();
         exampleRule.addProperty("tool", "minecraft:shears");
@@ -284,16 +334,34 @@ public final class DefaultSwapRules
         example.add("minecraft", exampleGroup);
         root.add("_example_rules", example);
 
-        // Flint and Steel breaks EvilCraft's Hardened Blood into shards.
-        JsonObject hardenedBlood = new JsonObject();
-        hardenedBlood.addProperty("tool", "minecraft:flint_and_steel");
-        hardenedBlood.addProperty("block", "evilcraft:hardened_blood");
-        JsonArray evilcraft = new JsonArray();
-        evilcraft.add(hardenedBlood);
         JsonObject groups = new JsonObject();
-        groups.add("evilcraft", evilcraft);
+        // Flint and Steel breaks EvilCraft's Hardened Blood into shards.
+        groups.add("evilcraft", blockRules("minecraft:flint_and_steel", "evilcraft:hardened_blood"));
+        // P2P tunnels are linked with the Memory Card, not the wrench. They are parts of a cable, not
+        // blocks: a "block" rule also matches the part under the crosshair (see AutoSwapClient).
+        groups.add("ae2", blockRules("ae2:memory_card",
+                "ae2:me_p2p_tunnel", "ae2:item_p2p_tunnel", "ae2:fluid_p2p_tunnel", "ae2:fe_p2p_tunnel",
+                "ae2:redstone_p2p_tunnel", "ae2:light_p2p_tunnel"));
         root.add("rules", groups);
+        return root;
+    }
 
+    /** One "block" rule per target, all for the same stored tool. */
+    private static JsonArray blockRules(String tool, String... blocks)
+    {
+        JsonArray rules = new JsonArray();
+        for (String block : blocks)
+        {
+            JsonObject rule = new JsonObject();
+            rule.addProperty("tool", tool);
+            rule.addProperty("block", block);
+            rules.add(rule);
+        }
+        return rules;
+    }
+
+    private static void write(Path path, JsonObject root) throws Exception
+    {
         Files.createDirectories(path.getParent());
         try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8))
         {

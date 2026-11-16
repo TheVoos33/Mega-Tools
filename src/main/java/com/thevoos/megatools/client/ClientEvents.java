@@ -1,8 +1,10 @@
 package com.thevoos.megatools.client;
 
+import com.thevoos.megatools.Config;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.SwapOrigin;
 import com.thevoos.megatools.items.MultiToolItem;
+import com.thevoos.megatools.menu.MenuStyle;
 import com.thevoos.megatools.menu.ModMenus;
 import com.thevoos.megatools.network.OpenToolGuiPayload;
 import com.thevoos.megatools.network.SwapToolPayload;
@@ -75,7 +77,13 @@ public final class ClientEvents
         if (openGui && ModKeyMappings.modifierMatches(ModKeyMappings.OPEN_GUI))
         {
             if (held.getItem() instanceof MultiToolItem)
-                PacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE);
+            {
+                // First time: pick one of the two menus. The choice is saved, and the menu then opens.
+                if (Config.MENU_STYLE.get() == MenuStyle.ASK)
+                    mc.setScreen(new MenuStyleScreen());
+                else
+                    PacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE);
+            }
             return;
         }
 
@@ -164,8 +172,8 @@ public final class ClientEvents
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null || mc.player == null || !Screen.hasShiftDown() || event.getScrollDeltaY() == 0)
             return;
-        // Wheel up = previous, wheel down = next (same feel as hotbar scrolling).
-        if (AutoSwapClient.cycle(event.getScrollDeltaY() > 0 ? -1 : 1))
+        // Wheel up = next, wheel down = previous.
+        if (AutoSwapClient.cycle(event.getScrollDeltaY() > 0 ? 1 : -1))
             event.setCanceled(true);
     }
 

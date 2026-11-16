@@ -505,7 +505,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
             case ITEM ->
             {
                 lines.add(Component.translatable("gui.megatools.swap_rules.mode.item").withStyle(ChatFormatting.GREEN));
-                // An item that places no block can't be looked at: only its whole mod can match.
+                // An item that places no block: matches while it is the part under the crosshair (pick block).
                 if (Block.byItem(icon(rule.target()).getItem()) == Blocks.AIR)
                     lines.add(Component.translatable("gui.megatools.swap_rules.not_a_block").withStyle(ChatFormatting.YELLOW));
                 lines.add(Component.translatable(tags.isEmpty()

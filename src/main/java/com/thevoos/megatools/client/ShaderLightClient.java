@@ -8,8 +8,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.lang.reflect.Method;
 
 /**
- * Tells the server whether a shader pack is active (Iris / Oculus), so it can stop placing light blocks
- * while the shader's own handheld light does the job (see MultiToolItem#getLightEmission).
+ * Tells the server whether something on this client lights the held tool by itself, so it can stop
+ * placing light blocks for this player: an active shader pack (Iris / Oculus), whose handheld light
+ * does the job (see MultiToolItem#getLightEmission), or a dynamic lights mod (see DynamicLightsCompat).
  *
  * Iris is optional, so its API (IrisApi.getInstance().isShaderPackInUse()) is called by reflection:
  * without Iris this is simply always "no shader". Checked once a second; sent only when it changes.
@@ -41,7 +42,7 @@ public final class ShaderLightClient
             return;
         cooldown = CHECK_TICKS;
 
-        boolean active = isShaderPackActive();
+        boolean active = DynamicLightsCompat.isActive() || isShaderPackActive();
         if ((lastSent == null || lastSent != active) && mc.getConnection().hasChannel(ShaderLightPayload.TYPE))
         {
             lastSent = active;

@@ -24,8 +24,8 @@ import java.util.Set;
  *
  * Each rule says "when I look at this block, pre-select that stored tool":
  *   tool   - item id of the stored tool to pre-select
- *   target - item id of the block the player dragged into the filter slot
- *   mode   - ITEM: only that block.  TAG: every block with one of its block tags (the rule's tag).
+ *   target - item id of the block (or of a part, like an AE2 P2P tunnel) the player dragged into the filter slot
+ *   mode   - ITEM: only that block, or that part of a block made of parts.  TAG: every block with one of its block tags (the rule's tag).
  *            MOD: every block from the target's mod
  *
  * Rules are stored on the tool stack, so every tool has its own. They are kept when the stored tool is
@@ -123,12 +123,15 @@ public record SwapRules(List<Rule> rules)
          * @param block       the targeted block
          * @param blockId     its registry id
          * @param blockItemId registry id of its item (minecraft:air if it has none)
+         * @param pickedId    registry id of the item "pick block" gives for the exact spot the player
+         *                    looks at. For blocks made of parts (an AE2 cable bus, a conduit bundle...)
+         *                    that is the part under the crosshair: a P2P tunnel, a cable, a bus.
          */
-        public boolean matches(Block block, ResourceLocation blockId, ResourceLocation blockItemId)
+        public boolean matches(Block block, ResourceLocation blockId, ResourceLocation blockItemId, ResourceLocation pickedId)
         {
             return switch (mode)
             {
-                case ITEM -> target.equals(blockItemId) || target.equals(blockId);
+                case ITEM -> target.equals(blockItemId) || target.equals(blockId) || target.equals(pickedId);
                 case TAG -> block.builtInRegistryHolder().is(TagKey.create(Registries.BLOCK, tag.orElseThrow()));
                 case MOD -> target.getNamespace().equals(blockId.getNamespace());
             };

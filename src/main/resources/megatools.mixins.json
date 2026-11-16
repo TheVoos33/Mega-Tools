@@ -3,6 +3,11 @@
   "minVersion": "0.8",
   "package": "com.thevoos.megatools.mixin",
   "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "PlayerMixin",
+    "RangedAttributeAccessor",
+    "TagLoaderMixin"
+  ],
   "client": [
     "client.KeyboardHandlerMixin"
   ],

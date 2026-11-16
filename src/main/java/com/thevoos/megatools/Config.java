@@ -1,5 +1,6 @@
 package com.thevoos.megatools;
 
+import com.thevoos.megatools.menu.MenuStyle;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -23,6 +24,13 @@ public class Config
                      "server and for nearby players. Large servers can switch it off here (read by the server).",
                      "Shader packs with handheld lighting still light the player's own surroundings.")
             .define("heldLight", true);
+
+    // Which of the two tool menus this player uses. ASK = show the choice the next time the menu opens.
+    public static final ModConfigSpec.EnumValue<MenuStyle> MENU_STYLE = BUILDER
+            .comment("Which tool menu to show: CLASSIC (wide, buttons with text) or ICONS (compact, buttons with item icons).",
+                     "ASK shows both the next time a tool menu is opened and lets you pick one.",
+                     "A setting of your own game: a server ignores it, every player picks their own.")
+            .defineEnum("menuStyle", MenuStyle.ASK);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }

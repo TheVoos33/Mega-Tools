@@ -19,8 +19,9 @@ All files are in the config folder and are created with their defaults on first 
 |---|---|---|---|
 | megatools-startup.toml | Tool stats | client and server | on restart |
 | megatools-common.toml | Mega Tool hold delay | client | at once |
+| megatools-common.toml | Tool menu style (menuStyle: ASK, CLASSIC or ICONS), each player's own choice | client | the next time a menu opens |
 | megatools-common.toml | Held tool light on or off (heldLight) | server | at once |
-| megatools-storage-whitelist.json | Items allowed in tool storage | server, sent to players | on /reload |
+| megatools-storage-whitelist.json | Items that get the tag megatools:storable_item | server, synced with the tags | on /reload |
 | megatools-tool-aliases.json | Auto-swap across mods | client | on joining a world |
 | megatools-default-rules.json | Default custom rules | client | on joining a world |
 
@@ -38,7 +39,7 @@ megatools-startup.toml has one section per tool: stone_paxel, iron_paxel, diamon
 
 | Option | Meaning |
 |---|---|
-| attackDamage | Total attack damage, as shown in the tooltip (1 to 1000). |
+| attackDamage | Total attack damage, as shown in the tooltip (1 to 10,000). Above 2048, the game's own limit for attack damage is raised to this value. |
 | attackSpeed | Attacks per second, as shown in the tooltip (0.1 to 20). A sword has 1.6. |
 | durability | Maximum durability (1 to 1,000,000). For the Mega Tool, 0 means unbreakable. |
 | miningSpeedMultiplier | Speed compared to the vanilla pickaxe of the same tier (0 to 2, default 1.2). Not for the Mega Tool, which always mines instantly. |
@@ -49,9 +50,19 @@ you give the Mega Tool durability, also add a repair recipe for it.
 
 ## Tool storage whitelist
 
-megatools-storage-whitelist.json lists, under "items", one group per mod id. Each group is a list of item
-ids or item tags (starting with #). To allow a tool, add its id to the group of its mod, or add a new
-group. Paxels, the Mega Tool and Enchantment Plates can never be stored.
+Tool storage only accepts items that have the item tag megatools:storable_item.
+megatools-storage-whitelist.json gives that tag to more items:
+
+| Key | Entry | Effect |
+|---|---|---|
+| tags | item tags, such as c:tools/wrench | Every item that has one of these tags also gets megatools:storable_item. |
+| items | mod id, then item ids (or item tags starting with #) | These items get megatools:storable_item. A group is only used if that mod is installed. |
+
+A datapack can take any of these items out again: list them under "remove" in
+data/megatools/tags/item/storable_item.json.
+
+To allow a tool, add its id to the group of its mod, or add a new group. Paxels, the Mega Tool and
+Enchantment Plates can never be stored.
 
 ## Tool aliases
 
@@ -62,8 +73,10 @@ megatools-tool-aliases.json decides which tools are pre-selected for blocks of o
 | items | item id, then mod ids | This one tool is also pre-selected for blocks of those mods. |
 | mods | mod id, then mod ids | Every tool of the first mod is also pre-selected for blocks of those mods. |
 | groups | any name, then mod ids | A mod family: a tool from any mod in the group is pre-selected for blocks of every mod in it. |
+| attachments | entity ids | Things another mod attaches to a block, such as logisticsnetworks:logistics_node. While one sits on the block you look at, the tools of its mod are pre-selected first. |
 
-To add an addon to a family, add its mod id to that group.
+To add an addon to a family, add its mod id to that group. Labels from Transfer Labels are detected
+without an entry.
 
 ## Default rules
 
@@ -73,12 +86,13 @@ names the stored tool with "tool" and has exactly one of these:
 
 | Key | Value | Matches |
 |---|---|---|
-| block | a block id | only that block |
+| block | a block id, or the item id of a part (such as ae2:me_p2p_tunnel) | only that block or part |
 | tag | a block tag | every block with that tag |
 | mod | a mod id | every block from that mod |
 
-The file is created with one rule: with EvilCraft installed, a Flint and Steel in tool storage is
-pre-selected for Hardened Blood.
+The file is created with these rules: with EvilCraft installed, a Flint and Steel in tool storage is
+pre-selected for Hardened Blood; with Applied Energistics 2 installed, a Memory Card is pre-selected
+for every P2P tunnel, before the wrench.
 
 * A default rule is copied onto a tool the first time the named tool is in its tool storage while the
   player holds it.
@@ -91,11 +105,11 @@ defaults they like. A modpack ships its defaults by putting the file in the pack
 
 ## Tags
 
-Add to these with a datapack, with "replace" set to false.
+Add to these with a datapack, with "replace" set to false. A "remove" list takes items out again.
 
 | Tag | Type | Use it to |
 |---|---|---|
-| megatools:storable_item | item | Allow items in tool storage. Already includes the common wrench and shears tags, screwdrivers and crowbars. |
+| megatools:storable_item | item | The only items allowed in tool storage. Already includes the common wrench and shears tags, screwdrivers and crowbars, plus everything megatools-storage-whitelist.json adds. |
 | megatools:torches | item | Allow other torches in the torch slot. |
 | megatools:mineable/paxel | block | Decide what paxels mine at tool speed. Contains the vanilla pickaxe, axe, shovel and hoe tags. |
 | megatools:mega_tool_unbreakable | block | Stop the Mega Tool from breaking a block at all. Empty by default. |

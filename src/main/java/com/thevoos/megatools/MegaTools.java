@@ -1,5 +1,10 @@
 package com.thevoos.megatools;
 
+import com.thevoos.megatools.items.ToolTier;
+import com.thevoos.megatools.mixin.RangedAttributeAccessor;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.attributes.RangedAttribute;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import com.mojang.logging.LogUtils;
 import com.thevoos.megatools.block.ModBlocks;
 import com.thevoos.megatools.component.ModDataComponents;
@@ -56,6 +61,27 @@ public class MegaTools
 
         // ---- Config ----------------------------------------------------------------------------
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        modEventBus.addListener((FMLCommonSetupEvent event) -> event.enqueueWork(MegaTools::raiseAttackDamageLimit));
+    }
+
+    /**
+     * Vanilla caps the attack damage attribute at 2048, and megatools-startup.toml allows up to 10,000.
+     * If a tool is configured above the current limit, the limit is raised to that value (for the
+     * attribute as a whole, like the AttributeFix mod does), otherwise the tool would silently hit for
+     * 2048. With the default stats nothing is changed.
+     */
+    private static void raiseAttackDamageLimit()
+    {
+        double needed = 0.0D;
+        for (ToolTier tier : ToolTier.values())
+            needed = Math.max(needed, tier.attackDamage());
+        if (Attributes.ATTACK_DAMAGE.value() instanceof RangedAttribute attribute && needed > attribute.getMaxValue())
+        {
+            LOGGER.info("Raising the attack damage attribute limit from {} to {} (megatools-startup.toml)",
+                    attribute.getMaxValue(), needed);
+            ((RangedAttributeAccessor) attribute).megatools$setMaxValue(needed);
+        }
     }
 
     /** Small helper so every class builds ResourceLocations in the mod namespace the same way. */

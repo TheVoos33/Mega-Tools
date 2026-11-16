@@ -9,7 +9,6 @@ import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.items.SupportToolItem;
 import com.thevoos.megatools.items.ToolTier;
 import com.thevoos.megatools.tool.LightSources;
-import com.thevoos.megatools.tool.StorageWhitelist;
 import com.thevoos.megatools.tool.ToolData;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -126,8 +125,8 @@ public class ToolMenu extends AbstractContainerMenu
         // ---- Enchantment plate slots (right of the toggle buttons) ----
         if (tier.hasEnchantPlates())
         {
-            addSlot(new PlateSlot(plates, ToolData.PRIMARY, layout.plateX(), layout.plateY0()));
-            addSlot(new PlateSlot(plates, ToolData.SECONDARY, layout.plateX(), layout.plateY1()));
+            addSlot(new PlateSlot(plates, ToolData.PRIMARY, layout.plate0X(), layout.plate0Y()));
+            addSlot(new PlateSlot(plates, ToolData.SECONDARY, layout.plate1X(), layout.plate1Y()));
         }
 
         // ---- Support Tool slot (left of the Shear / Brush / Ignite buttons) ----
@@ -394,9 +393,9 @@ public class ToolMenu extends AbstractContainerMenu
      *
      * Never allowed (prevents recursive storage and item loss):
      *   Mega Tools tools, Enchantment Plates, tools that are currently swapped out.
-     * Allowed:
-     *   #c:tools/wrench, #megatools:storable_item (which includes shears, screwdrivers, crowbars...),
-     *   and items listed in config/megatools-storage-whitelist.json for mods that are installed.
+     * Allowed: only items that have the tag #megatools:storable_item. The tag holds wrenches, shears,
+     *   screwdrivers, crowbars... (datapack JSON) plus everything config/megatools-storage-whitelist.json
+     *   adds to it (see StorageWhitelist).
      * Each slot holds one item (getMaxStackSize below).
      */
     public static class StorageSlot extends Slot
@@ -415,9 +414,7 @@ public class ToolMenu extends AbstractContainerMenu
                     || stack.has(ModDataComponents.SWAP_ORIGIN.get()))
                 return false;
 
-            return stack.is(ModTags.WRENCHES)
-                    || stack.is(ModTags.STORABLE_ITEM)
-                    || StorageWhitelist.contains(stack);
+            return stack.is(ModTags.STORABLE_ITEM);
         }
 
         @Override

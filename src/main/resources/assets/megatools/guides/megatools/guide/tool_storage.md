@@ -13,8 +13,8 @@ screwdrivers, crowbars, configurators, building gadgets, construction sticks and
 tool. Only items known to be tools are accepted, so the storage can't be used as a backpack. Paxels, the
 Mega Tool and Enchantment Plates can never be stored.
 
-An item is accepted if it is in the item tag c:tools/wrench or megatools:storable_item, or listed in the
-file config/megatools-storage-whitelist.json. Modpacks can add more tools there, see
+An item is accepted only if it has the item tag megatools:storable_item. The file
+config/megatools-storage-whitelist.json gives that tag to more tools. Modpacks can add tools there, see
 [For modpack developers](modpack_developers.md).
 
 ## Auto-swap
@@ -26,6 +26,10 @@ file config/megatools-storage-whitelist.json. Modpacks can add more tools there,
 2. Press <KeyBind id="key.megatools.swap_tool" /> to swap the paxel for the selected tool. Your paxel is
    kept safely inside it.
 3. Press <KeyBind id="key.megatools.swap_tool" /> again to swap back. The tool returns to its storage slot.
+
+If another mod attached something to the block, its tools are pre-selected too, in front of the tools
+for the block itself. This works for a Logistics Node from Logistics Network (look at the block it
+covers) and for a label from Transfer Labels (look at the label itself), also on vanilla blocks.
 
 ## Swap to the last tool
 
@@ -52,7 +56,7 @@ Open the [tool menu](tool_menu.md) and click **Custom Rule** above the tool stor
 ### Setting up a rule
 
 1. Select the stored tool the rule is for.
-2. Give it a block: pick the block up from your inventory and click a filter slot, Shift-click the block
+2. Give it a block (or a part, see Good to know): pick it up from your inventory and click a filter slot, Shift-click the block
    in your inventory, or drag it from JEI or EMI onto a filter slot. Nothing is used up: the slot only
    remembers the block.
 3. Choose what the filter matches. Left-click a filled slot to go to the next option:
@@ -94,8 +98,10 @@ in any slot.
   [For modpack developers](modpack_developers.md)). They appear the first time the tool they belong to
   is put in the tool storage. They are normal filters: change or remove them as you like. A default
   rule you removed does not come back on that tool.
-* Some blocks have no item of their own (some cables and multiblock parts). Use a tag or whole-mod
-  filter for those.
+* Blocks made of parts (cables with attached parts, such as Applied Energistics 2 P2P tunnels and
+  buses, or conduit bundles) have no block item. Use the **part's item** as the filter: it matches
+  while you look at that part. A Memory Card with the P2P tunnels as filters is pre-selected before
+  the wrench whenever you look at a P2P tunnel. A tag or whole-mod filter still covers every part.
 
 ## More about auto-swap
 

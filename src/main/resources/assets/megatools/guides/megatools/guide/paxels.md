@@ -43,6 +43,17 @@ Each one can be switched on or off in the [tool menu](tool_menu.md).
 
 If more than one ability fits a block, the first one in this list is used.
 
+## Break and Attack
+
+Every paxel and the Mega Tool has two more buttons in the [tool menu](tool_menu.md), both on by default:
+
+* **Break**: switch it off and the tool breaks no blocks at all, in any game mode. In survival,
+  left-click actions on blocks (such as taking items out of drawers) still work.
+* **Attack**: switch it off and the tool does not hit mobs or players, so it does no damage. Things
+  you hit to pick up or remove (item frames, paintings, boats, minecarts, armor stands) can still be hit.
+
+Right-click abilities, tool storage and auto-swap keep working either way.
+
 ## Crafting
 
 The heads and the stone paxel are shapeless: any arrangement works. Each head is shown next to the

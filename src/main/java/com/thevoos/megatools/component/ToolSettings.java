@@ -35,6 +35,14 @@ public record ToolSettings(int flags, int activePlate)
      */
     public static final int LIGHT_OFF = 1 << 8;
 
+    /**
+     * Block breaking switched OFF: the tool breaks no blocks at all. Stored inverted like LIGHT_OFF, so
+     * existing and fresh tools keep breaking blocks.
+     */
+    public static final int BREAK_OFF = 1 << 9;
+    /** Attacking switched OFF: the tool hits no entities (no damage). Stored inverted, like BREAK_OFF. */
+    public static final int ATTACK_OFF = 1 << 10;
+
     /** Flags enabled on a fresh tool: every toggle is ON, including Delayed Break (hold delay, see Config). */
     public static final int ALL = STRIP | PATH | TILL | SHEAR | BRUSH | IGNITE | DELAYED_BREAK;
 

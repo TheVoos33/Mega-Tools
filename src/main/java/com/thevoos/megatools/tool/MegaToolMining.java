@@ -16,6 +16,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,12 +28,13 @@ import java.util.function.BooleanSupplier;
  * Mega Tool mining rules:
  *  - Any breakable block breaks in one hit (hardness doesn't matter; hardness -1 blocks like bedrock
  *    stay unbreakable, vanilla never asks for a speed for those).
- *  - Flying / swimming / underwater penalties are ignored (we override the FINAL speed).
+ *  - Flying / swimming / underwater penalties are ignored, and so is whatever other mods do to the
+ *    mining speed (we override the FINAL speed, see below).
  *  - While left click is HELD, a delay (Config: megaToolHoldDelayTicks) separates breaks. That delay
  *    is the "Delayed Break" toggle (ON by default); turning it OFF removes the delay.
  *  - Every NEW click breaks a block immediately.
  *  - Zero-hardness blocks (grass, flowers, torches...) follow the same delay. Their speed can't be 0
- *    (see onBreakSpeed), so on the client the delay is applied in onLeftClickBlock instead.
+ *    (see finalDigSpeed), so on the client the delay is applied in onLeftClickBlock instead.
  *  - Blocks in the #megatools:mega_tool_unbreakable tag can never be broken with the Mega Tool.
  *
  * WHO DECIDES: the client. It knows about held vs. fresh clicks and is the side that shows the break
@@ -40,9 +42,14 @@ import java.util.function.BooleanSupplier;
  * vanilla's dig packet; the server then grants exactly that one break. The server never runs its own
  * timer, so both sides always break the same block at the same moment (no silent, late breaks).
  *
- * HOW: PlayerEvent.BreakSpeed fires on both sides whenever vanilla computes dig progress. We return a
- * huge speed when a break is permitted (vanilla then finishes the block in the same call chain) and 0
- * while the hold delay runs.
+ * HOW: Player#getDigSpeed runs on both sides whenever vanilla computes dig progress. PlayerMixin
+ * replaces its RESULT (finalDigSpeed below): a huge speed when a break is permitted (vanilla then
+ * finishes the block in the same call chain) and 0 while the hold delay runs.
+ * This is deliberately not a PlayerEvent.BreakSpeed listener. Mods that remove the "mining while not
+ * on the ground" penalty (Draconic Evolution's mining stabilizer, Advanced AE's armor, Apothic's Stable
+ * Footing...) listen to that event too and set the speed again from the ORIGINAL speed, which threw
+ * away our value whenever they ran after us: the Mega Tool then mined slowly, or broke blocks during
+ * the hold delay. The method's return value is computed after every listener, so nothing can undo it.
  */
 public final class MegaToolMining
 {
@@ -78,30 +85,37 @@ public final class MegaToolMining
     }
 
     // =====================================================================================
-    //  Break speed (both sides)
+    //  Final dig speed (both sides)
     // =====================================================================================
 
-    public static void onBreakSpeed(PlayerEvent.BreakSpeed event)
+    /**
+     * Called by PlayerMixin with the speed Player#getDigSpeed is about to return (after vanilla's
+     * penalties and every BreakSpeed listener). Returns the speed to use instead, or {@code speed}
+     * unchanged when the held item isn't one of our tools.
+     */
+    public static float finalDigSpeed(Player player, BlockState state, @Nullable BlockPos pos, float speed)
     {
-        Player player = event.getEntity();
         ItemStack held = player.getMainHandItem();
-        if (!isMegaTool(held) || MultiToolItem.isBroken(held))
-            return; // a broken tool is handled by BrokenToolHandler (no mining at all)
+        if (!(held.getItem() instanceof MultiToolItem multiTool))
+            return speed;
+        if (speed < 0.0F)
+            return speed; // another mod cancelled BreakSpeed (NeoForge then returns -1): the block stays protected
+        // Broken (1 durability left) or block breaking switched off: no progress at all, on every tier.
+        if (MultiToolItem.isBroken(held) || ToolData.hasFlag(held, ToolSettings.BREAK_OFF))
+            return 0.0F;
+        if (!multiTool.getTier().isMega())
+            return speed; // paxels mine at their normal speed
 
-        BlockState state = event.getState();
         if (state.is(ModTags.MEGA_TOOL_UNBREAKABLE))
-        {
-            event.setNewSpeed(0.0F); // tagged blocks: no progress at all
-            return;
-        }
+            return 0.0F; // tagged blocks: no progress at all
         if (player.getAbilities().instabuild)
-            return; // creative already breaks instantly
+            return speed; // creative already breaks instantly
 
         boolean client = player.level().isClientSide();
         // Zero-hardness blocks (short grass, flowers...): vanilla computes progress as speed / hardness,
         // so speed 0 gives 0 / 0 = NaN. On the client that NaN sticks in the dig progress and the block
         // can never break again, so these blocks must never get speed 0.
-        boolean zeroHardness = isZeroHardness(player, state, event.getPosition());
+        boolean zeroHardness = isZeroHardness(player, state, Optional.ofNullable(pos));
 
         if (!client)
         {
@@ -109,18 +123,13 @@ public final class MegaToolMining
             // each dig packet on its own, so for zero hardness -1 is safe: -1 / 0 = -Infinity, never >= 1.
             boolean granted = !ToolData.hasFlag(held, ToolSettings.DELAYED_BREAK)
                     || player.level().getGameTime() <= SERVER_PERMIT_UNTIL.getOrDefault(player.getUUID(), NEVER);
-            event.setNewSpeed(granted ? INSTANT_SPEED : zeroHardness ? -1.0F : 0.0F);
-            return;
+            return granted ? INSTANT_SPEED : zeroHardness ? -1.0F : 0.0F;
         }
 
         if (zeroHardness)
-        {
-            // Client: the delay for these blocks is applied in onLeftClickBlock, before vanilla asks for the speed.
-            event.setNewSpeed(INSTANT_SPEED);
-            return;
-        }
+            return INSTANT_SPEED; // client: the delay for these blocks is applied in onLeftClickBlock, before vanilla asks for the speed
 
-        event.setNewSpeed(clientPermitsBreak(player, held) ? INSTANT_SPEED : 0.0F);
+        return clientPermitsBreak(player, held) ? INSTANT_SPEED : 0.0F;
     }
 
     /**
@@ -207,8 +216,9 @@ public final class MegaToolMining
             return;
         }
 
-        if (!event.getLevel().isClientSide() || player.getAbilities().instabuild || MultiToolItem.isBroken(held))
-            return;
+        if (!event.getLevel().isClientSide() || player.getAbilities().instabuild
+                || MultiToolItem.isBroken(held) || ToolData.hasFlag(held, ToolSettings.BREAK_OFF))
+            return; // broken / breaking switched off: DisabledToolHandler cancels the click
         PlayerInteractEvent.LeftClickBlock.Action action = event.getAction();
         if (action != PlayerInteractEvent.LeftClickBlock.Action.START && action != PlayerInteractEvent.LeftClickBlock.Action.CLIENT_HOLD)
             return;
@@ -238,8 +248,9 @@ public final class MegaToolMining
     public static void onAttackEntity(AttackEntityEvent event)
     {
         Player player = event.getEntity();
-        if (!player.level().isClientSide() && isMegaTool(player.getMainHandItem()) && !MultiToolItem.isBroken(player.getMainHandItem()))
-            broadcastPoke(player);
+        ItemStack held = player.getMainHandItem();
+        if (!player.level().isClientSide() && isMegaTool(held) && !MultiToolItem.isBroken(held))
+            broadcastPoke(player); // not reached when the hit was cancelled (DisabledToolHandler runs first)
     }
 
     /** Tell everyone who can see this player to play the poke (third person). The player animates locally. */

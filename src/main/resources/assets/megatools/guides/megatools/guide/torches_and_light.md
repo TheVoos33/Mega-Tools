@@ -17,3 +17,6 @@ Put **torches** or **soul torches** in the torch slot of the [tool menu](tool_me
 * **Place Torch**: switch it on in the menu, then right-click a block to place a torch from the slot.
 * **Shaders**: with an Iris shader pack that supports handheld light, the tool glows like a held torch
   and the shader lights your surroundings smoothly. Other players then don't see your light.
+* **Dynamic lights mods**: with Sodium Dynamic Lights, LambDynamicLights or RyoamicLights installed,
+  that mod lights the held tool and Mega Tools places no light for you. The light then follows that
+  mod's own settings, and other players only see it if they have such a mod too.

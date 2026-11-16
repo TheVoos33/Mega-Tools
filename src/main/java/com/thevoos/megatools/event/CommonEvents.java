@@ -3,7 +3,7 @@ package com.thevoos.megatools.event;
 import com.thevoos.megatools.command.MegaToolsCommand;
 import com.thevoos.megatools.items.EnchantmentPlateItem;
 import com.thevoos.megatools.recipe.ToolCarryOver;
-import com.thevoos.megatools.tool.BrokenToolHandler;
+import com.thevoos.megatools.tool.DisabledToolHandler;
 import com.thevoos.megatools.tool.MegaToolMining;
 import com.thevoos.megatools.tool.ToolLightManager;
 import com.thevoos.megatools.tool.PlateHelper;
@@ -18,8 +18,7 @@ public final class CommonEvents
 
     public static void register()
     {
-        // Mega Tool: instant break, hold delay, fresh-click bookkeeping
-        NeoForge.EVENT_BUS.addListener(MegaToolMining::onBreakSpeed);
+        // Mega Tool: hold delay, fresh-click bookkeeping (the instant break speed itself is set by PlayerMixin)
         NeoForge.EVENT_BUS.addListener(MegaToolMining::onBlockBroken);
         NeoForge.EVENT_BUS.addListener(MegaToolMining::onLeftClickBlock);
         NeoForge.EVENT_BUS.addListener(MegaToolMining::onAttackEntity);   // third-person poke for others
@@ -33,10 +32,10 @@ public final class CommonEvents
         // Return the Mega Tools tool if a swapped-out tool breaks
         NeoForge.EVENT_BUS.addListener(ToolSwapper::onItemDestroyed);
 
-        // Broken tools (1 durability left) can't mine or attack until repaired
-        NeoForge.EVENT_BUS.addListener(BrokenToolHandler::onLeftClickBlock);
-        NeoForge.EVENT_BUS.addListener(BrokenToolHandler::onAttackEntity);
-        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, BrokenToolHandler::onBreakSpeed); // after MegaToolMining
+        // Broken tools (1 durability left) and tools with Break / Attack switched off can't mine / attack
+        NeoForge.EVENT_BUS.addListener(DisabledToolHandler::onLeftClickBlock);
+        NeoForge.EVENT_BUS.addListener(EventPriority.HIGH, DisabledToolHandler::onAttackEntity); // before the Mega Tool's poke
+        NeoForge.EVENT_BUS.addListener(EventPriority.HIGH, DisabledToolHandler::onBlockBroken); // before MegaToolMining uses up the granted break
 
         // Held-tool lighting: move the invisible light with the player, clean it up when needed
         NeoForge.EVENT_BUS.addListener(ToolLightManager::onPlayerTick);
@@ -55,10 +54,6 @@ public final class CommonEvents
 
         // Tell joining players the server's tool stats (startup config isn't synced)
         NeoForge.EVENT_BUS.addListener(com.thevoos.megatools.network.ToolStatsPayload::onPlayerLoggedIn);
-
-        // Storage whitelist file: read on server start and /reload, sent to joining players
-        NeoForge.EVENT_BUS.addListener(com.thevoos.megatools.tool.StorageWhitelist::onServerAboutToStart);
-        NeoForge.EVENT_BUS.addListener(com.thevoos.megatools.tool.StorageWhitelist::onDatapackSync);
 
         // /megatools commands (kit)
         NeoForge.EVENT_BUS.addListener(MegaToolsCommand::onRegisterCommands);

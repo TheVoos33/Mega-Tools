@@ -34,7 +34,5 @@ public final class ModNetworking
                 (payload, context) -> context.enqueueWork(() -> MegaToolPoke.triggerRemote(payload.entityId())));
         // Server -> client: the server's tool stats, so the client can warn about a mismatch.
         registrar.playToClient(ToolStatsPayload.TYPE, ToolStatsPayload.STREAM_CODEC, ToolStatsPayload::handle);
-        // Server -> client: the storage whitelist file as the server loaded it.
-        registrar.playToClient(StorageWhitelistPayload.TYPE, StorageWhitelistPayload.STREAM_CODEC, StorageWhitelistPayload::handle);
     }
 }

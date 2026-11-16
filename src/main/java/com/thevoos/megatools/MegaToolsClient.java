@@ -1,6 +1,7 @@
 package com.thevoos.megatools;
 
 import com.thevoos.megatools.client.ClientEvents;
+import com.thevoos.megatools.client.DynamicLightsCompat;
 import com.thevoos.megatools.client.MegaToolClientExtensions;
 import com.thevoos.megatools.client.ModKeyMappings;
 import com.thevoos.megatools.client.ToolHudOverlay;
@@ -36,6 +37,10 @@ public class MegaToolsClient
             Minecraft mc = Minecraft.getInstance();
             return mc.options != null && mc.screen == null && mc.options.keyAttack.isDown();
         });
+
+        // Dynamic lights mods light a held tool themselves (then no light blocks are placed for this player).
+        // Registered this early so the mods have it before they first collect their light sources.
+        DynamicLightsCompat.init();
 
         // Tool GUI: size the toggle buttons to their labels with the client font (see GuiLayout).
         ToolMenu.setClientLayoutFactory(ToolScreen::createLayout);

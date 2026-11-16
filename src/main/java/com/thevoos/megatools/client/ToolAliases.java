@@ -8,7 +8,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import com.thevoos.megatools.MegaTools;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.Reader;
@@ -38,7 +40,8 @@ import java.util.Set;
  *   },
  *   "groups": {                                        // mod families: every tool of any member
  *     "create": ["create", "createaddition", ...]      // works on blocks of every other member
- *   }
+ *   },
+ *   "attachments": ["logisticsnetworks:logistics_node"] // entity types that sit ON a block (see BlockAttachments)
  * }
  *
  * A value may be a single string or a list. "minecraft" has no effect: vanilla blocks never
@@ -53,6 +56,7 @@ public final class ToolAliases
 
     private static Map<ResourceLocation, Set<String>> itemAliases = Map.of();
     private static Map<String, Set<String>> modAliases = Map.of();
+    private static Set<EntityType<?>> attachmentEntities = Set.of();
     private static boolean loaded = false;
 
     private ToolAliases() {}
@@ -67,6 +71,17 @@ public final class ToolAliases
             return true;
         Set<String> forMod = modAliases.get(toolId.getNamespace());
         return forMod != null && forMod.contains(blockMod);
+    }
+
+    /**
+     * Entity types that other mods attach to a block (e.g. Logistics Network's node): while one sits on
+     * the targeted block, the tools of the entity's mod are pre-selected too (see BlockAttachments).
+     */
+    public static Set<EntityType<?>> attachmentEntities()
+    {
+        if (!loaded)
+            reload();
+        return attachmentEntities;
     }
 
     /** (Re)reads the file. Creates it with an explanation if it doesn't exist. Never throws. */
@@ -121,16 +136,31 @@ public final class ToolAliases
                 }
             }
 
+            // Files written before this key existed don't have it: use the defaults then.
+            Set<String> attachmentIds = root.has("attachments")
+                    ? readModList(root.get("attachments")) : new HashSet<>(DEFAULT_ATTACHMENTS);
+            Set<EntityType<?>> attachments = new HashSet<>();
+            for (String entry : attachmentIds)
+            {
+                ResourceLocation id = ResourceLocation.tryParse(entry);
+                if (id == null)
+                    MegaTools.LOGGER.warn("[{}] ignoring invalid entity id '{}'", FILE_NAME, entry);
+                else // not registered = that mod isn't installed
+                    BuiltInRegistries.ENTITY_TYPE.getOptional(id).ifPresent(attachments::add);
+            }
+
             itemAliases = items;
             modAliases = mods;
-            MegaTools.LOGGER.info("[{}] loaded {} item alias(es), {} mod alias(es) and {} group(s)",
-                    FILE_NAME, items.size(), mods.size(), groups);
+            attachmentEntities = Set.copyOf(attachments);
+            MegaTools.LOGGER.info("[{}] loaded {} item alias(es), {} mod alias(es), {} group(s) and {} attachment entity type(s)",
+                    FILE_NAME, items.size(), mods.size(), groups, attachments.size());
         }
         catch (Exception e)
         {
             // A typo in the file must never crash the game: keep running without aliases.
             itemAliases = Map.of();
             modAliases = Map.of();
+            attachmentEntities = Set.of();
             MegaTools.LOGGER.error("[{}] could not be read, tool aliases disabled until it is fixed", FILE_NAME, e);
         }
     }
@@ -155,6 +185,8 @@ public final class ToolAliases
                 "Tool auto-swap aliases. 'items': a tool's item id -> mod ids whose blocks it should be pre-selected for. "
               + "'mods': every tool from a mod -> extra mod ids. 'groups': mod families; a tool from any mod in a group "
               + "is pre-selected for blocks of every mod in that group (the group name is only a label). "
+              + "'attachments': entity types that other mods attach to a block (like Logistics Network's node); while one "
+              + "sits on the block you look at, the tools of its mod are pre-selected as well. "
               + "Values can be a string or a list. Mods that aren't installed are ignored. "
               + "Use F3+H in game to see item ids. Applied when you join a world.");
 
@@ -176,12 +208,19 @@ public final class ToolAliases
         });
         root.add("groups", groups);
 
+        JsonArray attachments = new JsonArray();
+        DEFAULT_ATTACHMENTS.forEach(attachments::add);
+        root.add("attachments", attachments);
+
         Files.createDirectories(path.getParent());
         try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8))
         {
             GSON.toJson(root, writer);
         }
     }
+
+    /** Entities that are attached to a block and are worked on with their own mod's tools. */
+    private static final List<String> DEFAULT_ATTACHMENTS = List.of("logisticsnetworks:logistics_node");
 
     /**
      * Mod families whose tools are used on each other's blocks (addons and their base mod).

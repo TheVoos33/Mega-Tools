@@ -95,21 +95,25 @@ public enum ToolTier
     /**
      * Whether this tier has the GUI toggle for ToolSettings bit {@code bit} (button id = bit):
      * 0-2 strip/path/till (all), 3-5 shear/brush/ignite (all tiers; shown while a Support Tool is in),
-     * 6 delayed break (mega), 7 place torch (all), 8 light on/off (all; stored inverted as LIGHT_OFF).
+     * 6 delayed break (mega), 7 place torch (all), 8 light on/off (all; stored inverted as LIGHT_OFF),
+     * 9 break blocks / 10 attack (all; stored inverted as BREAK_OFF / ATTACK_OFF).
      */
     public boolean hasToggle(int bit)
     {
         return switch (bit)
         {
-            case 0, 1, 2, 7, 8 -> true;
+            case 0, 1, 2, 7, 8, 9, 10 -> true;
             case 3, 4, 5 -> supportTools;
             case 6 -> isMega();
             default -> false;
         };
     }
 
-    /** Rows of toggle buttons: the 3-wide grid (1 or 2 rows) plus one row for Delayed Break / Place Torch. */
-    public int toggleRows() { return (supportTools ? 2 : 1) + 1; }
+    /**
+     * Rows of toggle buttons: one row for Break / Attack, the 3-wide grid (1 or 2 rows) and one row for
+     * Delayed Break / Place Torch.
+     */
+    public int toggleRows() { return 1 + (supportTools ? 2 : 1) + 1; }
     /** Auto-swap only makes sense when there is wrench storage to swap from. */
     public boolean hasAutoSwap() { return storageSlots > 0; }
     public TagKey<Block> incorrectBlocksForDrops() { return incorrectBlocksForDrops; }
