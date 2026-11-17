@@ -44,8 +44,8 @@ First row: Break, Attack, Delayed Break (Mega Tool only), Strip, Path, Till. Sec
 Shear, Brush, Ignite. The four slots on the right are the two Enchantment Plates (top), the torch slot
 with its light button (bottom left) and the Support Tool slot (bottom right).
 
-Your choice is saved for your game. Change it at any time under Mods > Mega Tools > Config > Tool menu
-style ("Ask next time" shows both menus again).
+Your choice is saved for your game. Change it at any time with menuStyle in config/megatools-common.toml
+(ASK shows both menus again).
 
 Shift-clicking an item in your inventory moves it to the right slot automatically. The tool stays in your
 hotbar while the menu is open, and its slot is locked.

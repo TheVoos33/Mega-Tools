@@ -157,7 +157,7 @@ The menu comes in two styles that do exactly the same. The first time you open a
 
 In the Compact menu the first row is Break, Attack, Delayed Break (Mega Tool only), Strip, Path and Till; the second row is Place Torch, Shear, Brush and Ignite. The four slots on the right are the two Enchantment Plates (top), the torch slot with its light button (bottom left) and the Support Tool slot (bottom right).
 
-Your choice is saved for your game. Change it at any time under **Mods > Mega Tools > Config > Tool menu style**, or with `menuStyle` in `config/megatools-common.toml` (`CLASSIC`, `ICONS`, or `ASK` to be asked again).
+Your choice is saved for your game. Change it at any time with `menuStyle` in `config/megatools-common.toml` (`CLASSIC`, `ICONS`, or `ASK` to be asked again).
 
 ---
 
@@ -492,13 +492,13 @@ To take an item out of a tag again, list it under `"remove"`. This also works fo
 {
   "replace": false,
   "values": [],
-  "remove": ["mekanism:configuration_card", "#c:tools/shear"]
+  "remove": ["mekanism:configuration_card", "#forge:shears"]
 }
 ```
 
 | Tag | Type | Use it to |
 |---|---|---|
-| `megatools:storable_item` | item | The only items allowed in tool storage. Already includes `c:tools/wrench`, `c:wrenches`, `forge:tools/wrench`, `c:tools/shear` (shears and chainsaws), Immersive Engineering's screwdrivers and Railcraft's crowbars. |
+| `megatools:storable_item` | item | The only items allowed in tool storage. Already includes `c:tools/wrench`, `c:wrenches`, `forge:tools/wrench`, `forge:tools/wrenches`, `forge:wrenches`, `c:tools/shear` and `forge:shears` (shears and chainsaws), Immersive Engineering's screwdrivers and Railcraft's crowbars. |
 | `megatools:torches` | item | Allow other torches in the torch slot (by default the torch and soul torch). The light is always full brightness, and Place Torch places the item as a block. |
 | `megatools:mineable/paxel` | block | Decide what paxels mine at tool speed. Contains the vanilla pickaxe, axe, shovel and hoe `mineable` tags; add blocks that no tool tag covers. |
 | `megatools:mega_tool_unbreakable` | block | Stop the Mega Tool from breaking a block at all, in every game mode. Empty by default. |

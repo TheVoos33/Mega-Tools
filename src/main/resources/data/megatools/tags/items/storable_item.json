@@ -4,7 +4,10 @@
     { "id": "#c:tools/wrench", "required": false },
     { "id": "#c:wrenches", "required": false },
     { "id": "#forge:tools/wrench", "required": false },
+    { "id": "#forge:tools/wrenches", "required": false },
+    { "id": "#forge:wrenches", "required": false },
     { "id": "#c:tools/shear", "required": false },
+    { "id": "#forge:shears", "required": false },
     { "id": "#immersiveengineering:tools/screwdrivers", "required": false },
     { "id": "#railcraft:crowbar", "required": false }
   ]

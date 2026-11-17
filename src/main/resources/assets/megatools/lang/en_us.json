@@ -58,7 +58,7 @@
   "gui.megatools.menu_style.classic.desc": "Wide menu. Every button has its name written on it.",
   "gui.megatools.menu_style.icons": "Compact",
   "gui.megatools.menu_style.icons.desc": "As wide as a chest. Every button is an item icon; hover a button to read what it does.",
-  "gui.megatools.menu_style.hint": "Both menus do the same. You can change this at any time: Mods > Mega Tools > Config > Tool menu style.",
+  "gui.megatools.menu_style.hint": "Both menus do the same. You can change this at any time: menuStyle in config/megatools-common.toml.",
   "megatools.configuration.heldLight": "Held tool light",
   "megatools.configuration.heldLight.tooltip": "Whether a held tool with torches lights the area around the player. Set by the server; switching it off saves light updates on large servers.",
   "message.megatools.contents_returned": "The tool's stored items were returned to you",
