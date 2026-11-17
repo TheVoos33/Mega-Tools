@@ -1,10 +1,15 @@
 # Changelog
 
-## v1.1
+## v1.1 for Minecraft 26.1.2 (NeoForge)
 
-Clients and servers must both run v1.1.
+First release of Mega Tools for Minecraft 26.1.2, on NeoForge 26.1.2.126 or newer. It has the same features as Mega Tools v1.1 for 1.21.1. Clients and servers must both run v1.1.
 
-### Added
+### Differences from the 1.21.1 version
+- No EMI support yet, because EMI has no release for 26.1.2. JEI is supported.
+
+### What's new in v1.1 (compared with v1.0 for 1.21.1)
+
+#### Added
 - **Break** and **Attack** buttons in the tool menu of every paxel and the Mega Tool, both on by default.
   - Break off: the tool breaks no blocks, in any game mode. Left-click actions on blocks (such as taking items out of drawers) still work in survival.
   - Attack off: the tool does not hit mobs or players, so it does no damage. Item frames, paintings, boats, minecarts and armor stands can still be hit.
@@ -18,7 +23,7 @@ Clients and servers must both run v1.1.
 - **Dynamic lights mods.** With Sodium Dynamic Lights, LambDynamicLights or RyoamicLights installed, that mod lights a held tool with torches, and Mega Tools no longer places its invisible light blocks for that player.
 - **New default storable tools:** Logistics Network wrench, Transfer Labels Label Accessor, Machine Settings Copier (Industrial Foregoing, Just Dire Things), Mekanism Configuration Card, Hostile Neural Networks Fab Directive, Crystalix Wand, and the chisels of Rechiseled, Chisel Reborn and Chipped.
 
-### Changed
+#### Changed
 - **Tool storage is tag based.** It accepts exactly the items that have the item tag `megatools:storable_item`. `megatools-storage-whitelist.json` no longer allows items directly: it adds that tag to the items it lists.
 - Datapacks have the last word over `megatools-storage-whitelist.json`: a `"remove"` list in a `megatools:storable_item` tag file takes out items the config file added.
 - `megatools-storage-whitelist.json` has a new `tags` list (default `c:tools/wrench`): every item with one of those tags also gets `megatools:storable_item`.
@@ -27,10 +32,5 @@ Clients and servers must both run v1.1.
 - The tool menu is one row taller (the Break / Attack row).
 - Shift + scroll through pre-selected tools goes the other way (wheel up = next).
 
-### Fixed
+#### Fixed
 - The Mega Tool's instant mining and hold delay no longer break when another mod removes the flying mining penalty (Draconic Evolution's mining stabilizer, Advanced AE armor, Apothic's Stable Footing and similar).
-
-### Config files from v1.0
-- `megatools-storage-whitelist.json` and `megatools-default-rules.json` are updated once: the new defaults are added and existing entries are kept. Comments typed into those files are lost in that update.
-- `megatools-tool-aliases.json` is not rewritten. Without an `attachments` key it uses the default.
-- `megaToolHoldDelayTicks` keeps its range of 1 to 200 ticks.
