@@ -3,7 +3,7 @@ package com.thevoos.megatools.client;
 import com.thevoos.megatools.MegaTools;
 import com.thevoos.megatools.network.ShaderLightPayload;
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import java.lang.reflect.Method;
 
@@ -46,7 +46,7 @@ public final class ShaderLightClient
         if ((lastSent == null || lastSent != active) && mc.getConnection().hasChannel(ShaderLightPayload.TYPE))
         {
             lastSent = active;
-            PacketDistributor.sendToServer(new ShaderLightPayload(active));
+            ClientPacketDistributor.sendToServer(new ShaderLightPayload(active));
         }
     }
 

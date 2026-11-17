@@ -1,6 +1,7 @@
 package com.thevoos.megatools.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.client.gui.screens.AlertScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -41,7 +42,7 @@ public final class ToolStatsAccess
             return Component.translatable("gui.megatools.tool_stats_locked.no_world");
         if (!mc.hasSingleplayerServer())
             return Component.translatable("gui.megatools.tool_stats_locked.server");
-        if (!mc.player.hasPermissions(2))
+        if (!mc.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
             return Component.translatable("gui.megatools.tool_stats_locked.no_permission");
         return null;
     }

@@ -14,6 +14,7 @@ import com.thevoos.megatools.tool.MegaToolPoke;
 import com.thevoos.megatools.tool.ToolSwapper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -24,7 +25,7 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 /** Client-only event handlers (registered in MegaToolsClient). */
@@ -82,7 +83,7 @@ public final class ClientEvents
                 if (Config.MENU_STYLE.get() == MenuStyle.ASK)
                     mc.setScreen(new MenuStyleScreen());
                 else
-                    PacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE);
+                    ClientPacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE);
             }
             return;
         }
@@ -91,7 +92,7 @@ public final class ClientEvents
         if (switchPlate && ModKeyMappings.modifierMatches(ModKeyMappings.SWITCH_PLATE))
         {
             if (held.getItem() instanceof MultiToolItem multiTool && multiTool.getTier().hasEnchantPlates())
-                PacketDistributor.sendToServer(SwitchPlatePayload.INSTANCE);
+                ClientPacketDistributor.sendToServer(SwitchPlatePayload.INSTANCE);
             return;
         }
 
@@ -99,9 +100,9 @@ public final class ClientEvents
         if (swapLast && ModKeyMappings.modifierMatches(ModKeyMappings.SWAP_LAST))
         {
             if (held.has(ModDataComponents.SWAP_ORIGIN.get()))
-                PacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
+                ClientPacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
             else if (held.getItem() instanceof MultiToolItem multiTool && multiTool.getTier().hasAutoSwap())
-                PacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_LAST));
+                ClientPacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_LAST));
             return;
         }
 
@@ -115,7 +116,7 @@ public final class ClientEvents
         // Holding a swapped-out tool -> swap back.
         if (held.has(ModDataComponents.SWAP_ORIGIN.get()))
         {
-            PacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
+            ClientPacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
             return;
         }
         // Holding a Mega Tools tool -> swap to the pre-selected stored tool.
@@ -123,9 +124,9 @@ public final class ClientEvents
         {
             int slot = AutoSwapClient.getPreselectedSlot();
             if (slot >= 0)
-                PacketDistributor.sendToServer(new SwapToolPayload(slot));
+                ClientPacketDistributor.sendToServer(new SwapToolPayload(slot));
             else
-                mc.player.displayClientMessage(Component.translatable("message.megatools.no_tool_selected"), true);
+                mc.player.sendOverlayMessage(Component.translatable("message.megatools.no_tool_selected"));
         }
     }
 
@@ -138,7 +139,7 @@ public final class ClientEvents
         Minecraft mc = Minecraft.getInstance();
         if (event.getAction() != GLFW.GLFW_PRESS || mc.screen != null || mc.player == null || mc.level == null)
             return;
-        if (!mc.options.keyAttack.matchesMouse(event.getButton()))
+        if (!mc.options.keyAttack.matchesMouse(new MouseButtonEvent(0.0D, 0.0D, event.getMouseButtonInfo())))
             return;
         if (!MegaToolMining.isMegaTool(mc.player.getMainHandItem()))
             return;
@@ -170,7 +171,7 @@ public final class ClientEvents
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event)
     {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null || mc.player == null || !Screen.hasShiftDown() || event.getScrollDeltaY() == 0)
+        if (mc.screen != null || mc.player == null || !Minecraft.getInstance().hasShiftDown() || event.getScrollDeltaY() == 0)
             return;
         // Wheel up = next, wheel down = previous.
         if (AutoSwapClient.cycle(event.getScrollDeltaY() > 0 ? 1 : -1))

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.thevoos.megatools.client.ToolScreen;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,13 +27,13 @@ public abstract class KeyboardHandlerMixin
     private Minecraft minecraft;
 
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
-    private void megatools$quickSwapFirst(long window, int key, int scanCode, int action, int modifiers, CallbackInfo ci)
+    private void megatools$quickSwapFirst(long window, int action, KeyEvent event, CallbackInfo ci)
     {
         if (action == GLFW.GLFW_PRESS
                 && minecraft.screen instanceof ToolScreen toolScreen
-                && window == minecraft.getWindow().getWindow()
-                && !InputConstants.isKeyDown(window, GLFW.GLFW_KEY_F3) // F3 + key debug combinations
-                && toolScreen.tryQuickSwap(key, scanCode))
+                && window == minecraft.getWindow().handle()
+                && !InputConstants.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_F3) // F3 + key debug combinations
+                && toolScreen.tryQuickSwap(event))
             ci.cancel();
     }
 }

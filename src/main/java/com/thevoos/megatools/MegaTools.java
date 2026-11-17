@@ -14,7 +14,7 @@ import com.thevoos.megatools.items.ModItems;
 import com.thevoos.megatools.menu.ModMenus;
 import com.thevoos.megatools.network.ModNetworking;
 import com.thevoos.megatools.recipe.ModRecipes;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -85,8 +85,8 @@ public class MegaTools
     }
 
     /** Small helper so every class builds ResourceLocations in the mod namespace the same way. */
-    public static ResourceLocation id(String path)
+    public static Identifier id(String path)
     {
-        return ResourceLocation.fromNamespaceAndPath(MODID, path);
+        return Identifier.fromNamespaceAndPath(MODID, path);
     }
 }

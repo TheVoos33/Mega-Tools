@@ -2,21 +2,11 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "minecraft:diamond_sword"
-    },
-    {
-      "item": "minecraft:diamond_axe"
-    },
-    {
-      "item": "minecraft:diamond_pickaxe"
-    },
-    {
-      "item": "minecraft:diamond_shovel"
-    },
-    {
-      "item": "minecraft:diamond_hoe"
-    }
+    "minecraft:diamond_sword",
+    "minecraft:diamond_axe",
+    "minecraft:diamond_pickaxe",
+    "minecraft:diamond_shovel",
+    "minecraft:diamond_hoe"
   ],
   "result": {
     "id": "megatools:diamond_head",

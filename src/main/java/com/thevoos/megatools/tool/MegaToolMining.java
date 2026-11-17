@@ -10,12 +10,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.util.TriState;
+import net.minecraft.util.TriState;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -42,7 +43,7 @@ import java.util.function.BooleanSupplier;
  * vanilla's dig packet; the server then grants exactly that one break. The server never runs its own
  * timer, so both sides always break the same block at the same moment (no silent, late breaks).
  *
- * HOW: Player#getDigSpeed runs on both sides whenever vanilla computes dig progress. PlayerMixin
+ * HOW: Player#getDestroySpeed runs on both sides whenever vanilla computes dig progress. PlayerMixin
  * replaces its RESULT (finalDigSpeed below): a huge speed when a break is permitted (vanilla then
  * finishes the block in the same call chain) and 0 while the hold delay runs.
  * This is deliberately not a PlayerEvent.BreakSpeed listener. Mods that remove the "mining while not
@@ -89,7 +90,7 @@ public final class MegaToolMining
     // =====================================================================================
 
     /**
-     * Called by PlayerMixin with the speed Player#getDigSpeed is about to return (after vanilla's
+     * Called by PlayerMixin with the speed Player#getDestroySpeed is about to return (after vanilla's
      * penalties and every BreakSpeed listener). Returns the speed to use instead, or {@code speed}
      * unchanged when the held item isn't one of our tools.
      */
@@ -154,7 +155,7 @@ public final class MegaToolMining
             clientFreshUntil = NEVER; // a click permits ONE immediate break
             MegaToolPoke.triggerLocal();
             if (delayed)
-                PacketDistributor.sendToServer(MegaToolBreakPayload.INSTANCE);
+                ClientPacketDistributor.sendToServer(MegaToolBreakPayload.INSTANCE);
         }
         return permitted;
     }
@@ -229,17 +230,19 @@ public final class MegaToolMining
             event.setUseItem(TriState.FALSE);
     }
 
-    /** Server: a block is about to be broken. */
-    public static void onBlockBroken(BlockEvent.BreakEvent event)
+    /** Both sides: a block is about to be broken. */
+    public static void onBlockBroken(BreakBlockEvent event)
     {
         Player player = event.getPlayer();
         if (player == null || !isMegaTool(player.getMainHandItem()))
             return;
         if (event.getState().is(ModTags.MEGA_TOOL_UNBREAKABLE))
         {
-            event.setCanceled(true); // final server-side guarantee for the tag
+            event.setCanceled(true); // final guarantee for the tag
             return;
         }
+        if (event.getLevel().isClientSide())
+            return; // the rest is server bookkeeping
         SERVER_PERMIT_UNTIL.remove(player.getUUID()); // the granted break is used up
         broadcastPoke(player);
     }

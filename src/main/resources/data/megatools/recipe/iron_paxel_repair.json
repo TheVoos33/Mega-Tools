@@ -7,12 +7,8 @@
     "MMM"
   ],
   "key": {
-    "M": {
-      "item": "minecraft:iron_ingot"
-    },
-    "T": {
-      "item": "megatools:iron_paxel"
-    }
+    "M": "minecraft:iron_ingot",
+    "T": "megatools:iron_paxel"
   },
   "result": {
     "id": "megatools:iron_paxel"

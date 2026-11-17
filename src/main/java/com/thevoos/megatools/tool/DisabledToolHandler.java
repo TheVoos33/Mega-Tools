@@ -9,10 +9,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.util.TriState;
+import net.minecraft.util.TriState;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 /**
  * Stops a tool from breaking blocks and/or attacking, for two reasons:
@@ -54,8 +54,8 @@ public final class DisabledToolHandler
         }
     }
 
-    /** Server: final guarantee, also for breaks that don't start with a left click (other mods' area mining...). */
-    public static void onBlockBroken(BlockEvent.BreakEvent event)
+    /** Both sides: final guarantee, also for breaks that don't start with a left click (other mods' area mining...). */
+    public static void onBlockBroken(BreakBlockEvent event)
     {
         Player player = event.getPlayer();
         if (player == null)
@@ -101,6 +101,6 @@ public final class DisabledToolHandler
     private static void showMessage(Player player, String key)
     {
         if (player.level().isClientSide())
-            player.displayClientMessage(Component.translatable(key).withStyle(ChatFormatting.YELLOW), true);
+            player.sendOverlayMessage(Component.translatable(key).withStyle(ChatFormatting.YELLOW));
     }
 }

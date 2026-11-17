@@ -76,7 +76,7 @@ public final class PlateHelper
             cost += Math.max(1, entry.getIntValue());
 
         event.setOutput(output);
-        event.setCost(Math.min(cost, 39));
+        event.setXpCost(Math.min(cost, 39));
         event.setMaterialCost(1);
     }
 
@@ -131,8 +131,8 @@ public final class PlateHelper
 
         if (plate.isEmpty())
         {
-            player.displayClientMessage(Component.translatable("message.megatools.plate_slot_empty",
-                    Component.translatable(target == ToolData.PRIMARY ? "gui.megatools.primary" : "gui.megatools.secondary")), true);
+            player.sendOverlayMessage(Component.translatable("message.megatools.plate_slot_empty",
+                    Component.translatable(target == ToolData.PRIMARY ? "gui.megatools.primary" : "gui.megatools.secondary")));
             return;
         }
 
@@ -141,7 +141,7 @@ public final class PlateHelper
 
         // Enchanting table sound + "Silk Touch Plate loaded" above the hotbar.
         player.level().playSound(null, player.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 1.0F, 1.0F);
-        player.displayClientMessage(Component.translatable("message.megatools.plate_loaded", plateDisplayName(plate)), true);
+        player.sendOverlayMessage(Component.translatable("message.megatools.plate_loaded", plateDisplayName(plate)));
     }
 
     /**

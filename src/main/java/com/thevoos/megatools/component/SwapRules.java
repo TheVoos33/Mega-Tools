@@ -6,7 +6,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 
@@ -88,20 +88,20 @@ public record SwapRules(List<Rule> rules)
     /**
      * @param tag the block tag of a TAG rule (one of the target block's tags, picked in the GUI); empty otherwise
      */
-    public record Rule(ResourceLocation tool, ResourceLocation target, Mode mode, Optional<ResourceLocation> tag)
+    public record Rule(Identifier tool, Identifier target, Mode mode, Optional<Identifier> tag)
     {
         public static final Codec<Rule> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                ResourceLocation.CODEC.fieldOf("tool").forGetter(Rule::tool),
-                ResourceLocation.CODEC.fieldOf("target").forGetter(Rule::target),
+                Identifier.CODEC.fieldOf("tool").forGetter(Rule::tool),
+                Identifier.CODEC.fieldOf("target").forGetter(Rule::target),
                 Mode.CODEC.optionalFieldOf("mode", Mode.ITEM).forGetter(Rule::mode),
-                ResourceLocation.CODEC.optionalFieldOf("tag").forGetter(Rule::tag)
+                Identifier.CODEC.optionalFieldOf("tag").forGetter(Rule::tag)
         ).apply(instance, Rule::new));
 
         public static final StreamCodec<ByteBuf, Rule> STREAM_CODEC = StreamCodec.composite(
-                ResourceLocation.STREAM_CODEC, Rule::tool,
-                ResourceLocation.STREAM_CODEC, Rule::target,
+                Identifier.STREAM_CODEC, Rule::tool,
+                Identifier.STREAM_CODEC, Rule::target,
                 Mode.STREAM_CODEC, Rule::mode,
-                ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC), Rule::tag,
+                ByteBufCodecs.optional(Identifier.STREAM_CODEC), Rule::tag,
                 Rule::new);
 
         /** Keeps mode and tag consistent: only a TAG rule has a tag, and a TAG rule without one is an ITEM rule. */
@@ -114,7 +114,7 @@ public record SwapRules(List<Rule> rules)
         }
 
         /** A new filter: only the target block. */
-        public Rule(ResourceLocation tool, ResourceLocation target)
+        public Rule(Identifier tool, Identifier target)
         {
             this(tool, target, Mode.ITEM, Optional.empty());
         }
@@ -127,7 +127,7 @@ public record SwapRules(List<Rule> rules)
          *                    looks at. For blocks made of parts (an AE2 cable bus, a conduit bundle...)
          *                    that is the part under the crosshair: a P2P tunnel, a cable, a bus.
          */
-        public boolean matches(Block block, ResourceLocation blockId, ResourceLocation blockItemId, ResourceLocation pickedId)
+        public boolean matches(Block block, Identifier blockId, Identifier blockItemId, Identifier pickedId)
         {
             return switch (mode)
             {
@@ -165,7 +165,7 @@ public record SwapRules(List<Rule> rules)
     }
 
     /** The rules of one stored tool, in filter slot order. */
-    public List<Rule> forTool(ResourceLocation tool)
+    public List<Rule> forTool(Identifier tool)
     {
         List<Rule> result = new ArrayList<>();
         for (Rule rule : rules)
@@ -175,9 +175,9 @@ public record SwapRules(List<Rule> rules)
     }
 
     /** Every tool that has at least one rule, in first-rule order. */
-    public Set<ResourceLocation> tools()
+    public Set<Identifier> tools()
     {
-        Set<ResourceLocation> result = new LinkedHashSet<>();
+        Set<Identifier> result = new LinkedHashSet<>();
         for (Rule rule : rules)
             result.add(rule.tool());
         return result;
@@ -188,7 +188,7 @@ public record SwapRules(List<Rule> rules)
      * (a whole-mod filter stays one, anything else becomes "this block"), or adds a new one if the slot is past the last filter.
      * Nothing changes if the tool already has a filter for that target, or has no room left.
      */
-    public SwapRules withTarget(ResourceLocation tool, int index, ResourceLocation target)
+    public SwapRules withTarget(Identifier tool, int index, Identifier target)
     {
         List<Rule> mine = forTool(tool);
         for (Rule rule : mine)
@@ -214,7 +214,7 @@ public record SwapRules(List<Rule> rules)
      * @param blockTags the block tags of the filter's target (the caller looks them up); the tag mode
      *                  starts with the first one and is skipped if there are none
      */
-    public SwapRules cycleMode(ResourceLocation tool, int index, List<ResourceLocation> blockTags)
+    public SwapRules cycleMode(Identifier tool, int index, List<Identifier> blockTags)
     {
         int global = globalIndex(tool, index);
         if (global < 0)
@@ -234,7 +234,7 @@ public record SwapRules(List<Rule> rules)
     }
 
     /** Makes filter {@code index} of {@code tool} match every block with this block tag. */
-    public SwapRules withTag(ResourceLocation tool, int index, ResourceLocation tag)
+    public SwapRules withTag(Identifier tool, int index, Identifier tag)
     {
         int global = globalIndex(tool, index);
         if (global < 0)
@@ -249,7 +249,7 @@ public record SwapRules(List<Rule> rules)
     }
 
     /** Removes filter {@code index} of {@code tool}; the tool's later filters move up one slot. */
-    public SwapRules without(ResourceLocation tool, int index)
+    public SwapRules without(Identifier tool, int index)
     {
         int global = globalIndex(tool, index);
         if (global < 0)
@@ -280,7 +280,7 @@ public record SwapRules(List<Rule> rules)
     {
         List<Rule> clean = new ArrayList<>();
         Set<Rule> seen = new HashSet<>();
-        Map<ResourceLocation, Integer> perTool = new HashMap<>();
+        Map<Identifier, Integer> perTool = new HashMap<>();
         for (Rule rule : rules)
         {
             if (clean.size() >= MAX_TOTAL)
@@ -295,7 +295,7 @@ public record SwapRules(List<Rule> rules)
     }
 
     /** Position in {@link #rules} of the {@code index}-th rule of {@code tool}, or -1. */
-    private int globalIndex(ResourceLocation tool, int index)
+    private int globalIndex(Identifier tool, int index)
     {
         if (index < 0)
             return -1;

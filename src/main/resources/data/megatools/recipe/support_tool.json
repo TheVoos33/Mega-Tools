@@ -2,15 +2,9 @@
   "type": "minecraft:crafting_shapeless",
   "category": "equipment",
   "ingredients": [
-    {
-      "item": "minecraft:flint_and_steel"
-    },
-    {
-      "item": "minecraft:brush"
-    },
-    {
-      "item": "minecraft:shears"
-    }
+    "minecraft:flint_and_steel",
+    "minecraft:brush",
+    "minecraft:shears"
   ],
   "result": {
     "id": "megatools:support_tool",

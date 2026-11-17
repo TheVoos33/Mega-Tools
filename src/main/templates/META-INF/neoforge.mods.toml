@@ -2,11 +2,9 @@
 # matching value from gradle.properties and writes the real file to build/generated/sources/modMetadata.
 # Note: every dollar-brace sequence in this file is treated as a placeholder, even inside comments.
 # Only these placeholders are available (they're the ones build.gradle passes in):
-#   minecraft_version, minecraft_version_range, neo_version, loader_version_range,
+#   minecraft_version, minecraft_version_range, neo_version, 
 #   mod_id, mod_name, mod_license, mod_version
 
-modLoader="javafml"
-loaderVersion="${loader_version_range}"
 license="${mod_license}"
 
 [[mods]]

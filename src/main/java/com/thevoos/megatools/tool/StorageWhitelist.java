@@ -9,7 +9,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import com.thevoos.megatools.MegaTools;
 import com.thevoos.megatools.items.ModTags;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagEntry;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
@@ -69,8 +69,8 @@ public final class StorageWhitelist
     public static List<TagEntry> loadTagEntries()
     {
         Path path = FMLPaths.CONFIGDIR.get().resolve(FILE_NAME);
-        Set<ResourceLocation> itemIds = new LinkedHashSet<>();
-        Set<ResourceLocation> tagIds = new LinkedHashSet<>();
+        Set<Identifier> itemIds = new LinkedHashSet<>();
+        Set<Identifier> tagIds = new LinkedHashSet<>();
         int skippedMods = 0;
         try
         {
@@ -131,10 +131,10 @@ public final class StorageWhitelist
     }
 
     /** One entry of the file: an item id, or a tag ("#id", or a plain id in the "tags" list). */
-    private static void addEntry(String entry, boolean tagList, Set<ResourceLocation> itemIds, Set<ResourceLocation> tagIds)
+    private static void addEntry(String entry, boolean tagList, Set<Identifier> itemIds, Set<Identifier> tagIds)
     {
         boolean isTag = tagList || entry.startsWith("#");
-        ResourceLocation id = ResourceLocation.tryParse(entry.startsWith("#") ? entry.substring(1) : entry);
+        Identifier id = Identifier.tryParse(entry.startsWith("#") ? entry.substring(1) : entry);
         if (id == null)
             MegaTools.LOGGER.warn("[{}] ignoring invalid id '{}'", FILE_NAME, entry);
         else if (!isTag)

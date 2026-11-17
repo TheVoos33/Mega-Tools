@@ -18,7 +18,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -46,11 +46,11 @@ public class ToolMenu extends AbstractContainerMenu
     private final ItemStack openedTool;
     private final ToolTier tier;
     private final GuiLayout layout;
-    private final SimpleContainer plates = new SimpleContainer(ToolData.PLATE_SLOTS);
-    private final SimpleContainer support = new SimpleContainer(1);
-    private final SimpleContainer storage;
+    private final ListenedContainer plates = new ListenedContainer(ToolData.PLATE_SLOTS);
+    private final ListenedContainer support = new ListenedContainer(1);
+    private final ListenedContainer storage;
     /** Torch slot: a one-slot container that allows up to 256 items instead of the usual 64/99. */
-    private final SimpleContainer light = new SimpleContainer(1)
+    private final ListenedContainer light = new ListenedContainer(1)
     {
         @Override
         public int getMaxStackSize()
@@ -101,7 +101,7 @@ public class ToolMenu extends AbstractContainerMenu
         this.openedTool = tool;
         this.tier = tool.getItem() instanceof MultiToolItem multiTool ? multiTool.getTier() : ToolTier.STONE;
         this.layout = layoutFactory.apply(tier);
-        this.storage = new SimpleContainer(tier.storageSlots());
+        this.storage = new ListenedContainer(tier.storageSlots());
 
         // ---- Load the tool's data into the temporary containers ----
         if (tier.hasEnchantPlates())
@@ -117,10 +117,10 @@ public class ToolMenu extends AbstractContainerMenu
             support.setItem(0, ToolData.getSupportTool(tool));
 
         // Listeners are added AFTER loading so loading doesn't trigger a save.
-        plates.addListener(this::onContainerChanged);
-        support.addListener(this::onContainerChanged);
-        storage.addListener(this::onContainerChanged);
-        light.addListener(this::onContainerChanged);
+        plates.setListener(this::onContainerChanged);
+        support.setListener(this::onContainerChanged);
+        storage.setListener(this::onContainerChanged);
+        light.setListener(this::onContainerChanged);
 
         // ---- Enchantment plate slots (right of the toggle buttons) ----
         if (tier.hasEnchantPlates())
@@ -233,15 +233,15 @@ public class ToolMenu extends AbstractContainerMenu
     // =====================================================================================
 
     @Override
-    public void clicked(int slotId, int button, ClickType clickType, Player player)
+    public void clicked(int slotId, int button, ContainerInput clickType, Player player)
     {
         // Pressing the number key of the tool's own hotbar slot would swap the tool out - block it.
-        if (clickType == ClickType.SWAP && button == toolSlot)
+        if (clickType == ContainerInput.SWAP && button == toolSlot)
             return;
         // A number key / the off-hand key moves a slot's WHOLE stack into the inventory, past LightSlot#remove.
         // More torches than one normal stack must leave by clicking (64 at a time): an over-sized stack in
         // the inventory can't be saved.
-        if (clickType == ClickType.SWAP && slotId == lightIndex)
+        if (clickType == ContainerInput.SWAP && slotId == lightIndex)
         {
             ItemStack torches = light.getItem(0);
             if (torches.getCount() > torches.getMaxStackSize())
@@ -300,7 +300,7 @@ public class ToolMenu extends AbstractContainerMenu
     @Override
     public boolean stillValid(Player player)
     {
-        return player.getInventory().selected == toolSlot && getTool() == openedTool
+        return player.getInventory().getSelectedSlot() == toolSlot && getTool() == openedTool
                 && openedTool.getItem() instanceof MultiToolItem;
     }
 

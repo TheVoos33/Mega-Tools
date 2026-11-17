@@ -41,7 +41,7 @@ public final class ServerPayloadHandler
                 return;
 
             closeOpenMenuQuietly(player); // coming back from the Swap Rules GUI
-            int toolSlot = player.getInventory().selected;
+            int toolSlot = player.getInventory().getSelectedSlot();
             player.openMenu(
                     new SimpleMenuProvider((containerId, inventory, p) -> new ToolMenu(containerId, inventory, toolSlot), held.getHoverName()),
                     buf -> buf.writeVarInt(toolSlot)); // read by the client-side ToolMenu constructor
@@ -72,7 +72,7 @@ public final class ServerPayloadHandler
                 return;
 
             closeOpenMenuQuietly(player); // coming from the tool GUI
-            int toolSlot = player.getInventory().selected;
+            int toolSlot = player.getInventory().getSelectedSlot();
             player.openMenu(
                     new SimpleMenuProvider((containerId, inventory, p) -> new SwapRulesMenu(containerId, inventory, toolSlot),
                             Component.translatable("gui.megatools.swap_rules")),

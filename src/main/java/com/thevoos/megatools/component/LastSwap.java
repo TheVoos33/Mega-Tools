@@ -7,7 +7,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 
 /**
@@ -21,7 +21,7 @@ public record LastSwap(int slot, Item item)
      * By id, and an unknown id (its mod was removed) loads as air instead of failing: a component that
      * can't be read can take the whole tool with it. Air never matches a stored tool (see ToolSwapper).
      */
-    private static final Codec<Item> LENIENT_ITEM = ResourceLocation.CODEC.xmap(BuiltInRegistries.ITEM::get, BuiltInRegistries.ITEM::getKey);
+    private static final Codec<Item> LENIENT_ITEM = Identifier.CODEC.xmap(BuiltInRegistries.ITEM::getValue, BuiltInRegistries.ITEM::getKey);
 
     public static final Codec<LastSwap> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.fieldOf("slot").forGetter(LastSwap::slot),

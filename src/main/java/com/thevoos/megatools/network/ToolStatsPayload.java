@@ -66,8 +66,8 @@ public record ToolStatsPayload(List<Double> stats) implements CustomPacketPayloa
             for (int i = 0; same && i < mine.size(); i++)
                 same = Math.abs(mine.get(i) - server.stats().get(i)) < 1.0E-6;
             if (!same)
-                context.player().displayClientMessage(
-                        Component.translatable("message.megatools.tool_stats_mismatch").withStyle(ChatFormatting.YELLOW), false);
+                context.player().sendSystemMessage(
+                        Component.translatable("message.megatools.tool_stats_mismatch").withStyle(ChatFormatting.YELLOW));
         });
     }
 }

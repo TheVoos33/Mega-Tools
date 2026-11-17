@@ -14,7 +14,7 @@ import com.thevoos.megatools.network.ApplyDefaultRulesPayload;
 import com.thevoos.megatools.tool.ToolData;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -23,7 +23,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import java.io.Reader;
 import java.io.Writer;
@@ -118,12 +118,12 @@ public final class DefaultSwapRules
         List<SwapRules.Rule> filters = new ArrayList<>(missing.size());
         for (SwapRules.Rule rule : missing)
             filters.add(asFilter(rule));
-        PacketDistributor.sendToServer(new ApplyDefaultRulesPayload(new SwapRules(missing), new SwapRules(filters)));
+        ClientPacketDistributor.sendToServer(new ApplyDefaultRulesPayload(new SwapRules(missing), new SwapRules(filters)));
     }
 
-    private static boolean isStored(ItemContainerContents storage, ResourceLocation tool)
+    private static boolean isStored(ItemContainerContents storage, Identifier tool)
     {
-        for (ItemStack stored : storage.nonEmptyItems())
+        for (ItemStack stored : storage.nonEmptyItemCopyStream().toList())
             if (BuiltInRegistries.ITEM.getKey(stored.getItem()).equals(tool))
                 return true;
         return false;
@@ -139,19 +139,19 @@ public final class DefaultSwapRules
     {
         return FILTERS.computeIfAbsent(rule, key ->
         {
-            ResourceLocation shown = switch (key.mode())
+            Identifier shown = switch (key.mode())
             {
                 case ITEM -> null;
-                case TAG -> BuiltInRegistries.BLOCK.getTag(TagKey.create(Registries.BLOCK, key.tag().orElseThrow()))
+                case TAG -> BuiltInRegistries.BLOCK.get(TagKey.create(Registries.BLOCK, key.tag().orElseThrow()))
                         .flatMap(tag -> tag.stream().map(holder -> holder.value().asItem()).filter(item -> item != Items.AIR).findFirst())
                         .map(BuiltInRegistries.ITEM::getKey).orElse(null);
                 case MOD ->
                 {
                     String mod = key.target().getNamespace();
-                    ResourceLocation any = null;
+                    Identifier any = null;
                     for (Item item : BuiltInRegistries.ITEM)
                     {
-                        ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+                        Identifier id = BuiltInRegistries.ITEM.getKey(item);
                         if (!id.getNamespace().equals(mod))
                             continue;
                         if (item instanceof BlockItem)
@@ -233,25 +233,25 @@ public final class DefaultSwapRules
     /** One rule object, or null if it has no valid "tool" or not exactly one valid "block" / "tag" / "mod". */
     private static SwapRules.Rule readRule(JsonObject json)
     {
-        ResourceLocation tool = id(json, "tool");
+        Identifier tool = id(json, "tool");
         int targets = (json.has("block") ? 1 : 0) + (json.has("tag") ? 1 : 0) + (json.has("mod") ? 1 : 0);
         if (tool == null || targets != 1)
             return null;
 
         if (json.has("block"))
         {
-            ResourceLocation block = id(json, "block");
+            Identifier block = id(json, "block");
             return block == null ? null : new SwapRules.Rule(tool, block);
         }
         if (json.has("tag"))
         {
             // The target of a default tag rule is the tag itself: there is no block it was picked from.
-            ResourceLocation tag = id(json, "tag");
+            Identifier tag = id(json, "tag");
             return tag == null ? null : new SwapRules.Rule(tool, tag, SwapRules.Mode.TAG, Optional.of(tag));
         }
         // Whole mod: only the namespace of the target matters (see SwapRules.Rule#matches).
         String mod = string(json, "mod");
-        ResourceLocation target = mod == null ? null : ResourceLocation.tryBuild(mod, "any");
+        Identifier target = mod == null ? null : Identifier.tryBuild(mod, "any");
         return target == null ? null : new SwapRules.Rule(tool, target, SwapRules.Mode.MOD, Optional.empty());
     }
 
@@ -265,12 +265,12 @@ public final class DefaultSwapRules
     }
 
     /** An id; a leading "#" (tags) is optional. */
-    private static ResourceLocation id(JsonObject json, String key)
+    private static Identifier id(JsonObject json, String key)
     {
         String text = string(json, key);
         if (text == null)
             return null;
-        return ResourceLocation.tryParse(text.startsWith("#") ? text.substring(1) : text);
+        return Identifier.tryParse(text.startsWith("#") ? text.substring(1) : text);
     }
 
     private static int version(JsonObject root)

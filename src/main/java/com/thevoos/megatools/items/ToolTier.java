@@ -4,11 +4,11 @@ import com.thevoos.megatools.StartupConfig;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 
-import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 /**
  * Feature set of each Mega Tools tool, plus where its stats come from.
@@ -29,11 +29,11 @@ import java.util.function.Supplier;
  */
 public enum ToolTier
 {
-    //      config section               vanilla speed storage support plates incorrect-for-drops tag             GUI accent   repair item
-    STONE  (StartupConfig.STONE_PAXEL,   4.0F,  0,      true,   true,  BlockTags.INCORRECT_FOR_STONE_TOOL,     0xFF5E5E5E, () -> Ingredient.of(ItemTags.STONE_TOOL_MATERIALS)),
-    IRON   (StartupConfig.IRON_PAXEL,    6.0F,  9,      true,   true,  BlockTags.INCORRECT_FOR_IRON_TOOL,      0xFF6B7782, () -> Ingredient.of(Items.IRON_INGOT)),
-    DIAMOND(StartupConfig.DIAMOND_PAXEL, 8.0F,  18,     true,   true,  BlockTags.INCORRECT_FOR_DIAMOND_TOOL,   0xFF1D8A86, () -> Ingredient.of(Items.DIAMOND)),
-    MEGA   (StartupConfig.MEGA_TOOL,     12.0F, 27,     true,   true,  BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF3E2050, () -> Ingredient.EMPTY);
+    //      config section               vanilla speed storage support plates incorrect-for-drops tag             GUI accent   anvil repair
+    STONE  (StartupConfig.STONE_PAXEL,   4.0F,  0,      true,   true,  BlockTags.INCORRECT_FOR_STONE_TOOL,     0xFF5E5E5E, p -> p.repairable(ItemTags.STONE_TOOL_MATERIALS)),
+    IRON   (StartupConfig.IRON_PAXEL,    6.0F,  9,      true,   true,  BlockTags.INCORRECT_FOR_IRON_TOOL,      0xFF6B7782, p -> p.repairable(Items.IRON_INGOT)),
+    DIAMOND(StartupConfig.DIAMOND_PAXEL, 8.0F,  18,     true,   true,  BlockTags.INCORRECT_FOR_DIAMOND_TOOL,   0xFF1D8A86, p -> p.repairable(Items.DIAMOND)),
+    MEGA   (StartupConfig.MEGA_TOOL,     12.0F, 27,     true,   true,  BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF3E2050, p -> {});
 
     private final StartupConfig.ToolValues config;
     private final float vanillaSpeed;
@@ -42,11 +42,11 @@ public enum ToolTier
     private final boolean enchantPlates;
     private final TagKey<Block> incorrectBlocksForDrops;
     private final int accentColor;
-    private final Supplier<Ingredient> repairIngredient;
+    private final Consumer<Item.Properties> repairItem;
 
     ToolTier(StartupConfig.ToolValues config, float vanillaSpeed, int storageSlots,
              boolean supportTools, boolean enchantPlates, TagKey<Block> incorrectBlocksForDrops,
-             int accentColor, Supplier<Ingredient> repairIngredient)
+             int accentColor, Consumer<Item.Properties> repairItem)
     {
         this.config = config;
         this.vanillaSpeed = vanillaSpeed;
@@ -55,7 +55,7 @@ public enum ToolTier
         this.enchantPlates = enchantPlates;
         this.incorrectBlocksForDrops = incorrectBlocksForDrops;
         this.accentColor = accentColor;
-        this.repairIngredient = repairIngredient;
+        this.repairItem = repairItem;
     }
 
     // ---- From config/megatools-startup.toml. Only call these once configs are loaded
@@ -119,6 +119,7 @@ public enum ToolTier
     public TagKey<Block> incorrectBlocksForDrops() { return incorrectBlocksForDrops; }
     /** Colour of the title bar in the GUI, so every tool's GUI looks different. */
     public int accentColor() { return accentColor; }
-    public Ingredient repairIngredient() { return repairIngredient.get(); }
+    /** Anvil repair material (the Mega Tool has none). */
+    public void applyRepairItem(Item.Properties properties) { repairItem.accept(properties); }
     public boolean isMega() { return this == MEGA; }
 }

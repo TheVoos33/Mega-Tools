@@ -163,16 +163,16 @@ public final class ToolLightManager
         if (!lit)
         {
             if (!PLAYERS.isEmpty())
-                release(player.server, PLAYERS.remove(player.getUUID()));
+                release(player.level().getServer(), PLAYERS.remove(player.getUUID()));
             return;
         }
 
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         PlayerLight light = PLAYERS.get(player.getUUID());
         if (light == null || light.dimension != world.dimension())
         {
             // New dimension: start over (the old light fades out).
-            release(player.server, light);
+            release(player.level().getServer(), light);
             light = new PlayerLight(world.dimension());
             PLAYERS.put(player.getUUID(), light);
         }
@@ -185,7 +185,7 @@ public final class ToolLightManager
             if (next != null)
                 place(world, next);   // the new light first...
             if (old != null)
-                fadeOut(player.server, new LightKey(world.dimension(), old), player.server.getTickCount()); // ...then the old one fades
+                fadeOut(player.level().getServer(), new LightKey(world.dimension(), old), player.level().getServer().getTickCount()); // ...then the old one fades
         }
     }
 
@@ -484,14 +484,14 @@ public final class ToolLightManager
     public static void onChunkSent(ChunkWatchEvent.Sent event)
     {
         RECENT_CHUNKS.computeIfAbsent(event.getPlayer().getUUID(), id -> new Long2LongOpenHashMap())
-                .put(event.getPos().toLong(), event.getLevel().getServer().getTickCount());
+                .put(event.getPos().pack(), event.getLevel().getServer().getTickCount());
     }
 
     /** Server: a player no longer has a chunk (out of range or other dimension). */
     public static void onChunkUnwatch(ChunkWatchEvent.UnWatch event)
     {
         UUID id = event.getPlayer().getUUID();
-        long chunk = event.getPos().toLong();
+        long chunk = event.getPos().pack();
         Long2LongOpenHashMap recent = RECENT_CHUNKS.get(id);
         if (recent != null)
             recent.remove(chunk);
@@ -518,7 +518,7 @@ public final class ToolLightManager
             if (!anyRecent(entry.getValue(), minX, maxX, minZ, maxZ, now))
                 continue;
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
-            if (player == null || player.serverLevel() != world)
+            if (player == null || player.level() != world)
                 continue;
 
             LevelLightEngine engine = world.getLightEngine();
@@ -533,7 +533,7 @@ public final class ToolLightManager
                 {
                     if (!player.getChunkTrackingView().contains(x, z))
                         continue;
-                    Resync resync = pending.computeIfAbsent(ChunkPos.asLong(x, z), c -> new Resync(world.dimension()));
+                    Resync resync = pending.computeIfAbsent(ChunkPos.pack(x, z), c -> new Resync(world.dimension()));
                     resync.sections.set(minIndex, maxIndex + 1);
                     resync.due = now + RESYNC_DELAY; // later changes push it back, so the last one is included
                 }
@@ -545,7 +545,7 @@ public final class ToolLightManager
         for (int x = minX; x <= maxX; x++)
             for (int z = minZ; z <= maxZ; z++)
             {
-                long sent = recent.getOrDefault(ChunkPos.asLong(x, z), Long.MIN_VALUE);
+                long sent = recent.getOrDefault(ChunkPos.pack(x, z), Long.MIN_VALUE);
                 if (sent != Long.MIN_VALUE && now - sent <= RESYNC_WINDOW)
                     return true;
             }
@@ -579,15 +579,15 @@ public final class ToolLightManager
                 Resync resync = chunk.getValue();
                 if (resync.due > now)
                     continue;
-                ChunkPos pos = new ChunkPos(chunk.getLongKey()); // read before remove(): the entry is invalid after it
+                ChunkPos pos = ChunkPos.unpack(chunk.getLongKey()); // read before remove(): the entry is invalid after it
                 chunks.remove();
                 ServerLevel world = server.getLevel(resync.dimension);
-                if (world == null || player.serverLevel() != world)
+                if (world == null || player.level() != world)
                     continue;
                 // The server works out light on its own thread: send once the light changes queued so far are done.
-                world.getChunkSource().getLightEngine().waitForPendingTasks(pos.x, pos.z).thenRunAsync(() ->
+                world.getChunkSource().getLightEngine().waitForPendingTasks(pos.x(), pos.z()).thenRunAsync(() ->
                 {
-                    if (!player.hasDisconnected() && player.serverLevel() == world
+                    if (!player.hasDisconnected() && player.level() == world
                             && player.getChunkTrackingView().contains(pos))
                         player.connection.send(new ClientboundLightUpdatePacket(pos, world.getLightEngine(), new BitSet(), resync.sections));
                 }, server);
@@ -617,19 +617,19 @@ public final class ToolLightManager
         RECENT_CHUNKS.remove(event.getEntity().getUUID());
         RESYNC.remove(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer player)
-            removeNow(player.server, PLAYERS.remove(player.getUUID()));
+            removeNow(player.level().getServer(), PLAYERS.remove(player.getUUID()));
     }
 
     public static void onChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event)
     {
         if (event.getEntity() instanceof ServerPlayer player)
-            removeNow(player.server, PLAYERS.remove(player.getUUID()));
+            removeNow(player.level().getServer(), PLAYERS.remove(player.getUUID()));
     }
 
     public static void onDeath(LivingDeathEvent event)
     {
         if (event.getEntity() instanceof ServerPlayer player)
-            removeNow(player.server, PLAYERS.remove(player.getUUID()));
+            removeNow(player.level().getServer(), PLAYERS.remove(player.getUUID()));
     }
 
     /**

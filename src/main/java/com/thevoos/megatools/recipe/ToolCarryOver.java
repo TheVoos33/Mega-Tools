@@ -163,7 +163,7 @@ public final class ToolCarryOver
 
         CraftingInput input = grid.asCraftInput();
         Optional<RecipeHolder<CraftingRecipe>> recipe =
-                player.level().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, player.level());
+                player.level().getServer().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, player.level());
         if (recipe.isEmpty())
             return;
         CraftingRecipe value = recipe.get().value();
@@ -215,7 +215,7 @@ public final class ToolCarryOver
             refunded = true;
         }
         if (refunded)
-            player.displayClientMessage(Component.translatable("message.megatools.contents_returned"), true);
+            player.sendOverlayMessage(Component.translatable("message.megatools.contents_returned"));
     }
 
     // =====================================================================================
@@ -264,7 +264,7 @@ public final class ToolCarryOver
                 continue;
             ItemStack tool = origin.tool().copy();
             stack.remove(ModDataComponents.SWAP_ORIGIN.get()); // so it can never exist twice
-            player.displayClientMessage(Component.translatable("message.megatools.swap_restored", tool.getHoverName()), true);
+            player.sendOverlayMessage(Component.translatable("message.megatools.swap_restored", tool.getHoverName()));
             if (!player.getInventory().add(tool))
                 player.drop(tool, false);
         }

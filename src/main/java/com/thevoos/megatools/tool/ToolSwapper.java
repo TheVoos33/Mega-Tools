@@ -66,9 +66,9 @@ public final class ToolSwapper
             if (requestedSlot < 0)
             {
                 LastSwap last = held.get(ModDataComponents.LAST_SWAP.get());
-                player.displayClientMessage(last == null || last.item() == Items.AIR
+                player.sendOverlayMessage(last == null || last.item() == Items.AIR
                         ? Component.translatable("message.megatools.no_last_tool")
-                        : Component.translatable("message.megatools.last_tool_gone", last.item().getDescription()), true);
+                        : Component.translatable("message.megatools.last_tool_gone", Component.translatable(last.item().getDescriptionId())));
                 return;
             }
         }
@@ -137,7 +137,7 @@ public final class ToolSwapper
         else
             giveOrDrop(player, megaTool);
 
-        player.displayClientMessage(Component.translatable("message.megatools.swap_restored", megaTool.getHoverName()), true);
+        player.sendOverlayMessage(Component.translatable("message.megatools.swap_restored", megaTool.getHoverName()));
     }
 
     /** Storage slot of the last swapped-to tool: its old slot if it's still there, else the first of that item. */

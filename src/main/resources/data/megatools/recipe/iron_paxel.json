@@ -8,15 +8,9 @@
     " C "
   ],
   "key": {
-    "A": {
-      "item": "megatools:iron_head"
-    },
-    "B": {
-      "item": "minecraft:chest"
-    },
-    "C": {
-      "item": "minecraft:leather"
-    }
+    "A": "megatools:iron_head",
+    "B": "minecraft:chest",
+    "C": "minecraft:leather"
   },
   "result": {
     "id": "megatools:iron_paxel"

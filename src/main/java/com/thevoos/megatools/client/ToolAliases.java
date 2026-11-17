@@ -9,7 +9,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import com.thevoos.megatools.MegaTools;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.neoforged.fml.loading.FMLPaths;
 
@@ -54,7 +54,7 @@ public final class ToolAliases
     private static final String FILE_NAME = "megatools-tool-aliases.json";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    private static Map<ResourceLocation, Set<String>> itemAliases = Map.of();
+    private static Map<Identifier, Set<String>> itemAliases = Map.of();
     private static Map<String, Set<String>> modAliases = Map.of();
     private static Set<EntityType<?>> attachmentEntities = Set.of();
     private static boolean loaded = false;
@@ -62,7 +62,7 @@ public final class ToolAliases
     private ToolAliases() {}
 
     /** True if the tool with this registry id should be offered for blocks from {@code blockMod}. */
-    public static boolean matches(ResourceLocation toolId, String blockMod)
+    public static boolean matches(Identifier toolId, String blockMod)
     {
         if (!loaded)
             reload();
@@ -102,12 +102,12 @@ public final class ToolAliases
                 root = JsonParser.parseReader(json).getAsJsonObject();
             }
 
-            Map<ResourceLocation, Set<String>> items = new HashMap<>();
+            Map<Identifier, Set<String>> items = new HashMap<>();
             if (root.has("items") && root.get("items").isJsonObject())
             {
                 for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject("items").entrySet())
                 {
-                    ResourceLocation id = ResourceLocation.tryParse(entry.getKey().trim().toLowerCase(Locale.ROOT));
+                    Identifier id = Identifier.tryParse(entry.getKey().trim().toLowerCase(Locale.ROOT));
                     if (id == null)
                         MegaTools.LOGGER.warn("[{}] ignoring invalid item id '{}'", FILE_NAME, entry.getKey());
                     else
@@ -142,7 +142,7 @@ public final class ToolAliases
             Set<EntityType<?>> attachments = new HashSet<>();
             for (String entry : attachmentIds)
             {
-                ResourceLocation id = ResourceLocation.tryParse(entry);
+                Identifier id = Identifier.tryParse(entry);
                 if (id == null)
                     MegaTools.LOGGER.warn("[{}] ignoring invalid entity id '{}'", FILE_NAME, entry);
                 else // not registered = that mod isn't installed

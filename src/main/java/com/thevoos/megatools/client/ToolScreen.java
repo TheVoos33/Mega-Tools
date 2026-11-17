@@ -11,22 +11,25 @@ import com.thevoos.megatools.network.OpenSwapRulesPayload;
 import com.thevoos.megatools.network.RenameToolPayload;
 import com.thevoos.megatools.network.SwapToolPayload;
 import com.thevoos.megatools.tool.ToolData;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.util.ARGB;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -73,8 +76,8 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     private static final String ON_SYMBOL = "\u2714 ";  // heavy check mark
     private static final String OFF_SYMBOL = "\u2716 "; // heavy multiplication x
     private static final int TOGGLE_H = 16;
-    private static final int LABEL_COLOR = 0x404040;
-    private static final int HINT_COLOR = 0x707070;
+    private static final int LABEL_COLOR = 0xFF404040;
+    private static final int HINT_COLOR = 0xFF707070;
     /** Shown in the Shear / Brush / Ignite row while the Support Tool slot is empty. */
     private static final Component SUPPORT_HINT = Component.translatable("gui.megatools.support_hint");
 
@@ -93,9 +96,7 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
 
     public ToolScreen(ToolMenu menu, Inventory playerInventory, Component title)
     {
-        super(menu, playerInventory, title);
-        this.imageWidth = menu.getLayout().width();
-        this.imageHeight = menu.getLayout().height();
+        super(menu, playerInventory, title, menu.getLayout().width(), menu.getLayout().height());
     }
 
     /**
@@ -160,7 +161,7 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
                 Component.translatable("gui.megatools.rename"));
         nameField.setBordered(false);
         nameField.setMaxLength(RenameToolPayload.MAX_LENGTH);
-        nameField.setTextColor(0xFFFFFF);
+        nameField.setTextColor(0xFFFFFFFF);
         nameField.setValue(currentName);
         lastSentName = currentName;
         addRenderableWidget(nameField);
@@ -273,17 +274,17 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     private void openSwapRules()
     {
         commitRename(); // before the menu changes, so the new name isn't lost
-        PacketDistributor.sendToServer(OpenSwapRulesPayload.INSTANCE);
+        ClientPacketDistributor.sendToServer(OpenSwapRulesPayload.INSTANCE);
     }
 
     /** Resizing the window rebuilds the widgets: keep a name that is typed but not confirmed yet. */
     @Override
-    public void resize(Minecraft minecraft, int width, int height)
+    public void resize(int width, int height)
     {
         String typed = nameField.getValue();
         boolean focused = nameField.isFocused();
         String sent = lastSentName;
-        super.resize(minecraft, width, height); // runs init() again
+        super.resize(width, height); // runs init() again
         nameField.setValue(typed);
         lastSentName = sent;
         if (focused)
@@ -376,14 +377,15 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
         if (!value.equals(lastSentName))
         {
             lastSentName = value;
-            PacketDistributor.sendToServer(new RenameToolPayload(value));
+            ClientPacketDistributor.sendToServer(new RenameToolPayload(value));
         }
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers)
+    public boolean keyPressed(KeyEvent event)
     {
         // R on a stored tool never gets here: KeyboardHandlerMixin handles it before any other mod (tryQuickSwap).
+        int keyCode = event.key();
         if (nameField.isFocused())
         {
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER)
@@ -395,9 +397,9 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
             // Swallow every other key (except Escape) so typing "e" or "1" doesn't close the
             // screen or move items.
             if (keyCode != GLFW.GLFW_KEY_ESCAPE)
-                return nameField.keyPressed(keyCode, scanCode, modifiers) || nameField.canConsumeInput();
+                return nameField.keyPressed(event) || nameField.canConsumeInput();
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     /**
@@ -410,18 +412,18 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
      * Returns true only if the key was the swap key AND a stored tool is hovered, so the key is
      * consumed in that case only and other mods (e.g. EMI's / JEI's R = show recipe) work everywhere else.
      */
-    public boolean tryQuickSwap(int keyCode, int scanCode)
+    public boolean tryQuickSwap(KeyEvent event)
     {
         if (nameField.isFocused())
             return false; // typing "r" in the name field
-        if (!ModKeyMappings.SWAP_TOOL.matches(keyCode, scanCode) || !ModKeyMappings.modifierMatches(ModKeyMappings.SWAP_TOOL))
+        if (!ModKeyMappings.SWAP_TOOL.matches(event) || !ModKeyMappings.modifierMatches(ModKeyMappings.SWAP_TOOL))
             return false;
         if (!(hoveredSlot instanceof ToolMenu.StorageSlot storageSlot) || !storageSlot.hasItem())
             return false;
 
         int storageIndex = storageSlot.getContainerSlot();
         onClose();
-        PacketDistributor.sendToServer(new SwapToolPayload(storageIndex));
+        ClientPacketDistributor.sendToServer(new SwapToolPayload(storageIndex));
         return true;
     }
 
@@ -440,15 +442,15 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button)
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick)
     {
         // Clicking anywhere else confirms the rename.
-        if (nameField.isFocused() && !nameField.isMouseOver(mouseX, mouseY))
+        if (nameField.isFocused() && !nameField.isMouseOver(event.x(), event.y()))
         {
             commitRename();
             nameField.setFocused(false);
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
@@ -463,36 +465,36 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     // =====================================================================================
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick)
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick)
     {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY); // item tooltips
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick); // also queues the item tooltips
 
         // Hint tooltips for empty plate slots and the title.
         if (hoveredSlot instanceof ToolMenu.LightSlot lightSlot && !lightSlot.hasItem())
         {
-            graphics.renderTooltip(font, Component.translatable("gui.megatools.light_slot"), mouseX, mouseY);
+            graphics.setTooltipForNextFrame(font, Component.translatable("gui.megatools.light_slot"), mouseX, mouseY);
         }
         else if (hoveredSlot instanceof ToolMenu.SupportSlot supportSlot && !supportSlot.hasItem())
         {
-            graphics.renderTooltip(font, Component.translatable("gui.megatools.support_slot"), mouseX, mouseY);
+            graphics.setTooltipForNextFrame(font, Component.translatable("gui.megatools.support_slot"), mouseX, mouseY);
         }
         else if (hoveredSlot instanceof ToolMenu.PlateSlot plateSlot && !plateSlot.hasItem())
         {
             boolean primary = plateSlot.getContainerSlot() == ToolData.PRIMARY;
-            graphics.renderTooltip(font, primary ? Component.translatable("gui.megatools.plate.primary")
+            graphics.setTooltipForNextFrame(font, primary ? Component.translatable("gui.megatools.plate.primary")
                     : Component.translatable("gui.megatools.plate.secondary", ModKeyMappings.SWITCH_PLATE.getTranslatedKeyMessage()),
                     mouseX, mouseY);
         }
         else if (!nameField.isFocused() && nameField.isMouseOver(mouseX, mouseY))
         {
-            graphics.renderTooltip(font, Component.translatable("gui.megatools.rename_hint"), mouseX, mouseY);
+            graphics.setTooltipForNextFrame(font, Component.translatable("gui.megatools.rename_hint"), mouseX, mouseY);
         }
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY)
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick)
     {
+        super.extractBackground(graphics, mouseX, mouseY, partialTick); // darkened world behind the menu
         int x = leftPos;
         int y = topPos;
         GuiLayout layout = menu.getLayout();
@@ -522,20 +524,20 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
             int active = ToolData.getSettings(menu.getTool()).activePlate();
             int plateX = active == ToolData.PRIMARY ? layout.plate0X() : layout.plate1X();
             int plateY = active == ToolData.PRIMARY ? layout.plate0Y() : layout.plate1Y();
-            graphics.renderOutline(x + plateX - 2, y + plateY - 2, 20, 20, 0xFFE8B923);
+            graphics.outline(x + plateX - 2, y + plateY - 2, 20, 20, 0xFFE8B923);
         }
     }
 
     /** Section labels. The title is the EditBox, so the default title/inventory labels are replaced. */
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY)
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY)
     {
         GuiLayout layout = menu.getLayout();
         // Empty Support Tool slot: a hint where the Shear / Brush / Ignite buttons would be.
         if (menu.getTier().supportTools() && !lastSupport && !layout.icons())
         {
             int rowY = GuiLayout.TOP + GuiLayout.SUPPORT_ROW * GuiLayout.ROW;
-            graphics.drawString(font, SUPPORT_HINT, layout.toggleX() + (layout.gridW() - font.width(SUPPORT_HINT)) / 2,
+            graphics.text(font, SUPPORT_HINT, layout.toggleX() + (layout.gridW() - font.width(SUPPORT_HINT)) / 2,
                     rowY + 4, HINT_COLOR, false);
         }
         if (layout.storageRows() > 0)
@@ -544,16 +546,16 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
             String label = Component.translatable("gui.megatools.tool_storage").getString();
             if (font.width(label) > storageLabelRoom)
                 label = font.plainSubstrByWidth(label, Math.max(0, storageLabelRoom - font.width("..."))) + "...";
-            graphics.drawString(font, label, layout.storageLabelX(), layout.storageLabelY(), LABEL_COLOR, false);
+            graphics.text(font, label, layout.storageLabelX(), layout.storageLabelY(), LABEL_COLOR, false);
         }
-        graphics.drawString(font, playerInventoryTitle, layout.invLabelX(), layout.invLabelY(), LABEL_COLOR, false);
+        graphics.text(font, playerInventoryTitle, layout.invLabelX(), layout.invLabelY(), LABEL_COLOR, false);
     }
 
     /**
      * Vanilla's chest GUI (176 x 222 on a 256 x 256 sheet). The panel and slots are assembled from its
      * pieces, so whatever a resource pack does to the chest GUI (dark themes...) applies here as well.
      */
-    private static final ResourceLocation CONTAINER_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+    private static final Identifier CONTAINER_TEXTURE = Identifier.withDefaultNamespace("textures/gui/container/generic_54.png");
     private static final int TEX_W = 176;
     private static final int TEX_H = 222;
     /** Border thickness, including the rounded corners. */
@@ -568,7 +570,7 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     private static final int SLOT_V = 17;
 
     /** A panel of any size in the style of the vanilla container GUIs: corners, tiled edges, tiled plain middle. */
-    static void drawPanel(GuiGraphics g, int x, int y, int w, int h)
+    static void drawPanel(GuiGraphicsExtractor g, int x, int y, int w, int h)
     {
         int right = x + w - EDGE;
         int bottom = y + h - EDGE;
@@ -577,40 +579,35 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
         {
             int th = Math.min(PLAIN_H, bottom - ty);
             for (int tx = x + EDGE; tx < right; tx += PLAIN_W)
-                g.blit(CONTAINER_TEXTURE, tx, ty, PLAIN_U, PLAIN_V, Math.min(PLAIN_W, right - tx), th);
-            g.blit(CONTAINER_TEXTURE, x, ty, 0, PLAIN_V, EDGE, th);
-            g.blit(CONTAINER_TEXTURE, right, ty, TEX_W - EDGE, PLAIN_V, EDGE, th);
+                g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, tx, ty, PLAIN_U, PLAIN_V, Math.min(PLAIN_W, right - tx), th, 256, 256);
+            g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, x, ty, 0, PLAIN_V, EDGE, th, 256, 256);
+            g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, right, ty, TEX_W - EDGE, PLAIN_V, EDGE, th, 256, 256);
         }
         for (int tx = x + EDGE; tx < right; tx += PLAIN_W)
         {
             int tw = Math.min(PLAIN_W, right - tx);
-            g.blit(CONTAINER_TEXTURE, tx, y, PLAIN_U, 0, tw, EDGE);
-            g.blit(CONTAINER_TEXTURE, tx, bottom, PLAIN_U, TEX_H - EDGE, tw, EDGE);
+            g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, tx, y, PLAIN_U, 0, tw, EDGE, 256, 256);
+            g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, tx, bottom, PLAIN_U, TEX_H - EDGE, tw, EDGE, 256, 256);
         }
         // Corners
-        g.blit(CONTAINER_TEXTURE, x, y, 0, 0, EDGE, EDGE);
-        g.blit(CONTAINER_TEXTURE, right, y, TEX_W - EDGE, 0, EDGE, EDGE);
-        g.blit(CONTAINER_TEXTURE, x, bottom, 0, TEX_H - EDGE, EDGE, EDGE);
-        g.blit(CONTAINER_TEXTURE, right, bottom, TEX_W - EDGE, TEX_H - EDGE, EDGE, EDGE);
+        g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, x, y, 0, 0, EDGE, EDGE, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, right, y, TEX_W - EDGE, 0, EDGE, EDGE, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, x, bottom, 0, TEX_H - EDGE, EDGE, EDGE, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, right, bottom, TEX_W - EDGE, TEX_H - EDGE, EDGE, EDGE, 256, 256);
     }
 
     /** Draws an item, then the slot's own background half-transparent over it, so it reads as a placeholder. */
-    static void drawGhostItem(GuiGraphics g, ItemStack stack, int x, int y)
+    static void drawGhostItem(GuiGraphicsExtractor g, ItemStack stack, int x, int y)
     {
-        g.renderFakeItem(stack, x, y);
-        g.pose().pushPose();
-        g.pose().translate(0.0F, 0.0F, 200.0F); // above the item, which renders at a raised depth
-        RenderSystem.enableBlend();
-        g.setColor(1.0F, 1.0F, 1.0F, 0.63F);
-        g.blit(CONTAINER_TEXTURE, x, y, SLOT_U + 1, SLOT_V + 1, 16, 16);
-        g.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.disableBlend();
-        g.pose().popPose();
+        g.fakeItem(stack, x, y);
+        // Drawn after the item, so it lands above it (the GUI puts later overlapping elements on top).
+        g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, x, y, SLOT_U + 1, SLOT_V + 1, 16, 16, 256, 256,
+                ARGB.white(0.63F));
     }
 
     /** An 18x18 slot, the same one the vanilla chest GUI shows. */
-    static void drawSlot(GuiGraphics g, int x, int y)
+    static void drawSlot(GuiGraphicsExtractor g, int x, int y)
     {
-        g.blit(CONTAINER_TEXTURE, x, y, SLOT_U, SLOT_V, 18, 18);
+        g.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, x, y, SLOT_U, SLOT_V, 18, 18, 256, 256);
     }
 }

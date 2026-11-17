@@ -15,10 +15,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.EnchantedBookItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -44,7 +44,7 @@ public final class MegaToolsCommand
     {
         event.getDispatcher().register(Commands.literal(MegaTools.MODID)
                 .then(Commands.literal("kit")
-                        .requires(source -> source.hasPermission(Commands.LEVEL_ADMINS))
+                        .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                         .executes(MegaToolsCommand::giveKit)));
     }
 
@@ -61,7 +61,7 @@ public final class MegaToolsCommand
                 player.drop(stack, false);
         }
 
-        MegaTools.LOGGER.info("Gave the Mega Tools kit to {}", player.getGameProfile().getName());
+        MegaTools.LOGGER.info("Gave the Mega Tools kit to {}", player.getGameProfile().name());
         source.sendSuccess(() -> Component.translatable("command.megatools.kit.success", player.getDisplayName()), true);
         return Command.SINGLE_SUCCESS;
     }
@@ -122,6 +122,6 @@ public final class MegaToolsCommand
         Holder<Enchantment> enchantment = player.registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .getOrThrow(key);
-        return EnchantedBookItem.createForEnchantment(new EnchantmentInstance(enchantment, level));
+        return EnchantmentHelper.createBook(new EnchantmentInstance(enchantment, level));
     }
 }

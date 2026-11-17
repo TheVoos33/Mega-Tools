@@ -6,8 +6,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 
-import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Support Tool - shears, a brush and flint and steel in one item (crafted from those three).
@@ -23,9 +24,11 @@ public class SupportToolItem extends Item
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag)
+    @SuppressWarnings("deprecation") // the vanilla way for items to add tooltip lines
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag)
     {
-        tooltip.add(Component.translatable("tooltip.megatools.support_tool").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.megatools.support_tool.usage", Component.keybind(KeyNames.OPEN_GUI)).withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("tooltip.megatools.support_tool").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("tooltip.megatools.support_tool.usage", Component.keybind(KeyNames.OPEN_GUI)).withStyle(ChatFormatting.DARK_GRAY));
     }
 }

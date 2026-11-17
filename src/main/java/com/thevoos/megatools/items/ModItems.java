@@ -16,30 +16,29 @@ public class ModItems
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MegaTools.MODID);
 
     // ---- Tools (all share MultiToolItem; ToolTier decides stats and features) ----
-    public static final DeferredItem<MultiToolItem> STONE_PAXEL = ITEMS.register("stone_paxel",
-            () -> new MultiToolItem(ToolTier.STONE, new Item.Properties()));
-    public static final DeferredItem<MultiToolItem> IRON_PAXEL = ITEMS.register("iron_paxel",
-            () -> new MultiToolItem(ToolTier.IRON, new Item.Properties()));
-    public static final DeferredItem<MultiToolItem> DIAMOND_PAXEL = ITEMS.register("diamond_paxel",
-            () -> new MultiToolItem(ToolTier.DIAMOND, new Item.Properties()));
-    public static final DeferredItem<MultiToolItem> MEGA_TOOL = ITEMS.register("mega_tool",
-            () -> new MultiToolItem(ToolTier.MEGA, new Item.Properties()));
+    // registerItem / registerSimpleItem set the item's id on its properties (required since 1.21.2).
+    public static final DeferredItem<MultiToolItem> STONE_PAXEL = ITEMS.registerItem("stone_paxel",
+            properties -> new MultiToolItem(ToolTier.STONE, properties));
+    public static final DeferredItem<MultiToolItem> IRON_PAXEL = ITEMS.registerItem("iron_paxel",
+            properties -> new MultiToolItem(ToolTier.IRON, properties));
+    public static final DeferredItem<MultiToolItem> DIAMOND_PAXEL = ITEMS.registerItem("diamond_paxel",
+            properties -> new MultiToolItem(ToolTier.DIAMOND, properties));
+    public static final DeferredItem<MultiToolItem> MEGA_TOOL = ITEMS.registerItem("mega_tool",
+            properties -> new MultiToolItem(ToolTier.MEGA, properties));
 
     // ---- Crafting ingredients ----
-    public static final DeferredItem<Item> IRON_HEAD = ITEMS.register("iron_head",
-            () -> new Item(new Item.Properties()));
-    public static final DeferredItem<Item> DIAMOND_HEAD = ITEMS.register("diamond_head",
-            () -> new Item(new Item.Properties()));
-    public static final DeferredItem<Item> NETHERITE_HEAD = ITEMS.register("netherite_head",
-            () -> new Item(new Item.Properties().fireResistant().rarity(Rarity.RARE)));
+    public static final DeferredItem<Item> IRON_HEAD = ITEMS.registerSimpleItem("iron_head");
+    public static final DeferredItem<Item> DIAMOND_HEAD = ITEMS.registerSimpleItem("diamond_head");
+    public static final DeferredItem<Item> NETHERITE_HEAD = ITEMS.registerSimpleItem("netherite_head",
+            properties -> properties.fireResistant().rarity(Rarity.RARE));
 
     // ---- Upgrade item ----
-    public static final DeferredItem<EnchantmentPlateItem> ENCHANTMENT_PLATE = ITEMS.register("enchantment_plate",
-            () -> new EnchantmentPlateItem(new Item.Properties()));
+    public static final DeferredItem<EnchantmentPlateItem> ENCHANTMENT_PLATE = ITEMS.registerItem("enchantment_plate",
+            EnchantmentPlateItem::new);
 
     /** Shears + brush + flint and steel; adds those abilities to a tool when placed in its Support Tool slot. */
-    public static final DeferredItem<SupportToolItem> SUPPORT_TOOL = ITEMS.register("support_tool",
-            () -> new SupportToolItem(new Item.Properties()));
+    public static final DeferredItem<SupportToolItem> SUPPORT_TOOL = ITEMS.registerItem("support_tool",
+            SupportToolItem::new);
 
     public static void register(IEventBus eventBus)
     {

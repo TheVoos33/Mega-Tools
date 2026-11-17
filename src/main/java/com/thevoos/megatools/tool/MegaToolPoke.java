@@ -1,6 +1,6 @@
 package com.thevoos.megatools.tool;
 
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 
 import java.util.HashMap;
 import java.util.Map;

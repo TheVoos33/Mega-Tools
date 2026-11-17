@@ -1,13 +1,21 @@
 package com.thevoos.megatools.client;
 
+import com.thevoos.megatools.MegaTools;
+import com.thevoos.megatools.items.ModItems;
 import com.thevoos.megatools.tool.MegaToolPoke;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.util.context.ContextKey;
+import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.HumanoidArm;
-import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.fml.common.asm.enumextension.EnumProxy;
 import net.neoforged.neoforge.client.IArmPoseTransformer;
+import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
+import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 
 /**
  * Third-person pose for the Mega Tool (F5 view and other players): a simple prod.
@@ -29,7 +37,13 @@ public final class MegaToolArmPose
     private static final float REACH_RADIANS = 0.5F;
 
     public static final EnumProxy<HumanoidModel.ArmPose> POKE_PARAMS = new EnumProxy<>(
-            HumanoidModel.ArmPose.class, false, (IArmPoseTransformer) MegaToolArmPose::applyTransform);
+            HumanoidModel.ArmPose.class, false, false, (IArmPoseTransformer) MegaToolArmPose::applyTransform);
+
+    /**
+     * The poke state of the player being drawn. Models only see a render state (not the player), so the state
+     * is looked up while the render state is filled (see onRegisterRenderStateModifiers) and read back here.
+     */
+    private static final ContextKey<MegaToolPoke.State> POKE_STATE = new ContextKey<>(MegaTools.id("poke_state"));
 
     private MegaToolArmPose() {}
 
@@ -38,13 +52,29 @@ public final class MegaToolArmPose
         return POKE_PARAMS.getValue();
     }
 
-    private static void applyTransform(HumanoidModel<?> model, LivingEntity entity, HumanoidArm arm)
+    /** Mod bus (MegaToolsClient): every player holding a Mega Tool gets its poke state in its render state. */
+    public static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event)
+    {
+        event.registerAvatarEntityModifier(new AvatarRenderStateModifier()
+        {
+            @Override
+            public <T extends Avatar & ClientAvatarEntity> void accept(T avatar, AvatarRenderState renderState)
+            {
+                MegaToolPoke.State state = null;
+                if (avatar.getMainHandItem().is(ModItems.MEGA_TOOL.get()) || avatar.getOffhandItem().is(ModItems.MEGA_TOOL.get()))
+                    state = avatar == Minecraft.getInstance().player
+                            ? MegaToolPoke.updateLocal(MegaToolClientExtensions.localWantsTilt())
+                            : MegaToolPoke.updateRemote(avatar.getId());
+                renderState.setRenderData(POKE_STATE, state); // null clears last frame's state
+            }
+        });
+    }
+
+    private static void applyTransform(HumanoidModel<?> model, HumanoidRenderState renderState, HumanoidArm arm)
     {
         ModelPart part = arm == HumanoidArm.RIGHT ? model.rightArm : model.leftArm;
 
-        MegaToolPoke.State state = entity == Minecraft.getInstance().player
-                ? MegaToolPoke.updateLocal(MegaToolClientExtensions.localWantsTilt())
-                : MegaToolPoke.updateRemote(entity.getId());
+        MegaToolPoke.State state = renderState.getRenderData(POKE_STATE);
         float thrust = state == null ? 0.0F : state.thrust();
         boolean poking = state != null && (state.tilt() > 0.0F || thrust > 0.0F);
 
@@ -54,6 +84,6 @@ public final class MegaToolArmPose
         part.z -= THRUST_PIXELS * thrust; // model -Z is forward
 
         if (poking)
-            model.attackTime = 0.0F; // no vanilla swing on top of the prod
+            renderState.attackTime = 0.0F; // no vanilla swing on top of the prod (it is applied after the arm poses)
     }
 }

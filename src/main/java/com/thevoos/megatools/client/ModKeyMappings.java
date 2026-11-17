@@ -2,8 +2,9 @@ package com.thevoos.megatools.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.thevoos.megatools.KeyNames;
+import com.thevoos.megatools.MegaTools;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.client.settings.KeyModifier;
@@ -15,7 +16,8 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class ModKeyMappings
 {
-    public static final String CATEGORY = "key.categories.megatools";
+    /** Shown as "Mega Tools" (lang key key.category.megatools.megatools). */
+    public static final KeyMapping.Category CATEGORY = new KeyMapping.Category(MegaTools.id("megatools"));
 
     /** Ctrl + R: open the tool GUI. */
     public static final KeyMapping OPEN_GUI = new KeyMapping(KeyNames.OPEN_GUI,
@@ -37,6 +39,7 @@ public final class ModKeyMappings
 
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event)
     {
+        event.registerCategory(CATEGORY);
         event.register(OPEN_GUI);
         event.register(SWITCH_PLATE);
         event.register(SWAP_TOOL);
@@ -51,7 +54,7 @@ public final class ModKeyMappings
     {
         KeyModifier modifier = mapping.getKeyModifier();
         if (modifier == KeyModifier.NONE)
-            return !Screen.hasControlDown() && !Screen.hasShiftDown() && !Screen.hasAltDown();
+            return !Minecraft.getInstance().hasControlDown() && !Minecraft.getInstance().hasShiftDown() && !Minecraft.getInstance().hasAltDown();
         return modifier.isActive(mapping.getKeyConflictContext());
     }
 }

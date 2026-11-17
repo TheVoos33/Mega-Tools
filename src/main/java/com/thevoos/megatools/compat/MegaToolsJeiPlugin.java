@@ -8,7 +8,7 @@ import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ import java.util.Optional;
 public class MegaToolsJeiPlugin implements IModPlugin
 {
     @Override
-    public ResourceLocation getPluginUid()
+    public Identifier getPluginUid()
     {
         return MegaTools.id("jei");
     }

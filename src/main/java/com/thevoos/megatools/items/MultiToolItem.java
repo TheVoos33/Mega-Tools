@@ -10,8 +10,12 @@ import com.thevoos.megatools.tool.ToolData;
 import com.thevoos.megatools.tool.ToolLightManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderGetter;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
@@ -25,13 +29,19 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.item.component.Weapon;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.core.Holder;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
@@ -46,6 +56,7 @@ import net.neoforged.neoforge.common.ItemAbility;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import java.util.function.Consumer;
 
 /**
@@ -124,7 +135,7 @@ public class MultiToolItem extends Item
     public static void showBrokenMessage(Player player)
     {
         if (player.level().isClientSide())
-            player.displayClientMessage(Component.translatable("message.megatools.tool_broken").withStyle(ChatFormatting.RED), true);
+            player.sendOverlayMessage(Component.translatable("message.megatools.tool_broken").withStyle(ChatFormatting.RED));
     }
 
     // =====================================================================================
@@ -134,7 +145,10 @@ public class MultiToolItem extends Item
     private static Item.Properties applyTier(ToolTier tier, Item.Properties properties)
     {
         properties.component(DataComponents.TOOL, createToolComponent(tier, tier.supportTools()))
+                  // Sword behaviour: lose 1 durability per hit (no-op for the unbreakable Mega Tool).
+                  .component(DataComponents.WEAPON, new Weapon(1))
                   .attributes(createAttributes(tier));
+        tier.applyRepairItem(properties); // anvil repair with the tier's material (none for the Mega Tool)
 
         if (tier.durability() > 0)
             properties.durability(tier.durability());   // also forces stack size 1
@@ -152,23 +166,25 @@ public class MultiToolItem extends Item
      */
     private static Tool createToolComponent(ToolTier tier, boolean withShears)
     {
+        // Tags are looked up the way vanilla's tool materials do it: bound once the tags are loaded.
+        HolderGetter<Block> blocks = BuiltInRegistries.acquireBootstrapRegistrationLookup(BuiltInRegistries.BLOCK);
         List<Tool.Rule> rules = new ArrayList<>();
         // Blocks this tier is too weak for (e.g. obsidian for stone) mine but do not drop.
         if (!tier.isMega())
-            rules.add(Tool.Rule.deniesDrops(tier.incorrectBlocksForDrops()));
+            rules.add(Tool.Rule.deniesDrops(blocks.getOrThrow(tier.incorrectBlocksForDrops())));
         // Sword ability: cobwebs break fast and drop string.
-        rules.add(Tool.Rule.minesAndDrops(List.<Block>of(Blocks.COBWEB), 15.0F));
+        rules.add(Tool.Rule.minesAndDrops(HolderSet.direct(Block::builtInRegistryHolder, Blocks.COBWEB), 15.0F));
         // Shears ability: same speeds as vanilla shears (only used while a Support Tool is in, see getDestroySpeed).
         if (withShears)
         {
-            rules.add(Tool.Rule.overrideSpeed(BlockTags.LEAVES, 15.0F));
-            rules.add(Tool.Rule.overrideSpeed(BlockTags.WOOL, 5.0F));
-            rules.add(Tool.Rule.overrideSpeed(List.<Block>of(Blocks.VINE, Blocks.GLOW_LICHEN), 2.0F));
+            rules.add(Tool.Rule.overrideSpeed(blocks.getOrThrow(BlockTags.LEAVES), 15.0F));
+            rules.add(Tool.Rule.overrideSpeed(blocks.getOrThrow(BlockTags.WOOL), 5.0F));
+            rules.add(Tool.Rule.overrideSpeed(HolderSet.direct(Block::builtInRegistryHolder, Blocks.VINE, Blocks.GLOW_LICHEN), 2.0F));
         }
         // Pickaxe + axe + shovel + hoe.
-        rules.add(Tool.Rule.minesAndDrops(ModTags.MINEABLE_WITH_PAXEL, tier.miningSpeed()));
-        // Mega Tool takes no damage per block.
-        return new Tool(rules, 1.0F, tier.isMega() ? 0 : 1);
+        rules.add(Tool.Rule.minesAndDrops(blocks.getOrThrow(ModTags.MINEABLE_WITH_PAXEL), tier.miningSpeed()));
+        // Mega Tool takes no damage per block. Like vanilla tools (not swords), it can break blocks in creative.
+        return new Tool(rules, 1.0F, tier.isMega() ? 0 : 1, true);
     }
 
     /** Attack damage/speed. The player has 1 base damage, so the modifier is (total - 1). */
@@ -243,23 +259,18 @@ public class MultiToolItem extends Item
         return tier.isMega() || super.isCorrectToolForDrops(stack, state);
     }
 
-    /** Sword behaviour: lose 1 durability per hit (no-op for the unbreakable Mega Tool). */
-    @Override
-    public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker)
-    {
-        stack.hurtAndBreak(1, attacker, EquipmentSlot.MAINHAND);
-        return true;
-    }
-
     /**
      * NeoForge "item abilities": which vanilla tool actions this item can perform.
      * Used by block interactions (stripping, pathing, tilling), shear loot checks, sweep attacks, etc.
      * The right-click abilities honour the GUI toggles stored on the stack.
      */
     @Override
-    public boolean canPerformAction(ItemStack stack, ItemAbility ability)
+    public boolean canPerformAction(ItemInstance instance, ItemAbility ability)
     {
-        if (isBroken(stack))
+        // Asked for stacks and (rarely) for item templates, such as recipe results; read a template as a stack.
+        ItemStack stack = instance instanceof ItemStack itemStack ? itemStack
+                : instance instanceof ItemStackTemplate template ? template.create() : ItemStack.EMPTY;
+        if (stack.isEmpty() || isBroken(stack))
             return false; // broken: no stripping, shearing, sweeping...
         ToolSettings settings = ToolData.getSettings(stack);
 
@@ -277,11 +288,11 @@ public class MultiToolItem extends Item
         if (ItemAbilities.DEFAULT_FLINT_ACTIONS.contains(ability))
             return ToolData.supportAbility(stack, ToolSettings.IGNITE);
 
-        return ItemAbilities.DEFAULT_PICKAXE_ACTIONS.contains(ability)
-                || ItemAbilities.DEFAULT_AXE_ACTIONS.contains(ability)
+        // (Digging itself comes from the Tool component; there are no dig abilities any more.)
+        return ItemAbilities.DEFAULT_AXE_ACTIONS.contains(ability)
                 || ItemAbilities.DEFAULT_SHOVEL_ACTIONS.contains(ability)
                 || ItemAbilities.DEFAULT_HOE_ACTIONS.contains(ability)
-                || ItemAbilities.DEFAULT_SWORD_ACTIONS.contains(ability);
+                || ability == ItemAbilities.SWORD_SWEEP;
     }
 
     // =====================================================================================
@@ -376,11 +387,11 @@ public class MultiToolItem extends Item
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL_IMMEDIATE);
             if (player != null)
             {
-                tool.hurtAndBreak(1, player, LivingEntity.getSlotForHand(context.getHand()));
+                tool.hurtAndBreak(1, player, context.getHand().asEquipmentSlot());
                 player.awardStat(Stats.ITEM_USED.get(Items.FLINT_AND_STEEL));
             }
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     /**
@@ -412,9 +423,9 @@ public class MultiToolItem extends Item
      * over; anything else (lantern, glowstone...) is given back to the player.
      */
     @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected)
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot)
     {
-        if (level.isClientSide() || !stack.has(ModDataComponents.TOOL_LIGHT.get()))
+        if (!stack.has(ModDataComponents.TOOL_LIGHT.get())) // (server only)
             return;
         ItemStack legacy = ToolData.getLegacyLight(stack);
         stack.remove(ModDataComponents.TOOL_LIGHT.get());
@@ -449,9 +460,9 @@ public class MultiToolItem extends Item
     }
 
     @Override
-    public UseAnim getUseAnimation(ItemStack stack)
+    public ItemUseAnimation getUseAnimation(ItemStack stack)
     {
-        return ToolData.hasSupportTool(stack) ? UseAnim.BRUSH : UseAnim.NONE;
+        return ToolData.hasSupportTool(stack) ? ItemUseAnimation.BRUSH : ItemUseAnimation.NONE;
     }
 
     /** Forward each use tick to the vanilla brush logic (raycast, particles, sound, BrushableBlockEntity#brush). */
@@ -493,34 +504,22 @@ public class MultiToolItem extends Item
      * makes vanilla enchantments apply to an item.
      */
 
-    /** Enchanting table: never accepts the tool. */
+    /*
+     * Enchanting table: the tool has no "enchantable" component, so the table never accepts it.
+     * Repair material: set on the item properties (ToolTier#applyRepairItem).
+     */
+
+    /** Anvil and /enchant: no enchantment can be put on the tool directly (use a plate instead). */
     @Override
-    public boolean isEnchantable(ItemStack stack)
+    public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment)
     {
         return false;
     }
 
     @Override
-    public int getEnchantmentValue()
-    {
-        return 0;
-    }
-
-    /** Anvil: enchanted books can't be put on the tool (use a plate instead). */
-    @Override
-    public boolean isBookEnchantable(ItemStack stack, ItemStack book)
-    {
-        return false;
-    }
-
-    @Override
-    public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate)
-    {
-        return !tier.isMega() && tier.repairIngredient().test(repairCandidate);
-    }
-
-    @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag)
+    @SuppressWarnings("deprecation") // the vanilla way for items to add tooltip lines
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag)
     {
         if (isBroken(stack))
         {
@@ -531,21 +530,21 @@ public class MultiToolItem extends Item
                 case DIAMOND -> Items.DIAMOND;
                 case MEGA -> null; // no built-in repair recipe (unbreakable by default)
             };
-            tooltip.add(Component.translatable("tooltip.megatools.broken").withStyle(ChatFormatting.RED));
+            tooltip.accept(Component.translatable("tooltip.megatools.broken").withStyle(ChatFormatting.RED));
             if (material != null)
-                tooltip.add(Component.translatable("tooltip.megatools.repair_hint", new ItemStack(material).getHoverName())
+                tooltip.accept(Component.translatable("tooltip.megatools.repair_hint", new ItemStack(material).getHoverName())
                         .withStyle(ChatFormatting.RED));
         }
-        tooltip.add(Component.translatable("tooltip.megatools.open_gui", Component.keybind(KeyNames.OPEN_GUI)).withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("tooltip.megatools.open_gui", Component.keybind(KeyNames.OPEN_GUI)).withStyle(ChatFormatting.GRAY));
 
         if (tier.storageSlots() > 0)
         {
             int used = ToolData.countStoredItems(stack);
-            tooltip.add(Component.translatable("tooltip.megatools.storage", used, tier.storageSlots())
+            tooltip.accept(Component.translatable("tooltip.megatools.storage", used, tier.storageSlots())
                     .withStyle(ChatFormatting.GRAY));
         }
         if (tier.isMega())  // a modpack can give the Mega Tool durability in megatools-startup.toml
-            tooltip.add(Component.translatable(stack.isDamageableItem() ? "tooltip.megatools.mega_breakable" : "tooltip.megatools.mega")
+            tooltip.accept(Component.translatable(stack.isDamageableItem() ? "tooltip.megatools.mega_breakable" : "tooltip.megatools.mega")
                     .withStyle(ChatFormatting.GOLD));
     }
 }

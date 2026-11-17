@@ -11,6 +11,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import org.jetbrains.annotations.Nullable;
@@ -74,7 +75,7 @@ public final class ToolData
         if (contents == null)
             return 0;
         int count = 0;
-        for (ItemStack ignored : contents.nonEmptyItems())
+        for (ItemStackTemplate ignored : contents.nonEmptyItems())
             count++;
         return count;
     }
@@ -175,8 +176,8 @@ public final class ToolData
         ItemContainerContents slot = tool.get(ModDataComponents.SUPPORT_TOOL.get());
         if (slot == null)
             return false;
-        Iterator<ItemStack> items = slot.nonEmptyItems().iterator();
-        return items.hasNext() && items.next().getItem() instanceof SupportToolItem;
+        Iterator<ItemStackTemplate> items = slot.nonEmptyItems().iterator();
+        return items.hasNext() && items.next().item().value() instanceof SupportToolItem;
     }
 
     /** True if the support ability behind {@code flag} (SHEAR, BRUSH or IGNITE) is usable right now. */

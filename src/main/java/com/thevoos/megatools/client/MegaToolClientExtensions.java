@@ -6,7 +6,7 @@ import com.thevoos.megatools.items.ModItems;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.tool.MegaToolMining;
 import com.thevoos.megatools.tool.MegaToolPoke;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.player.LocalPlayer;
@@ -155,7 +155,7 @@ public final class MegaToolClientExtensions
             return;
         }
         boolean mega = MegaToolMining.isMegaTool(mc.player.getMainHandItem());
-        int slot = mc.player.getInventory().selected;
+        int slot = mc.player.getInventory().getSelectedSlot();
         if (mega && (!trackedMega || slot != trackedSlot))
             selectedAtMs = Util.getMillis();
         trackedMega = mega;
@@ -172,7 +172,7 @@ public final class MegaToolClientExtensions
             return 0.0F;
         long now = Util.getMillis();
         ItemStack actual = player.getMainHandItem();
-        int slot = player.getInventory().selected;
+        int slot = player.getInventory().getSelectedSlot();
 
         // Switching away: vanilla still draws this Mega Tool while lowering it. Follow its drop.
         // (Same item in the same slot with a new stack object is just a data update, not a switch.)

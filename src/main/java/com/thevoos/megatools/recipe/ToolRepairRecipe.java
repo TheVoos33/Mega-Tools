@@ -4,13 +4,14 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.thevoos.megatools.items.MultiToolItem;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapedRecipePattern;
@@ -27,14 +28,12 @@ import net.minecraft.world.level.Level;
  */
 public class ToolRepairRecipe extends ShapedRecipe implements PreservesToolData
 {
-    private final ShapedRecipePattern repairPattern;
-    private final ItemStack displayResult;
+    private final ItemStackTemplate displayResult;
 
-    public ToolRepairRecipe(String group, CraftingBookCategory category, ShapedRecipePattern pattern,
-                            ItemStack result, boolean showNotification)
+    public ToolRepairRecipe(Recipe.CommonInfo commonInfo, CraftingRecipe.CraftingBookInfo bookInfo,
+                            ShapedRecipePattern pattern, ItemStackTemplate result)
     {
-        super(group, category, pattern, result, showNotification);
-        this.repairPattern = pattern;
+        super(commonInfo, bookInfo, pattern, result);
         this.displayResult = result;
     }
 
@@ -45,7 +44,7 @@ public class ToolRepairRecipe extends ShapedRecipe implements PreservesToolData
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries)
+    public ItemStack assemble(CraftingInput input)
     {
         ItemStack tool = findTool(input);
         if (tool.isEmpty())
@@ -65,26 +64,29 @@ public class ToolRepairRecipe extends ShapedRecipe implements PreservesToolData
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer()
+    public RecipeSerializer<ShapedRecipe> getSerializer()
     {
         return ModRecipes.TOOL_REPAIR.get();
     }
 
     // ---- JSON format: identical to minecraft:crafting_shaped ----
+    // (Defaults differ from vanilla: no "new recipe" toast, equipment tab.)
     public static final MapCodec<ToolRepairRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("group", "").forGetter(ShapedRecipe::getGroup),
-            CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.EQUIPMENT).forGetter(ShapedRecipe::category),
-            ShapedRecipePattern.MAP_CODEC.forGetter(r -> r.repairPattern),
-            ItemStack.STRICT_CODEC.fieldOf("result").forGetter(r -> r.displayResult),
-            Codec.BOOL.optionalFieldOf("show_notification", false).forGetter(ShapedRecipe::showNotification)
+            Codec.BOOL.optionalFieldOf("show_notification", false).xmap(Recipe.CommonInfo::new, Recipe.CommonInfo::showNotification)
+                    .forGetter(r -> r.commonInfo),
+            RecordCodecBuilder.<CraftingRecipe.CraftingBookInfo>mapCodec(book -> book.group(
+                    CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.EQUIPMENT).forGetter(CraftingRecipe.CraftingBookInfo::category),
+                    Codec.STRING.optionalFieldOf("group", "").forGetter(CraftingRecipe.CraftingBookInfo::group)
+            ).apply(book, CraftingRecipe.CraftingBookInfo::new)).forGetter(r -> r.bookInfo),
+            ShapedRecipePattern.MAP_CODEC.forGetter(r -> r.pattern),
+            ItemStackTemplate.CODEC.fieldOf("result").forGetter(r -> r.displayResult)
     ).apply(instance, ToolRepairRecipe::new));
 
     // ---- Network format ----
     public static final StreamCodec<RegistryFriendlyByteBuf, ToolRepairRecipe> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.STRING_UTF8, ShapedRecipe::getGroup,
-            CraftingBookCategory.STREAM_CODEC, ShapedRecipe::category,
-            ShapedRecipePattern.STREAM_CODEC, r -> r.repairPattern,
-            ItemStack.STREAM_CODEC, r -> r.displayResult,
-            ByteBufCodecs.BOOL, ShapedRecipe::showNotification,
+            Recipe.CommonInfo.STREAM_CODEC, r -> r.commonInfo,
+            CraftingRecipe.CraftingBookInfo.STREAM_CODEC, r -> r.bookInfo,
+            ShapedRecipePattern.STREAM_CODEC, r -> r.pattern,
+            ItemStackTemplate.STREAM_CODEC, r -> r.displayResult,
             ToolRepairRecipe::new);
 }

@@ -5,7 +5,7 @@
 <p align="center">
   <b>Paxels and the Mega Tool</b>: a pickaxe, axe, shovel, hoe and sword in one item, with built-in storage for your
   other tools, swappable enchantments and a torch slot that lights your way.<br>
-  <sub>Minecraft 1.21.1 · NeoForge</sub>
+  <sub>Minecraft 26.1.2 · NeoForge</sub>
 </p>
 
 ---
@@ -246,7 +246,7 @@ Open the [tool menu](#the-tool-menu) and click **Custom Rule** above the tool st
 2. **Give it a block.** Any of these fills the next free filter slot (**3**):
    - pick the block up from your inventory and click a filter slot,
    - Shift-click the block in your inventory,
-   - drag the block from **JEI** or **EMI** onto a filter slot.
+   - drag the block from **JEI** onto a filter slot.
 
    Nothing is used up: the slot only remembers the block, and the item stays where it was.
 3. **Choose what the filter matches.** Left-click a filled slot to go to the next option:
@@ -401,7 +401,7 @@ Ids and tags that don't exist are skipped. Leave `version` as it is.
 
 The file is created with `c:tools/wrench`, vanilla's Flint and Steel and tools from many popular mods (Super Factory Manager, Construction Sticks, Building and Mining Gadgets, Functional Storage, Sophisticated Storage, PneumaticCraft, Framed Blocks, Mekanism, Industrial Foregoing, Just Dire Things, Logistics Network, Transfer Labels, Rechiseled, Chisel Reborn, Chipped and more). A file from Mega Tools 1.0 is updated once: the `tags` list and the new default tools are added, and your own entries are kept.
 
-Because these are real tag entries, they show up wherever tags do (JEI/EMI, `/reload`, other mods), and on a server the server's file decides: tags are synced to every player.
+Because these are real tag entries, they show up wherever tags do (JEI, `/reload`, other mods), and on a server the server's file decides: tags are synced to every player.
 
 Paxels, the Mega Tool and Enchantment Plates can never be stored, whatever the file says. Tools that were stored before a change stay in storage even if they are no longer accepted.
 

@@ -7,6 +7,8 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -20,21 +22,27 @@ public final class ModRecipes
     public static final DeferredRegister<RecipeSerializer<?>> SERIALIZERS =
             DeferredRegister.create(Registries.RECIPE_SERIALIZER, MegaTools.MODID);
 
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<CarryOverShapedRecipe>> SHAPED_CARRY_OVER =
+    // Typed as the vanilla recipe class they extend: ShapedRecipe / ShapelessRecipe#getSerializer must return
+    // a serializer of exactly that class. The codecs only ever read and write our own recipe objects.
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ShapedRecipe>> SHAPED_CARRY_OVER =
             SERIALIZERS.register("crafting_shaped_carry_over",
-                    () -> new Serializer<>(CarryOverShapedRecipe.CODEC, CarryOverShapedRecipe.STREAM_CODEC));
+                    () -> serializer(CarryOverShapedRecipe.CODEC, CarryOverShapedRecipe.STREAM_CODEC));
 
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<CarryOverShapelessRecipe>> SHAPELESS_CARRY_OVER =
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ShapelessRecipe>> SHAPELESS_CARRY_OVER =
             SERIALIZERS.register("crafting_shapeless_carry_over",
-                    () -> new Serializer<>(CarryOverShapelessRecipe.CODEC, CarryOverShapelessRecipe.STREAM_CODEC));
+                    () -> serializer(CarryOverShapelessRecipe.CODEC, CarryOverShapelessRecipe.STREAM_CODEC));
 
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ToolRepairRecipe>> TOOL_REPAIR =
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ShapedRecipe>> TOOL_REPAIR =
             SERIALIZERS.register("tool_repair",
-                    () -> new Serializer<>(ToolRepairRecipe.CODEC, ToolRepairRecipe.STREAM_CODEC));
+                    () -> serializer(ToolRepairRecipe.CODEC, ToolRepairRecipe.STREAM_CODEC));
 
-    /** Minimal RecipeSerializer: the record accessors codec() / streamCodec() implement the interface. */
-    private record Serializer<T extends Recipe<?>>(MapCodec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> streamCodec)
-            implements RecipeSerializer<T> {}
+    /** A serializer for subclass S, typed as its vanilla base class B (see above). */
+    @SuppressWarnings({"unchecked", "deprecation"})
+    private static <B extends Recipe<?>, S extends B> RecipeSerializer<B> serializer(MapCodec<S> codec,
+                                                                                     StreamCodec<RegistryFriendlyByteBuf, S> streamCodec)
+    {
+        return new RecipeSerializer<>((MapCodec<B>) (MapCodec<?>) codec, (StreamCodec<RegistryFriendlyByteBuf, B>) (StreamCodec<?, ?>) streamCodec);
+    }
 
     private ModRecipes() {}
 

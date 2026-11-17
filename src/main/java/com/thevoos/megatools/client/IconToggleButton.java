@@ -1,8 +1,9 @@
 package com.thevoos.megatools.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -42,17 +43,16 @@ public class IconToggleButton extends Button
     }
 
     @Override
-    protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick)
+    protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick)
     {
         int x = getX();
         int y = getY();
-        g.blitSprite(SPRITES.get(active, false), x, y, width, height);
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITES.get(active, false), x, y, width, height);
         if (active)
-            g.renderOutline(x, y, width, height, on ? ON_COLOR : OFF_COLOR);
-        g.renderFakeItem(icon, x + 1, y + 1);
+            g.outline(x, y, width, height, on ? ON_COLOR : OFF_COLOR);
+        g.fakeItem(icon, x + 1, y + 1);
 
-        g.pose().pushPose();
-        g.pose().translate(0.0F, 0.0F, 200.0F); // above the item, which renders at a raised depth
+        // Drawn after the item, so it lands above it (the GUI puts later overlapping elements on top).
         if (!on || !active)
             g.fill(x + 1, y + 1, x + SIZE - 1, y + SIZE - 1, DIM);
         if (!on && active)
@@ -60,7 +60,6 @@ public class IconToggleButton extends Button
                 g.fill(x + 3 + i, y + 3 + i, x + 5 + i, y + 4 + i, OFF_COLOR);
         if (active && isHighlighted())
             g.fill(x + 1, y + 1, x + SIZE - 1, y + SIZE - 1, HOVER);
-        g.pose().popPose();
     }
 
     /**

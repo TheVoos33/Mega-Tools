@@ -9,7 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -77,7 +77,7 @@ public final class AutoSwapClient
         }
 
         ItemStack held = mc.player.getMainHandItem();
-        int hotbarSlot = mc.player.getInventory().selected;
+        int hotbarSlot = mc.player.getInventory().getSelectedSlot();
         ItemContainerContents storage = held.get(ModDataComponents.TOOL_STORAGE.get());
         SwapRules rules = ToolData.getSwapRules(held);
         BlockHitResult hit = targetedBlock(mc);
@@ -134,7 +134,7 @@ public final class AutoSwapClient
         try
         {
             BlockPos pos = hit.getBlockPos();
-            return mc.level.getBlockState(pos).getCloneItemStack(hit, mc.level, pos, mc.player).getItem();
+            return mc.level.getBlockState(pos).getCloneItemStack(pos, mc.level, false, mc.player).getItem();
         }
         catch (RuntimeException e)
         {
@@ -151,7 +151,7 @@ public final class AutoSwapClient
         if (block == null || !(held.getItem() instanceof MultiToolItem multiTool) || !multiTool.getTier().hasAutoSwap())
             return;
 
-        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(block);
+        Identifier blockId = BuiltInRegistries.BLOCK.getKey(block);
         String blockMod = blockId.getNamespace();
         NonNullList<ItemStack> storage = ToolData.getStorage(held, multiTool.getTier().storageSlots());
 
@@ -163,7 +163,7 @@ public final class AutoSwapClient
         for (String mod : attached)
             addModMatches(storage, mod);
         // Vanilla blocks only pre-select a stored tool through a custom rule or an attachment.
-        if (!ResourceLocation.DEFAULT_NAMESPACE.equals(blockMod))
+        if (!Identifier.DEFAULT_NAMESPACE.equals(blockMod))
             addModMatches(storage, blockMod);
     }
 
@@ -175,7 +175,7 @@ public final class AutoSwapClient
             ItemStack stored = storage.get(i);
             if (stored.isEmpty() || candidateSlots.contains(i))
                 continue;
-            ResourceLocation toolId = BuiltInRegistries.ITEM.getKey(stored.getItem());
+            Identifier toolId = BuiltInRegistries.ITEM.getKey(stored.getItem());
             if (mod.equals(toolId.getNamespace()) || ToolAliases.matches(toolId, mod))
                 addCandidate(i, stored);
         }
@@ -183,11 +183,11 @@ public final class AutoSwapClient
 
     /** Stored tools these rules name for the block: exact block first, then tag rules, then whole-mod rules. */
     private static void addRuleMatches(SwapRules rules, NonNullList<ItemStack> storage, Block block,
-                                       ResourceLocation blockId, ResourceLocation pickedId)
+                                       Identifier blockId, Identifier pickedId)
     {
         if (rules.isEmpty())
             return;
-        ResourceLocation blockItemId = BuiltInRegistries.ITEM.getKey(block.asItem());
+        Identifier blockItemId = BuiltInRegistries.ITEM.getKey(block.asItem());
         for (SwapRules.Mode mode : SwapRules.Mode.values())
             for (SwapRules.Rule rule : rules.rules())
                 if (rule.mode() == mode && rule.matches(block, blockId, blockItemId, pickedId))
@@ -195,7 +195,7 @@ public final class AutoSwapClient
     }
 
     /** Adds every stored tool with this item id (normally one) that isn't a candidate yet. */
-    private static void addStoredTool(NonNullList<ItemStack> storage, ResourceLocation toolId)
+    private static void addStoredTool(NonNullList<ItemStack> storage, Identifier toolId)
     {
         for (int i = 0; i < storage.size(); i++)
         {

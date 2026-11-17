@@ -7,12 +7,8 @@
     "MMM"
   ],
   "key": {
-    "M": {
-      "item": "minecraft:cobblestone"
-    },
-    "T": {
-      "item": "megatools:stone_paxel"
-    }
+    "M": "minecraft:cobblestone",
+    "T": "megatools:stone_paxel"
   },
   "result": {
     "id": "megatools:stone_paxel"

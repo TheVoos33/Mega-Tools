@@ -6,12 +6,16 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.item.enchantment.Enchantable;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
@@ -21,6 +25,8 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Enchantment Plate - an upgrade item that carries enchantments to a tool. Works like a book:
@@ -50,7 +56,8 @@ public class EnchantmentPlateItem extends Item
 
     public EnchantmentPlateItem(Item.Properties properties)
     {
-        super(properties.stacksTo(1).rarity(Rarity.UNCOMMON));
+        // Enchantable while empty, like a book (setStored takes this away once the plate holds enchantments).
+        super(properties.stacksTo(1).rarity(Rarity.UNCOMMON).enchantable(ENCHANTMENT_VALUE));
     }
 
     /** The tools whose enchantments a plate may hold (created on first use, after items are registered). */
@@ -142,18 +149,10 @@ public class EnchantmentPlateItem extends Item
 
     // ---- enchanting table ----
 
-    /** Like a book: an unenchanted plate can go in the enchanting table. */
-    @Override
-    public boolean isEnchantable(ItemStack stack)
-    {
-        return stack.getCount() == 1 && getStoredEnchantments(stack).isEmpty();
-    }
-
-    @Override
-    public int getEnchantmentValue()
-    {
-        return ENCHANTMENT_VALUE;
-    }
+    /*
+     * Like a book, an unenchanted plate can go in the enchanting table: the "enchantable" component (value
+     * ENCHANTMENT_VALUE) is on the item by default and removed by setStored while the plate holds enchantments.
+     */
 
     /** Enchanting table (vanilla and mods using this NeoForge hook): store the enchantments like a book does. */
     @Override
@@ -161,8 +160,8 @@ public class EnchantmentPlateItem extends Item
     {
         ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(getStoredEnchantments(stack));
         for (EnchantmentInstance instance : enchantments)
-            if (allows(instance.enchantment))
-                stored.upgrade(instance.enchantment, instance.level);
+            if (allows(instance.enchantment()))
+                stored.upgrade(instance.enchantment(), instance.level());
         setStored(stack, stored.toImmutable());
         return stack;
     }
@@ -173,13 +172,12 @@ public class EnchantmentPlateItem extends Item
      * an older version, which removed the ENCHANTMENTS component and so could no longer be enchanted.
      */
     @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected)
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, @Nullable EquipmentSlot slot)
     {
-        if (level.isClientSide())
-            return;
         ItemEnchantments direct = stack.get(DataComponents.ENCHANTMENTS);
         ItemEnchantments stored = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-        if (direct == null || !direct.isEmpty() || !allAllowed(stored)) // runs every tick: no allocation unless needed
+        if (direct == null || !direct.isEmpty() || !allAllowed(stored) // runs every tick: no allocation unless needed
+                || stack.has(DataComponents.ENCHANTABLE) != stored.isEmpty()) // plates from before the enchantable rule
             setStored(stack, getStoredEnchantments(stack));
     }
 
@@ -188,9 +186,15 @@ public class EnchantmentPlateItem extends Item
     {
         plate.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY); // equal to the default: no patch left
         if (enchantments.isEmpty())
+        {
             plate.remove(DataComponents.STORED_ENCHANTMENTS);
+            plate.set(DataComponents.ENCHANTABLE, new Enchantable(ENCHANTMENT_VALUE)); // the default again
+        }
         else
+        {
             plate.set(DataComponents.STORED_ENCHANTMENTS, enchantments);
+            plate.remove(DataComponents.ENCHANTABLE); // a filled plate can't go in the enchanting table
+        }
     }
 
     // ---- looks ----
@@ -203,10 +207,12 @@ public class EnchantmentPlateItem extends Item
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag)
+    @SuppressWarnings("deprecation") // the vanilla way for items to add tooltip lines
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag)
     {
         if (getStoredEnchantments(stack).isEmpty())
-            tooltip.add(Component.translatable("tooltip.megatools.plate.empty").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.megatools.plate.usage", Component.keybind(KeyNames.OPEN_GUI)).withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.accept(Component.translatable("tooltip.megatools.plate.empty").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("tooltip.megatools.plate.usage", Component.keybind(KeyNames.OPEN_GUI)).withStyle(ChatFormatting.DARK_GRAY));
     }
 }

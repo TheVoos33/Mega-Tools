@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Gives Mega Tools the last word on the mining speed: replaces the value Player#getDigSpeed returns,
+ * Gives Mega Tools the last word on the mining speed: replaces the value Player#getDestroySpeed returns,
  * which is computed after vanilla's penalties and after every PlayerEvent.BreakSpeed listener of other
  * mods (see MegaToolMining for why an event listener wasn't enough). Priority above the default 1000,
  * so this also runs after other mods' injections at the same point.
@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = Player.class, priority = 1500)
 public abstract class PlayerMixin
 {
-    @Inject(method = "getDigSpeed", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getDestroySpeed(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;)F", at = @At("RETURN"), cancellable = true)
     private void megatools$finalDigSpeed(BlockState state, @Nullable BlockPos pos, CallbackInfoReturnable<Float> cir)
     {
         float speed = cir.getReturnValueF();

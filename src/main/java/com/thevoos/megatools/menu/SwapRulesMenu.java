@@ -8,7 +8,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -109,10 +109,10 @@ public class SwapRulesMenu extends AbstractContainerMenu
     public int height() { return height; }
 
     @Override
-    public void clicked(int slotId, int button, ClickType clickType, Player player)
+    public void clicked(int slotId, int button, ContainerInput clickType, Player player)
     {
         // Pressing the number key of the tool's own hotbar slot would swap the tool out - block it.
-        if (clickType == ClickType.SWAP && button == toolSlot)
+        if (clickType == ContainerInput.SWAP && button == toolSlot)
             return;
         super.clicked(slotId, button, clickType, player);
     }
@@ -128,7 +128,7 @@ public class SwapRulesMenu extends AbstractContainerMenu
     @Override
     public boolean stillValid(Player player)
     {
-        return player.getInventory().selected == toolSlot && getTool() == openedTool
+        return player.getInventory().getSelectedSlot() == toolSlot && getTool() == openedTool
                 && openedTool.getItem() instanceof MultiToolItem multiTool && multiTool.getTier().hasAutoSwap();
     }
 }

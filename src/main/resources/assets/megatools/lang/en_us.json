@@ -8,7 +8,7 @@
   "item.megatools.netherite_head": "Netherite Head",
   "item.megatools.enchantment_plate": "Enchantment Plate",
   "creativetab.megatools.megatools_items": "Mega Tools",
-  "key.categories.megatools": "Mega Tools",
+  "key.category.megatools.megatools": "Mega Tools",
   "key.megatools.open_gui": "Open Tool Settings",
   "key.megatools.switch_plate": "Switch Enchantment Plate",
   "key.megatools.swap_tool": "Auto-Swap Tool",

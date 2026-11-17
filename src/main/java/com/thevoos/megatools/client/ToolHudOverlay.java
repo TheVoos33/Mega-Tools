@@ -4,7 +4,7 @@ import com.thevoos.megatools.MegaTools;
 import net.minecraft.client.AttackIndicatorStatus;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
@@ -40,7 +40,7 @@ public final class ToolHudOverlay
         event.registerAbove(VanillaGuiLayers.HOTBAR, MegaTools.id("auto_swap_indicator"), ToolHudOverlay::render);
     }
 
-    private static void render(GuiGraphics graphics, DeltaTracker deltaTracker)
+    private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker)
     {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null || mc.player.isSpectator())
@@ -79,14 +79,14 @@ public final class ToolHudOverlay
             graphics.fill(x, y, x + CELL, y + CELL, 0x90000000);
             if (isSelected)
             {
-                graphics.renderOutline(x - 1, y - 1, CELL + 2, CELL + 2, GOLD); // double frame
-                graphics.renderOutline(x, y, CELL, CELL, GOLD);
+                graphics.outline(x - 1, y - 1, CELL + 2, CELL + 2, GOLD); // double frame
+                graphics.outline(x, y, CELL, CELL, GOLD);
             }
             else
             {
-                graphics.renderOutline(x, y, CELL, CELL, GREY);
+                graphics.outline(x, y, CELL, CELL, GREY);
             }
-            graphics.renderItem(candidates.get(i), x + 2, y + 2);
+            graphics.item(candidates.get(i), x + 2, y + 2);
         }
 
         // ---- Key hint (and "2/3" counter) above the top row, aligned to the hotbar side ----
@@ -94,6 +94,6 @@ public final class ToolHudOverlay
         if (candidates.size() > 1)
             hint = Component.translatable("hud.megatools.cycle_hint", hint, selected + 1, candidates.size());
         int textY = bottomY - (rows - 1) * STRIDE - 11;
-        graphics.drawString(mc.font, hint, rightEdge - mc.font.width(hint), textY, 0xFFFFFF, true);
+        graphics.text(mc.font, hint, rightEdge - mc.font.width(hint), textY, 0xFFFFFFFF, true);
     }
 }

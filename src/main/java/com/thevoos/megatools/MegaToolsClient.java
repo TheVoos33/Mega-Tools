@@ -2,6 +2,7 @@ package com.thevoos.megatools;
 
 import com.thevoos.megatools.client.ClientEvents;
 import com.thevoos.megatools.client.DynamicLightsCompat;
+import com.thevoos.megatools.client.MegaToolArmPose;
 import com.thevoos.megatools.client.MegaToolClientExtensions;
 import com.thevoos.megatools.client.ModKeyMappings;
 import com.thevoos.megatools.client.ToolHudOverlay;
@@ -55,6 +56,7 @@ public class MegaToolsClient
         modEventBus.addListener(ClientEvents::onRegisterScreens);                       // ToolMenu -> ToolScreen
         modEventBus.addListener(ToolHudOverlay::onRegisterGuiLayers);                   // auto-swap icon near hotbar
         modEventBus.addListener(MegaToolClientExtensions::onRegisterClientExtensions);  // "prodding" animation
+        modEventBus.addListener(MegaToolArmPose::onRegisterRenderStateModifiers);       // third-person prod: poke state per player
 
         // ---- Game bus: per-tick / per-input client logic -------------------------------------
         NeoForge.EVENT_BUS.addListener(ClientEvents::onClientTickPre);   // marks "inside the game tick"

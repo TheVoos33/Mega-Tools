@@ -1,6 +1,6 @@
 package com.thevoos.megatools;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.fml.ModList;
 
@@ -15,7 +15,7 @@ import java.lang.reflect.Method;
 public final class GuideCompat
 {
     public static final String MOD_ID = "guideme";
-    public static final ResourceLocation GUIDE = MegaTools.id("guide");
+    public static final Identifier GUIDE = MegaTools.id("guide");
 
     private static Boolean loaded;
     private static Method openGuide;
@@ -41,8 +41,8 @@ public final class GuideCompat
             {
                 Class<?> guides = Class.forName("guideme.GuidesCommon");
                 Class<?> anchor = Class.forName("guideme.PageAnchor");
-                openGuide = guides.getMethod("openGuide", Player.class, ResourceLocation.class, anchor);
-                pageAnchor = anchor.getMethod("page", ResourceLocation.class);
+                openGuide = guides.getMethod("openGuide", Player.class, Identifier.class, anchor);
+                pageAnchor = anchor.getMethod("page", Identifier.class);
             }
             Object anchor = pageAnchor.invoke(null, MegaTools.id(page == null ? "index.md" : page));
             openGuide.invoke(null, player, GUIDE, anchor);

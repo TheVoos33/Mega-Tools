@@ -3,7 +3,7 @@ package com.thevoos.megatools.mixin;
 import com.thevoos.megatools.items.ModTags;
 import com.thevoos.megatools.tool.StorageWhitelist;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.tags.TagEntry;
 import net.minecraft.tags.TagLoader;
@@ -34,7 +34,7 @@ public abstract class TagLoaderMixin
 
     @Inject(method = "load", at = @At("RETURN"))
     private void megatools$addStorableItems(ResourceManager resourceManager,
-            CallbackInfoReturnable<Map<ResourceLocation, List<TagLoader.EntryWithSource>>> cir)
+            CallbackInfoReturnable<Map<Identifier, List<TagLoader.EntryWithSource>>> cir)
     {
         if (!Registries.tagsDirPath(Registries.ITEM).equals(this.directory))
             return;

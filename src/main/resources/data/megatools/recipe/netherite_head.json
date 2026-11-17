@@ -2,24 +2,12 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "minecraft:netherite_sword"
-    },
-    {
-      "item": "minecraft:netherite_axe"
-    },
-    {
-      "item": "minecraft:netherite_pickaxe"
-    },
-    {
-      "item": "minecraft:netherite_shovel"
-    },
-    {
-      "item": "minecraft:netherite_hoe"
-    },
-    {
-      "item": "minecraft:nether_star"
-    }
+    "minecraft:netherite_sword",
+    "minecraft:netherite_axe",
+    "minecraft:netherite_pickaxe",
+    "minecraft:netherite_shovel",
+    "minecraft:netherite_hoe",
+    "minecraft:nether_star"
   ],
   "result": {
     "id": "megatools:netherite_head"

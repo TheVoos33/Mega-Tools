@@ -5,14 +5,16 @@ import com.thevoos.megatools.MegaTools;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.menu.MenuStyle;
 import com.thevoos.megatools.network.OpenToolGuiPayload;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 /**
  * Shown instead of the tool menu while no menu style is chosen (Config: menuStyle = ASK), which is the
@@ -33,7 +35,7 @@ public class MenuStyleScreen extends Screen
         ICONS(MenuStyle.ICONS, "icons", 176, 231);
 
         final MenuStyle style;
-        final ResourceLocation texture;
+        final Identifier texture;
         final Component name;
         final Component description;
         /** Size of the real menu in GUI pixels; the texture is 2x that. */
@@ -111,7 +113,7 @@ public class MenuStyleScreen extends Screen
         Config.MENU_STYLE.save();
         onClose();
         if (minecraft != null && minecraft.player != null && minecraft.player.getMainHandItem().getItem() instanceof MultiToolItem)
-            PacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE);
+            ClientPacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE);
     }
 
     private int previewAt(double mouseX, double mouseY)
@@ -126,11 +128,11 @@ public class MenuStyleScreen extends Screen
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button)
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick)
     {
-        if (super.mouseClicked(mouseX, mouseY, button))
+        if (super.mouseClicked(event, doubleClick))
             return true;
-        int preview = button == 0 ? previewAt(mouseX, mouseY) : -1;
+        int preview = event.button() == 0 ? previewAt(event.x(), event.y()) : -1;
         if (preview < 0)
             return false;
         choose(OPTIONS[preview].style);
@@ -138,10 +140,10 @@ public class MenuStyleScreen extends Screen
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick)
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick)
     {
-        super.render(graphics, mouseX, mouseY, partialTick); // background and buttons
-        graphics.drawCenteredString(font, title, width / 2, TITLE_Y, 0xFFFFFF);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick); // buttons (the background is drawn before)
+        graphics.centeredText(font, title, width / 2, TITLE_Y, 0xFFFFFFFF);
 
         int hovered = previewAt(mouseX, mouseY);
         int bottom = 0;
@@ -149,20 +151,20 @@ public class MenuStyleScreen extends Screen
         {
             Option option = OPTIONS[i];
             int[] p = previews[i];
-            graphics.blit(option.texture, p[0], p[1], p[2], p[3], 0, 0, option.menuW * 2, option.menuH * 2, option.menuW * 2, option.menuH * 2);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, option.texture, p[0], p[1], 0, 0, p[2], p[3], option.menuW * 2, option.menuH * 2, option.menuW * 2, option.menuH * 2);
             if (i == hovered)
-                graphics.renderOutline(p[0] - 2, p[1] - 2, p[2] + 4, p[3] + 4, GOLD);
+                graphics.outline(p[0] - 2, p[1] - 2, p[2] + 4, p[3] + 4, GOLD);
             bottom = Math.max(bottom, p[1] + p[3]);
         }
 
         int y = bottom + 6 + BUTTON_H + 6;
         for (FormattedCharSequence line : font.split(HINT, width - 20))
         {
-            graphics.drawCenteredString(font, line, width / 2, y, 0xA0A0A0);
+            graphics.centeredText(font, line, width / 2, y, 0xFFA0A0A0);
             y += 10;
         }
         if (hovered >= 0)
-            graphics.renderTooltip(font, font.split(OPTIONS[hovered].description, 200), mouseX, mouseY);
+            graphics.setTooltipForNextFrame(font, font.split(OPTIONS[hovered].description, 200), mouseX, mouseY);
     }
 
     @Override
