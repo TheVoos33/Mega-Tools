@@ -1,7 +1,5 @@
 package com.thevoos.megatools.command;
 
-import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
 import com.thevoos.megatools.GuideCompat;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
@@ -10,10 +8,7 @@ import com.thevoos.megatools.MegaTools;
 import com.thevoos.megatools.items.ModItems;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.EnchantedBookItem;
 import net.minecraft.world.item.ItemStack;
@@ -21,7 +16,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.RegisterCommandsEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,25 +81,17 @@ public final class MegaToolsCommand
         kit.add(new ItemStack(Items.TORCH, 64));
 
         // Books to put on the plates in an anvil
-        kit.add(enchantedBook(player, Enchantments.FORTUNE, 3));
-        kit.add(enchantedBook(player, Enchantments.SILK_TOUCH, 1));
+        kit.add(enchantedBook(Enchantments.BLOCK_FORTUNE, 3));
+        kit.add(enchantedBook(Enchantments.SILK_TOUCH, 1));
 
         // Plates stack to 1, so two separate stacks
         kit.add(new ItemStack(ModItems.ENCHANTMENT_PLATE.get()));
         kit.add(new ItemStack(ModItems.ENCHANTMENT_PLATE.get()));
 
         // The in-game guide book, only when GuideME is installed (built from its id: no dependency on GuideME)
-        if (GuideCompat.isLoaded())
-        {
-            JsonObject guide = new JsonObject();
-            guide.addProperty("id", GuideCompat.MOD_ID + ":guide");
-            JsonObject components = new JsonObject();
-            components.addProperty(GuideCompat.MOD_ID + ":guide_id", GuideCompat.GUIDE.toString());
-            guide.add("components", components);
-            ItemStack.CODEC.parse(player.registryAccess().createSerializationContext(JsonOps.INSTANCE), guide)
-                    .resultOrPartial(error -> MegaTools.LOGGER.warn("Couldn't create the guide book: {}", error))
-                    .ifPresent(kit::add);
-        }
+        ItemStack guide = GuideCompat.createGuideItem();
+        if (!guide.isEmpty())
+            kit.add(guide);
 
         // Vanilla diamond tools
         kit.add(new ItemStack(Items.DIAMOND_SWORD));
@@ -116,12 +103,8 @@ public final class MegaToolsCommand
         return kit;
     }
 
-    /** Enchantments are data-driven in 1.21, so they are looked up from the server's registries. */
-    private static ItemStack enchantedBook(ServerPlayer player, ResourceKey<Enchantment> key, int level)
+    private static ItemStack enchantedBook(Enchantment enchantment, int level)
     {
-        Holder<Enchantment> enchantment = player.registryAccess()
-                .lookupOrThrow(Registries.ENCHANTMENT)
-                .getOrThrow(key);
         return EnchantedBookItem.createForEnchantment(new EnchantmentInstance(enchantment, level));
     }
 }

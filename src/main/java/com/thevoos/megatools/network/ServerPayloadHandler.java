@@ -1,5 +1,7 @@
 package com.thevoos.megatools.network;
 
+import net.minecraft.SharedConstants;
+import net.minecraftforge.network.NetworkHooks;
 import com.thevoos.megatools.component.SwapRules;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.menu.SwapRulesMenu;
@@ -9,13 +11,10 @@ import com.thevoos.megatools.tool.PlateHelper;
 import com.thevoos.megatools.tool.ToolData;
 import com.thevoos.megatools.tool.ToolLightManager;
 import com.thevoos.megatools.tool.ToolSwapper;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.StringUtil;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -30,7 +29,7 @@ public final class ServerPayloadHandler
     private ServerPayloadHandler() {}
 
     /** Ctrl + R -> open the GUI of the held Mega Tools tool. */
-    public static void handleOpenGui(OpenToolGuiPayload payload, IPayloadContext context)
+    public static void handleOpenGui(OpenToolGuiPayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -42,7 +41,7 @@ public final class ServerPayloadHandler
 
             closeOpenMenuQuietly(player); // coming back from the Swap Rules GUI
             int toolSlot = player.getInventory().selected;
-            player.openMenu(
+            NetworkHooks.openScreen(player,
                     new SimpleMenuProvider((containerId, inventory, p) -> new ToolMenu(containerId, inventory, toolSlot), held.getHoverName()),
                     buf -> buf.writeVarInt(toolSlot)); // read by the client-side ToolMenu constructor
         });
@@ -61,7 +60,7 @@ public final class ServerPayloadHandler
     }
 
     /** "Custom Rule" button of the tool GUI -> open the Swap Rules GUI of the held tool (replaces the tool GUI). */
-    public static void handleOpenSwapRules(OpenSwapRulesPayload payload, IPayloadContext context)
+    public static void handleOpenSwapRules(OpenSwapRulesPayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -73,7 +72,7 @@ public final class ServerPayloadHandler
 
             closeOpenMenuQuietly(player); // coming from the tool GUI
             int toolSlot = player.getInventory().selected;
-            player.openMenu(
+            NetworkHooks.openScreen(player,
                     new SimpleMenuProvider((containerId, inventory, p) -> new SwapRulesMenu(containerId, inventory, toolSlot),
                             Component.translatable("gui.megatools.swap_rules")),
                     buf -> buf.writeVarInt(toolSlot)); // read by SwapRulesMenu#fromNetwork
@@ -81,7 +80,7 @@ public final class ServerPayloadHandler
     }
 
     /** Swap Rules GUI -> store the new rules on the held tool. Synced back to the client with the item. */
-    public static void handleSetSwapRules(SetSwapRulesPayload payload, IPayloadContext context)
+    public static void handleSetSwapRules(SetSwapRulesPayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -98,7 +97,7 @@ public final class ServerPayloadHandler
      * Default rules of the player's own config file for the held tool: remember them on the tool and add
      * the ones it hasn't received before as ordinary rules (see ApplyDefaultRulesPayload).
      */
-    public static void handleApplyDefaultRules(ApplyDefaultRulesPayload payload, IPayloadContext context)
+    public static void handleApplyDefaultRules(ApplyDefaultRulesPayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -121,7 +120,7 @@ public final class ServerPayloadHandler
     }
 
     /** The client's shader pack lights the held tool itself: stop/resume placing light blocks for this player. */
-    public static void handleShaderLight(ShaderLightPayload payload, IPayloadContext context)
+    public static void handleShaderLight(ShaderLightPayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -131,7 +130,7 @@ public final class ServerPayloadHandler
     }
 
     /** Shift + R -> switch primary/secondary enchantment plate. */
-    public static void handleSwitchPlate(SwitchPlatePayload payload, IPayloadContext context)
+    public static void handleSwitchPlate(SwitchPlatePayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -141,7 +140,7 @@ public final class ServerPayloadHandler
     }
 
     /** R -> swap to the pre-selected stored tool, or back to the Mega Tools tool. */
-    public static void handleSwapTool(SwapToolPayload payload, IPayloadContext context)
+    public static void handleSwapTool(SwapToolPayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -151,7 +150,7 @@ public final class ServerPayloadHandler
     }
 
     /** Title edited in the GUI -> rename the held tool (blank or default name removes the custom name). */
-    public static void handleRename(RenameToolPayload payload, IPayloadContext context)
+    public static void handleRename(RenameToolPayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -161,20 +160,20 @@ public final class ServerPayloadHandler
             if (!(held.getItem() instanceof MultiToolItem))
                 return;
 
-            String name = StringUtil.filterText(payload.name()).trim();   // strips illegal characters
+            String name = SharedConstants.filterText(payload.name()).trim();   // strips illegal characters
             if (name.length() > RenameToolPayload.MAX_LENGTH)
                 name = name.substring(0, RenameToolPayload.MAX_LENGTH);
 
             String defaultName = held.getItem().getName(held).getString();
             if (name.isEmpty() || name.equals(defaultName))
-                held.remove(DataComponents.CUSTOM_NAME);
+                held.resetHoverName();
             else
-                held.set(DataComponents.CUSTOM_NAME, Component.literal(name));
+                held.setHoverName(Component.literal(name));
         });
     }
 
     /** The client's Mega Tool is breaking a block right now (see MegaToolMining). */
-    public static void handleMegaToolBreak(MegaToolBreakPayload payload, IPayloadContext context)
+    public static void handleMegaToolBreak(MegaToolBreakPayload payload, PayloadContext context)
     {
         context.enqueueWork(() ->
         {

@@ -1,23 +1,20 @@
 package com.thevoos.megatools.tool;
 
+import com.thevoos.megatools.component.ItemEnchantments;
 import com.thevoos.megatools.component.ToolSettings;
 import com.thevoos.megatools.items.EnchantmentPlateItem;
 import com.thevoos.megatools.items.MultiToolItem;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.StringUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
-import net.neoforged.neoforge.event.AnvilUpdateEvent;
+import net.minecraftforge.event.AnvilUpdateEvent;
 
 
 /** Everything to do with Enchantment Plates. */
@@ -39,7 +36,7 @@ public final class PlateHelper
         ItemEnchantments base = EnchantmentPlateItem.getStoredEnchantments(left);
         // Only tool enchantments (sword, shovel, axe, pickaxe, hoe, shears, brush, flint and steel) go on a plate.
         ItemEnchantments added = EnchantmentPlateItem.onlyAllowed(
-                right.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY));
+                ItemEnchantments.stored(right));
         // No result: cancel, which empties the output. Vanilla's own anvil logic must never run for a plate:
         // it adds the book to the plate's NORMAL enchantments and checks compatibility against those
         // (always empty on a plate), so a Fortune book went onto a Silk Touch plate, or a book was used up
@@ -64,15 +61,15 @@ public final class PlateHelper
         String name = event.getName();
         if (name != null)
         {
-            if (StringUtil.isBlank(name))
-                output.remove(DataComponents.CUSTOM_NAME);
+            if (name.isBlank())
+                output.resetHoverName();
             else if (!name.equals(left.getHoverName().getString()))
-                output.set(DataComponents.CUSTOM_NAME, Component.literal(name));
+                output.setHoverName(Component.literal(name));
         }
 
         // XP cost: one level per accepted enchantment level on the book, capped below "Too Expensive!".
         int cost = 1;
-        for (Object2IntMap.Entry<Holder<Enchantment>> entry : added.entrySet())
+        for (Object2IntMap.Entry<Enchantment> entry : added.entrySet())
             cost += Math.max(1, entry.getIntValue());
 
         event.setOutput(output);
@@ -87,15 +84,15 @@ public final class PlateHelper
     private static ItemEnchantments merge(ItemEnchantments base, ItemEnchantments added)
     {
         ItemEnchantments.Mutable result = new ItemEnchantments.Mutable(base);
-        for (Object2IntMap.Entry<Holder<Enchantment>> entry : added.entrySet())
+        for (Object2IntMap.Entry<Enchantment> entry : added.entrySet())
         {
-            Holder<Enchantment> enchantment = entry.getKey();
+            Enchantment enchantment = entry.getKey();
             int level = entry.getIntValue();
 
             boolean compatible = true;
-            for (Holder<Enchantment> existing : result.keySet())
+            for (Enchantment existing : result.keySet())
             {
-                if (!existing.equals(enchantment) && !Enchantment.areCompatible(existing, enchantment))
+                if (!existing.equals(enchantment) && !existing.isCompatibleWith(enchantment))
                 {
                     compatible = false;
                     break;
@@ -106,7 +103,7 @@ public final class PlateHelper
 
             int current = result.getLevel(enchantment);
             int newLevel = current == level
-                    ? Math.min(level + 1, enchantment.value().getMaxLevel())
+                    ? Math.min(level + 1, enchantment.getMaxLevel())
                     : Math.max(current, level);
             result.set(enchantment, newLevel);
         }
@@ -152,15 +149,15 @@ public final class PlateHelper
      */
     public static Component plateDisplayName(ItemStack plate)
     {
-        if (plate.has(DataComponents.CUSTOM_NAME))
+        if (plate.hasCustomHoverName())
             return plate.getHoverName();
 
         MutableComponent list = Component.empty();
         boolean first = true;
-        for (Object2IntMap.Entry<Holder<Enchantment>> entry : EnchantmentPlateItem.getStoredEnchantments(plate).entrySet())
+        for (Object2IntMap.Entry<Enchantment> entry : EnchantmentPlateItem.getStoredEnchantments(plate).entrySet())
         {
             if (!first) list.append(", ");
-            list.append(Enchantment.getFullname(entry.getKey(), entry.getIntValue()));
+            list.append(entry.getKey().getFullname(entry.getIntValue()));
             first = false;
         }
         return first ? plate.getHoverName() : list;

@@ -4,9 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 
@@ -28,8 +25,4 @@ public record LastSwap(int slot, Item item)
             LENIENT_ITEM.fieldOf("item").forGetter(LastSwap::item)
     ).apply(instance, LastSwap::new));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, LastSwap> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, LastSwap::slot,
-            ByteBufCodecs.registry(Registries.ITEM), LastSwap::item,
-            LastSwap::new);
 }

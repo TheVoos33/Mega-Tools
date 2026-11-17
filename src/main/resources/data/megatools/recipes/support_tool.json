@@ -13,7 +13,6 @@
     }
   ],
   "result": {
-    "id": "megatools:support_tool",
-    "count": 1
+    "item": "megatools:support_tool"
   }
 }

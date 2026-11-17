@@ -8,13 +8,13 @@
   ],
   "key": {
     "M": {
-      "item": "minecraft:cobblestone"
+      "item": "minecraft:iron_ingot"
     },
     "T": {
-      "item": "megatools:stone_paxel"
+      "item": "megatools:iron_paxel"
     }
   },
   "result": {
-    "id": "megatools:stone_paxel"
+    "item": "megatools:iron_paxel"
   }
 }

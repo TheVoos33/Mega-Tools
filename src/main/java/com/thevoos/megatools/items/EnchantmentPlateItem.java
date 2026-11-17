@@ -1,10 +1,10 @@
 package com.thevoos.megatools.items;
 
+import com.thevoos.megatools.component.ItemEnchantments;
+import org.jetbrains.annotations.Nullable;
 import com.thevoos.megatools.KeyNames;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
@@ -13,10 +13,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.EnchantmentInstance;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.event.TagsUpdatedEvent;
+import net.minecraftforge.event.TagsUpdatedEvent;
 
 import java.util.List;
 import java.util.Map;
@@ -25,23 +23,18 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Enchantment Plate - an upgrade item that carries enchantments to a tool. Works like a book:
  *
- *  - Enchanting table (and enchanting mods): the plate is in the vanilla "enchantable" item tags
- *    for swords, axes, pickaxes, shovels, hoes and shears (data/minecraft/tags/item/enchantable/),
- *    so it is offered exactly the enchantments those tools can get.
+ *  - Enchanting table (and enchanting mods): canApplyAtEnchantingTable offers exactly the
+ *    enchantments that swords, axes, pickaxes, shovels, hoes and shears can get.
  *  - Anvil: plate (left) + any enchanted book (right) adds the book's enchantments (PlateHelper).
  *  - Rename it in the anvil (e.g. "Silk Touch Plate"); Shift+R then shows "Silk Touch Plate loaded".
  *
  * Like an enchanted book, the enchantments are STORED on the plate (they don't act while you hold it).
- * The enchanting table (and table mods using NeoForge's applyEnchantments hook) writes them straight
- * into the stored enchantments. Anything that writes normal enchantments instead (/enchant, other
- * mods) is moved over by inventoryTick; getStoredEnchantments counts both, so nothing is missed.
+ * The enchanting table, /enchant and other mods write normal enchantments; inventoryTick moves them
+ * into the stored ones, and getStoredEnchantments counts both, so nothing is missed.
  *
  * ACCEPTED ENCHANTMENTS: only those that can go on one of the tools a paxel / Mega Tool replaces:
  * sword, shovel, axe, pickaxe, hoe, shears, brush or flint and steel (see allows). Armor, bow, trident,
  * fishing rod... enchantments are refused everywhere: enchanting table, anvil, /enchant, other mods.
- *
- * The normal ENCHANTMENTS component must stay present (empty): vanilla's ItemStack#isEnchantable
- * refuses items without it. It is therefore reset to empty, never removed.
  */
 public class EnchantmentPlateItem extends Item
 {
@@ -61,13 +54,13 @@ public class EnchantmentPlateItem extends Item
      * integrated server both use it. Without it, every plate re-ran up to 8 tag checks per enchantment
      * every frame (glint) and every tick (inventoryTick).
      */
-    private static final Map<Holder<Enchantment>, Boolean> ALLOWED = new ConcurrentHashMap<>();
+    private static final Map<Enchantment, Boolean> ALLOWED = new ConcurrentHashMap<>();
 
     /**
      * True if this enchantment can go on a sword, shovel, axe, pickaxe, hoe, shears, brush or flint and
      * steel. Uses each enchantment's own "supported items", so modded enchantments for those tools work too.
      */
-    public static boolean allows(Holder<Enchantment> enchantment)
+    public static boolean allows(Enchantment enchantment)
     {
         Boolean cached = ALLOWED.get(enchantment);
         if (cached == null)
@@ -78,7 +71,7 @@ public class EnchantmentPlateItem extends Item
         return cached;
     }
 
-    private static boolean computeAllows(Holder<Enchantment> enchantment)
+    private static boolean computeAllows(Enchantment enchantment)
     {
         List<ItemStack> tools = referenceTools;
         if (tools == null)
@@ -86,7 +79,7 @@ public class EnchantmentPlateItem extends Item
                     new ItemStack(Items.DIAMOND_AXE), new ItemStack(Items.DIAMOND_PICKAXE), new ItemStack(Items.DIAMOND_HOE),
                     new ItemStack(Items.SHEARS), new ItemStack(Items.BRUSH), new ItemStack(Items.FLINT_AND_STEEL));
         for (ItemStack tool : tools)
-            if (enchantment.value().isSupportedItem(tool))
+            if (enchantment.canEnchant(tool))
                 return true;
         return false;
     }
@@ -100,7 +93,7 @@ public class EnchantmentPlateItem extends Item
     /** True if a plate accepts every one of these enchantments. */
     private static boolean allAllowed(ItemEnchantments enchantments)
     {
-        for (Holder<Enchantment> enchantment : enchantments.keySet())
+        for (Enchantment enchantment : enchantments.keySet())
             if (!allows(enchantment))
                 return false;
         return true;
@@ -112,7 +105,7 @@ public class EnchantmentPlateItem extends Item
         if (allAllowed(enchantments))
             return enchantments;
         ItemEnchantments.Mutable result = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
-        for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet())
+        for (Object2IntMap.Entry<Enchantment> entry : enchantments.entrySet())
             if (allows(entry.getKey()))
                 result.set(entry.getKey(), entry.getIntValue());
         return result.toImmutable();
@@ -124,8 +117,8 @@ public class EnchantmentPlateItem extends Item
      */
     public static ItemEnchantments getStoredEnchantments(ItemStack plate)
     {
-        ItemEnchantments stored = plate.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-        ItemEnchantments direct = plate.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        ItemEnchantments stored = ItemEnchantments.stored(plate);
+        ItemEnchantments direct = ItemEnchantments.of(plate);
         if (direct.isEmpty())
             return onlyAllowed(stored); // the usual case: no new maps (called every frame for the glint)
         ItemEnchantments.Mutable merged = new ItemEnchantments.Mutable(stored);
@@ -133,9 +126,9 @@ public class EnchantmentPlateItem extends Item
         return onlyAllowed(merged.toImmutable());
     }
 
-    /** Which enchantments the plate accepts (enchanting table, anvil, /enchant and mods all ask this). */
+    /** Which enchantments the enchanting table (and table mods) may offer for a plate. */
     @Override
-    public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment)
+    public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment)
     {
         return allows(enchantment);
     }
@@ -155,42 +148,28 @@ public class EnchantmentPlateItem extends Item
         return ENCHANTMENT_VALUE;
     }
 
-    /** Enchanting table (vanilla and mods using this NeoForge hook): store the enchantments like a book does. */
-    @Override
-    public ItemStack applyEnchantments(ItemStack stack, List<EnchantmentInstance> enchantments)
-    {
-        ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(getStoredEnchantments(stack));
-        for (EnchantmentInstance instance : enchantments)
-            if (allows(instance.enchantment))
-                stored.upgrade(instance.enchantment, instance.level);
-        setStored(stack, stored.toImmutable());
-        return stack;
-    }
-
     /**
      * Server, while in an inventory: move normal enchantments (from /enchant or other mods) into the stored
-     * ones and drop any a plate doesn't accept (plates made before that rule). Also repairs plates saved by
-     * an older version, which removed the ENCHANTMENTS component and so could no longer be enchanted.
+     * ones and drop any a plate doesn't accept (plates made before that rule).
      */
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected)
     {
         if (level.isClientSide())
             return;
-        ItemEnchantments direct = stack.get(DataComponents.ENCHANTMENTS);
-        ItemEnchantments stored = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-        if (direct == null || !direct.isEmpty() || !allAllowed(stored)) // runs every tick: no allocation unless needed
+        if (stack.getTag() == null)
+            return; // runs every tick: nothing to read on a blank plate
+        ItemEnchantments direct = ItemEnchantments.of(stack);
+        ItemEnchantments stored = ItemEnchantments.stored(stack);
+        if (!direct.isEmpty() || !allAllowed(stored))
             setStored(stack, getStoredEnchantments(stack));
     }
 
-    /** Puts these enchantments in the stored component and resets the normal one to its empty default. */
+    /** Puts these enchantments in the stored list and removes the normal ones. */
     public static void setStored(ItemStack plate, ItemEnchantments enchantments)
     {
-        plate.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY); // equal to the default: no patch left
-        if (enchantments.isEmpty())
-            plate.remove(DataComponents.STORED_ENCHANTMENTS);
-        else
-            plate.set(DataComponents.STORED_ENCHANTMENTS, enchantments);
+        ItemEnchantments.setOn(plate, ItemEnchantments.EMPTY);
+        ItemEnchantments.setStoredOn(plate, enchantments);
     }
 
     // ---- looks ----
@@ -203,7 +182,7 @@ public class EnchantmentPlateItem extends Item
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag)
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag)
     {
         if (getStoredEnchantments(stack).isEmpty())
             tooltip.add(Component.translatable("tooltip.megatools.plate.empty").withStyle(ChatFormatting.GRAY));

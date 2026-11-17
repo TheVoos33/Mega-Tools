@@ -1,20 +1,15 @@
 package com.thevoos.megatools.network;
 
-import com.thevoos.megatools.MegaTools;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 
 /** Client -> server: Ctrl + R was pressed while holding a Mega Tools tool. Open its GUI. */
-public record OpenToolGuiPayload() implements CustomPacketPayload
+public record OpenToolGuiPayload() implements Payload
 {
     public static final OpenToolGuiPayload INSTANCE = new OpenToolGuiPayload();
-    public static final CustomPacketPayload.Type<OpenToolGuiPayload> TYPE = new CustomPacketPayload.Type<>(MegaTools.id("open_tool_gui"));
-    public static final StreamCodec<ByteBuf, OpenToolGuiPayload> STREAM_CODEC = StreamCodec.unit(INSTANCE);
 
     @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type()
+    public void write(FriendlyByteBuf buf)
     {
-        return TYPE;
+        // no data
     }
 }

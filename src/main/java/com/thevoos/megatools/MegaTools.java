@@ -1,13 +1,16 @@
 package com.thevoos.megatools;
 
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import com.thevoos.megatools.items.ToolTier;
 import com.thevoos.megatools.mixin.RangedAttributeAccessor;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import com.mojang.logging.LogUtils;
 import com.thevoos.megatools.block.ModBlocks;
-import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.event.CommonEvents;
 import com.thevoos.megatools.items.ModCreativeModeTab;
 import com.thevoos.megatools.items.ModItems;
@@ -15,10 +18,9 @@ import com.thevoos.megatools.menu.ModMenus;
 import com.thevoos.megatools.network.ModNetworking;
 import com.thevoos.megatools.recipe.ModRecipes;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import org.slf4j.Logger;
 
 /**
@@ -31,20 +33,21 @@ import org.slf4j.Logger;
 @Mod(MegaTools.MODID)
 public class MegaTools
 {
-    // Mod id - must match the modId in META-INF/neoforge.mods.toml
+    // Mod id - must match the modId in META-INF/mods.toml
     public static final String MODID = "megatools";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public MegaTools(IEventBus modEventBus, ModContainer modContainer)
+    public MegaTools()
     {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+
         // ---- Startup config FIRST: tool stats (damage, durability, mining speed) are read when the
-        //      items are built during registration, so this file must be loaded before that.
-        //      config/megatools-startup.toml, restart required after edits.
-        modContainer.registerConfig(ModConfig.Type.STARTUP, StartupConfig.SPEC);
+        //      items are built during registration, which on Forge happens before COMMON configs load,
+        //      so this file is read right here. config/megatools-startup.toml, restart required after edits.
+        StartupConfig.load();
 
         // ---- Registries (mod event bus) --------------------------------------------------------
         // Data components first: they describe the per-stack data (settings, storage, plates, swap info).
-        ModDataComponents.register(modEventBus);
         ModBlocks.register(modEventBus);    // invisible light placed by tools holding a light source
         ModItems.register(modEventBus);
         ModMenus.register(modEventBus);
@@ -53,14 +56,18 @@ public class MegaTools
 
         // ---- Networking (mod event bus) --------------------------------------------------------
         // Client -> server packets for Ctrl+R, Shift+R, R, renaming and Mega Tool clicks.
-        modEventBus.addListener(ModNetworking::onRegisterPayloads);
+        ModNetworking.register();
 
-        // ---- Gameplay events (NeoForge game bus) -----------------------------------------------
+        // ---- Gameplay events (Forge game bus) -----------------------------------------------
         // Mega Tool mining speed/delay, anvil plate enchanting, swap safety net, etc.
         CommonEvents.register();
 
         // ---- Config ----------------------------------------------------------------------------
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        // ---- Client-only setup (key binds, screens, HUD, render tweaks) ----------------------------
+        if (FMLEnvironment.dist == Dist.CLIENT)
+            MegaToolsClient.init(modEventBus);
 
         modEventBus.addListener((FMLCommonSetupEvent event) -> event.enqueueWork(MegaTools::raiseAttackDamageLimit));
     }
@@ -76,7 +83,7 @@ public class MegaTools
         double needed = 0.0D;
         for (ToolTier tier : ToolTier.values())
             needed = Math.max(needed, tier.attackDamage());
-        if (Attributes.ATTACK_DAMAGE.value() instanceof RangedAttribute attribute && needed > attribute.getMaxValue())
+        if (Attributes.ATTACK_DAMAGE instanceof RangedAttribute attribute && needed > attribute.getMaxValue())
         {
             LOGGER.info("Raising the attack damage attribute limit from {} to {} (megatools-startup.toml)",
                     attribute.getMaxValue(), needed);
@@ -87,6 +94,6 @@ public class MegaTools
     /** Small helper so every class builds ResourceLocations in the mod namespace the same way. */
     public static ResourceLocation id(String path)
     {
-        return ResourceLocation.fromNamespaceAndPath(MODID, path);
+        return new ResourceLocation(MODID, path);
     }
 }

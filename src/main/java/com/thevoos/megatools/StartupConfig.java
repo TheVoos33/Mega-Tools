@@ -1,16 +1,22 @@
 package com.thevoos.megatools;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
+import com.electronwill.nightconfig.core.file.FileNotFoundAction;
+import com.electronwill.nightconfig.core.io.ParsingException;
+import com.electronwill.nightconfig.core.io.WritingMode;
+import net.minecraftforge.fml.loading.FMLPaths;
+import java.nio.file.Path;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /**
  * Tool stats for modpack developers: config/megatools-startup.toml.
  *
- * This is a STARTUP config (not COMMON) because durability, attack damage and mining speed are
- * baked into each item when it is registered, which happens before COMMON configs load. Startup
- * configs load immediately, so the values are ready in time. Consequences:
+ * This is not a normal Forge config: durability, attack damage and mining speed are baked into each
+ * item when it is registered, which happens before COMMON configs load. So the file is read by
+ * load() when the mod is constructed, before registration. Consequences:
  *  - Changes need a game/server restart.
- *  - Startup configs are not synced over the network: ship the same file to clients and the
- *    server (modpacks do this automatically through their config folder).
+ *  - The file is not synced over the network: ship the same file to clients and the server
+ *    (modpacks do this automatically through their config folder).
  *
  * miningSpeedMultiplier is relative to the matching vanilla tier:
  *   stone pickaxe 4.0, iron 6.0, diamond 8.0.  1.2 = 20% faster, 0.5 = half as fast, 2.0 = twice as fast.
@@ -19,7 +25,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  */
 public final class StartupConfig
 {
-    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
     //                                                     section         name             damage atk/s durability mining speed
     public static final ToolValues STONE_PAXEL   = new ToolValues(BUILDER, "stone_paxel",   "Stone Paxel",   10.0, 1.6,  655,  true);
@@ -27,7 +33,34 @@ public final class StartupConfig
     public static final ToolValues DIAMOND_PAXEL = new ToolValues(BUILDER, "diamond_paxel", "Diamond Paxel", 18.0, 2.5,  8171, true);
     public static final ToolValues MEGA_TOOL     = new ToolValues(BUILDER, "mega_tool",     "Mega Tool",     22.0, 3.0,  0,    false);
 
-    static final ModConfigSpec SPEC = BUILDER.build();
+    static final ForgeConfigSpec SPEC = BUILDER.build();
+
+    public static final String FILE_NAME = MegaTools.MODID + "-startup.toml";
+
+    /**
+     * Reads config/megatools-startup.toml (creating it with the defaults if missing, and fixing
+     * invalid or missing values like Forge does for its own configs). Called once, from the mod constructor.
+     */
+    static void load()
+    {
+        Path path = FMLPaths.CONFIGDIR.get().resolve(FILE_NAME);
+        CommentedFileConfig file = CommentedFileConfig.builder(path)
+                .sync()
+                .preserveInsertionOrder()
+                .onFileNotFound(FileNotFoundAction.CREATE_EMPTY)
+                .writingMode(WritingMode.REPLACE)
+                .build();
+        try
+        {
+            file.load();
+        }
+        catch (ParsingException e)
+        {
+            throw new IllegalStateException("config/" + FILE_NAME + " is not a valid TOML file. Fix or delete it. " + e.getMessage(), e);
+        }
+        SPEC.setConfig(file); // fills in missing values and comments, saving the file if it changed
+        file.save();
+    }
 
     private StartupConfig() {}
 
@@ -36,13 +69,13 @@ public final class StartupConfig
     {
         public static final double DEFAULT_SPEED_MULTIPLIER = 1.2;
 
-        public final ModConfigSpec.DoubleValue attackDamage;
-        public final ModConfigSpec.DoubleValue attackSpeed;
-        public final ModConfigSpec.IntValue durability;
+        public final ForgeConfigSpec.DoubleValue attackDamage;
+        public final ForgeConfigSpec.DoubleValue attackSpeed;
+        public final ForgeConfigSpec.IntValue durability;
         /** Null for the Mega Tool (instant mining). */
-        public final ModConfigSpec.DoubleValue miningSpeedMultiplier;
+        public final ForgeConfigSpec.DoubleValue miningSpeedMultiplier;
 
-        private ToolValues(ModConfigSpec.Builder builder, String section, String displayName,
+        private ToolValues(ForgeConfigSpec.Builder builder, String section, String displayName,
                            double defaultDamage, double defaultAttackSpeed, int defaultDurability, boolean hasSpeed)
         {
             builder.comment(displayName + " stats (restart required after changes)").push(section);

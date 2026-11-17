@@ -30,7 +30,7 @@ public final class LightSources
     {
         if (!(stack.getItem() instanceof MultiToolItem))
             return false;
-        StoredTorches torches = stack.get(ModDataComponents.TORCHES.get());
+        StoredTorches torches = ModDataComponents.TORCHES.get(stack);
         return torches != null && isTorch(torches.type()) && !ToolData.hasFlag(stack, ToolSettings.LIGHT_OFF);
     }
 

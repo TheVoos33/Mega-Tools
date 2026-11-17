@@ -11,8 +11,8 @@ import com.thevoos.megatools.MegaTools;
 import com.thevoos.megatools.items.ModTags;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagEntry;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLPaths;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.Reader;
 import java.io.Writer;

@@ -1,10 +1,6 @@
 package com.thevoos.megatools.network;
 
-import com.thevoos.megatools.MegaTools;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 
 /**
  * Client -> server: R was pressed.
@@ -12,16 +8,16 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * slot = -1 : swap back to the Mega Tools tool (ToolSwapper.SWAP_BACK).
  * The server re-validates everything.
  */
-public record SwapToolPayload(int slot) implements CustomPacketPayload
+public record SwapToolPayload(int slot) implements Payload
 {
-    public static final CustomPacketPayload.Type<SwapToolPayload> TYPE = new CustomPacketPayload.Type<>(MegaTools.id("swap_tool"));
-    public static final StreamCodec<ByteBuf, SwapToolPayload> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, SwapToolPayload::slot,
-            SwapToolPayload::new);
-
     @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type()
+    public void write(FriendlyByteBuf buf)
     {
-        return TYPE;
+        buf.writeVarInt(slot);
+    }
+
+    public static SwapToolPayload read(FriendlyByteBuf buf)
+    {
+        return new SwapToolPayload(buf.readVarInt());
     }
 }

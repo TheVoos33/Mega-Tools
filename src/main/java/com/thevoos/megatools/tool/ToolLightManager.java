@@ -22,15 +22,14 @@ import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.phys.Vec3;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.event.level.ChunkWatchEvent;
-import net.neoforged.neoforge.event.server.ServerStoppedEvent;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.event.level.ChunkWatchEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.event.TickEvent;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -151,10 +150,12 @@ public final class ToolLightManager
     //  Per-tick update
     // =====================================================================================
 
-    public static void onPlayerTick(PlayerTickEvent.Post event)
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event)
     {
+        if (event.phase != TickEvent.Phase.END)
+            return;
         // Fake players (machines that "use" items) never get lights: nothing would ever remove them.
-        if (!(event.getEntity() instanceof ServerPlayer player) || player instanceof FakePlayer)
+        if (!(event.player instanceof ServerPlayer player) || player instanceof FakePlayer)
             return;
 
         // Runs for every player every tick: the cheap held-item check comes first.
@@ -190,8 +191,10 @@ public final class ToolLightManager
     }
 
     /** Server tick: turn faded-out lights back into air/water. */
-    public static void onServerTick(ServerTickEvent.Post event)
+    public static void onServerTick(TickEvent.ServerTickEvent event)
     {
+        if (event.phase != TickEvent.Phase.END)
+            return;
         MinecraftServer server = event.getServer();
         if (!RECENT_CHUNKS.isEmpty() || !RESYNC.isEmpty())
             tickResync(server);
@@ -358,7 +361,7 @@ public final class ToolLightManager
      * A fire was placed by a player (flint and steel, fire charge, the tool's Ignite ability). Fire inside an
      * obsidian frame makes a Nether portal only if the whole inside of the frame is AIR, and a tool light is
      * not air: standing in the frame with a lit tool, the portal never appeared. So a light that sits INSIDE
-     * the frame the fire was placed in is removed first; lights anywhere else are left alone. NeoForge fires
+     * the frame the fire was placed in is removed first; lights anywhere else are left alone. Forge fires
      * this event before the fire looks for its portal frame; the player's light comes back on their next tick
      * (by then the frame is filled with portal blocks, so it is placed next to it).
      */
@@ -481,7 +484,7 @@ public final class ToolLightManager
     // =====================================================================================
 
     /** Server: a chunk was sent to a player. */
-    public static void onChunkSent(ChunkWatchEvent.Sent event)
+    public static void onChunkSent(ChunkWatchEvent.Watch event)
     {
         RECENT_CHUNKS.computeIfAbsent(event.getPlayer().getUUID(), id -> new Long2LongOpenHashMap())
                 .put(event.getPos().toLong(), event.getLevel().getServer().getTickCount());
@@ -531,7 +534,7 @@ public final class ToolLightManager
             for (int x = minX; x <= maxX; x++)
                 for (int z = minZ; z <= maxZ; z++)
                 {
-                    if (!player.getChunkTrackingView().contains(x, z))
+                    if (!world.getChunkSource().chunkMap.getPlayers(new ChunkPos(x, z), false).contains(player))
                         continue;
                     Resync resync = pending.computeIfAbsent(ChunkPos.asLong(x, z), c -> new Resync(world.dimension()));
                     resync.sections.set(minIndex, maxIndex + 1);
@@ -584,13 +587,9 @@ public final class ToolLightManager
                 ServerLevel world = server.getLevel(resync.dimension);
                 if (world == null || player.serverLevel() != world)
                     continue;
-                // The server works out light on its own thread: send once the light changes queued so far are done.
-                world.getChunkSource().getLightEngine().waitForPendingTasks(pos.x, pos.z).thenRunAsync(() ->
-                {
-                    if (!player.hasDisconnected() && player.serverLevel() == world
-                            && player.getChunkTrackingView().contains(pos))
-                        player.connection.send(new ClientboundLightUpdatePacket(pos, world.getLightEngine(), new BitSet(), resync.sections));
-                }, server);
+                // The light engine catches up every tick, and resyncs wait RESYNC_DELAY ticks, so the light is ready.
+                if (world.getChunkSource().chunkMap.getPlayers(pos, false).contains(player))
+                    player.connection.send(new ClientboundLightUpdatePacket(pos, world.getLightEngine(), new BitSet(), resync.sections));
             }
             if (entry.getValue().isEmpty())
                 players.remove();

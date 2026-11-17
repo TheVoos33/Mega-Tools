@@ -3,7 +3,7 @@ package com.thevoos.megatools.menu;
 import com.thevoos.megatools.component.SwapRules;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.items.ToolTier;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -57,7 +57,7 @@ public class SwapRulesMenu extends AbstractContainerMenu
     private final int height;
 
     /** Client side factory: reads the tool's hotbar slot written in ServerPayloadHandler. */
-    public static SwapRulesMenu fromNetwork(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData)
+    public static SwapRulesMenu fromNetwork(int containerId, Inventory playerInventory, FriendlyByteBuf extraData)
     {
         return new SwapRulesMenu(containerId, playerInventory, extraData.readVarInt());
     }

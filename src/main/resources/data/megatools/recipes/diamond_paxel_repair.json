@@ -8,13 +8,13 @@
   ],
   "key": {
     "M": {
-      "item": "minecraft:iron_ingot"
+      "item": "minecraft:diamond"
     },
     "T": {
-      "item": "megatools:iron_paxel"
+      "item": "megatools:diamond_paxel"
     }
   },
   "result": {
-    "id": "megatools:iron_paxel"
+    "item": "megatools:diamond_paxel"
   }
 }

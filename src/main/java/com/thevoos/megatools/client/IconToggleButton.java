@@ -46,7 +46,9 @@ public class IconToggleButton extends Button
     {
         int x = getX();
         int y = getY();
-        g.blitSprite(SPRITES.get(active, false), x, y, width, height);
+        // Vanilla button background (AbstractButton#renderWidget): disabled / normal / hovered row of widgets.png.
+        int textureY = !active ? 46 : isHoveredOrFocused() ? 86 : 66;
+        g.blitNineSliced(WIDGETS_LOCATION, x, y, width, height, 20, 4, 200, 20, 0, textureY);
         if (active)
             g.renderOutline(x, y, width, height, on ? ON_COLOR : OFF_COLOR);
         g.renderFakeItem(icon, x + 1, y + 1);

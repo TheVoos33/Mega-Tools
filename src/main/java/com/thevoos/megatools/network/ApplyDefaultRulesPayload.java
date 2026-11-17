@@ -1,10 +1,7 @@
 package com.thevoos.megatools.network;
 
-import com.thevoos.megatools.MegaTools;
+import net.minecraft.network.FriendlyByteBuf;
 import com.thevoos.megatools.component.SwapRules;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Client -> server: default rules of the player's config/megatools-default-rules.json for the held tool.
@@ -19,17 +16,17 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  *
  * The server ignores the whole packet if the tool already knows every rule in {@code applied}.
  */
-public record ApplyDefaultRulesPayload(SwapRules applied, SwapRules add) implements CustomPacketPayload
+public record ApplyDefaultRulesPayload(SwapRules applied, SwapRules add) implements Payload
 {
-    public static final CustomPacketPayload.Type<ApplyDefaultRulesPayload> TYPE = new CustomPacketPayload.Type<>(MegaTools.id("apply_default_rules"));
-    public static final StreamCodec<ByteBuf, ApplyDefaultRulesPayload> STREAM_CODEC = StreamCodec.composite(
-            SwapRules.APPLIED_STREAM_CODEC, ApplyDefaultRulesPayload::applied,
-            SwapRules.STREAM_CODEC, ApplyDefaultRulesPayload::add,
-            ApplyDefaultRulesPayload::new);
-
     @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type()
+    public void write(FriendlyByteBuf buf)
     {
-        return TYPE;
+        applied.write(buf);
+        add.write(buf);
+    }
+
+    public static ApplyDefaultRulesPayload read(FriendlyByteBuf buf)
+    {
+        return new ApplyDefaultRulesPayload(SwapRules.read(buf, SwapRules.MAX_APPLIED), SwapRules.read(buf, SwapRules.MAX_TOTAL));
     }
 }

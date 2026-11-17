@@ -67,7 +67,7 @@
   "gui.megatools.toggle.delayed_break.desc": "Mega Tool: short delay between block breaks while left click is held. Turn off to break as fast as you can aim (%s)",
   "gui.megatools.quick_swap_hint": "Press %s to swap to this tool",
   "block.megatools.tool_light": "Tool Light",
-  "gui.megatools.light_slot": "Torches (up to 256). Light up the area while you hold this tool; Place Torch uses them",
+  "gui.megatools.light_slot": "Torches (up to 64). Light up the area while you hold this tool; Place Torch uses them",
   "tooltip.megatools.mega_breakable": "Fireproof - Instant mining",
   "megatools.configuration.section.megatools.startup.toml": "Mega Tools Tool Stats",
   "megatools.configuration.section.megatools.startup.toml.title": "Mega Tools Tool Stats (restart required)",

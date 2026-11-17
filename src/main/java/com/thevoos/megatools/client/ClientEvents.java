@@ -1,5 +1,7 @@
 package com.thevoos.megatools.client;
 
+import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import com.thevoos.megatools.Config;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.SwapOrigin;
@@ -18,13 +20,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
+import com.thevoos.megatools.network.ModPackets;
 import org.lwjgl.glfw.GLFW;
 
 /** Client-only event handlers (registered in MegaToolsClient). */
@@ -33,21 +34,28 @@ public final class ClientEvents
     private ClientEvents() {}
 
     /** Mod bus: connect the menu type to its screen. */
-    public static void onRegisterScreens(RegisterMenuScreensEvent event)
+    /** Mod bus (client setup): menu type -> screen. */
+    public static void onClientSetup(FMLClientSetupEvent event)
     {
-        event.register(ModMenus.TOOL_MENU.get(), ToolScreen::new);
-        event.register(ModMenus.SWAP_RULES_MENU.get(), SwapRulesScreen::new);
+        event.enqueueWork(() ->
+        {
+            MenuScreens.register(ModMenus.TOOL_MENU.get(), ToolScreen::new);
+            MenuScreens.register(ModMenus.SWAP_RULES_MENU.get(), SwapRulesScreen::new);
+        });
     }
 
     /** Game bus: start of the client tick. Vanilla mining happens between this and Post. */
-    public static void onClientTickPre(ClientTickEvent.Pre event)
+    public static void onClientTickPre(TickEvent.ClientTickEvent event)
     {
-        MegaToolMining.setClientInTick(true);
+        if (event.phase == TickEvent.Phase.START)
+            MegaToolMining.setClientInTick(true);
     }
 
     /** Game bus: runs once per client tick. Updates auto-swap pre-selection and handles the R keys. */
-    public static void onClientTick(ClientTickEvent.Post event)
+    public static void onClientTick(TickEvent.ClientTickEvent event)
     {
+        if (event.phase != TickEvent.Phase.END)
+            return;
         MegaToolMining.setClientInTick(false); // anything after this (e.g. HUD rendering) isn't mining
 
         Minecraft mc = Minecraft.getInstance();
@@ -82,7 +90,7 @@ public final class ClientEvents
                 if (Config.MENU_STYLE.get() == MenuStyle.ASK)
                     mc.setScreen(new MenuStyleScreen());
                 else
-                    PacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE);
+                    ModPackets.sendToServer(OpenToolGuiPayload.INSTANCE);
             }
             return;
         }
@@ -91,17 +99,17 @@ public final class ClientEvents
         if (switchPlate && ModKeyMappings.modifierMatches(ModKeyMappings.SWITCH_PLATE))
         {
             if (held.getItem() instanceof MultiToolItem multiTool && multiTool.getTier().hasEnchantPlates())
-                PacketDistributor.sendToServer(SwitchPlatePayload.INSTANCE);
+                ModPackets.sendToServer(SwitchPlatePayload.INSTANCE);
             return;
         }
 
         // Shift + R : swap to the last tool swapped to; holding a swapped-out tool, swap back (like R)
         if (swapLast && ModKeyMappings.modifierMatches(ModKeyMappings.SWAP_LAST))
         {
-            if (held.has(ModDataComponents.SWAP_ORIGIN.get()))
-                PacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
+            if (ModDataComponents.SWAP_ORIGIN.has(held))
+                ModPackets.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
             else if (held.getItem() instanceof MultiToolItem multiTool && multiTool.getTier().hasAutoSwap())
-                PacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_LAST));
+                ModPackets.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_LAST));
             return;
         }
 
@@ -113,9 +121,9 @@ public final class ClientEvents
     private static void handleSwapKey(Minecraft mc, ItemStack held)
     {
         // Holding a swapped-out tool -> swap back.
-        if (held.has(ModDataComponents.SWAP_ORIGIN.get()))
+        if (ModDataComponents.SWAP_ORIGIN.has(held))
         {
-            PacketDistributor.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
+            ModPackets.sendToServer(new SwapToolPayload(ToolSwapper.SWAP_BACK));
             return;
         }
         // Holding a Mega Tools tool -> swap to the pre-selected stored tool.
@@ -123,7 +131,7 @@ public final class ClientEvents
         {
             int slot = AutoSwapClient.getPreselectedSlot();
             if (slot >= 0)
-                PacketDistributor.sendToServer(new SwapToolPayload(slot));
+                ModPackets.sendToServer(new SwapToolPayload(slot));
             else
                 mc.player.displayClientMessage(Component.translatable("message.megatools.no_tool_selected"), true);
         }
@@ -170,10 +178,10 @@ public final class ClientEvents
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event)
     {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null || mc.player == null || !Screen.hasShiftDown() || event.getScrollDeltaY() == 0)
+        if (mc.screen != null || mc.player == null || !Screen.hasShiftDown() || event.getScrollDelta() == 0)
             return;
         // Wheel up = next, wheel down = previous.
-        if (AutoSwapClient.cycle(event.getScrollDeltaY() > 0 ? 1 : -1))
+        if (AutoSwapClient.cycle(event.getScrollDelta() > 0 ? 1 : -1))
             event.setCanceled(true);
     }
 
@@ -199,7 +207,7 @@ public final class ClientEvents
     /** Game bus: warn players that a swapped-out tool is carrying their Mega Tools tool. */
     public static void onItemTooltip(ItemTooltipEvent event)
     {
-        SwapOrigin origin = event.getItemStack().get(ModDataComponents.SWAP_ORIGIN.get());
+        SwapOrigin origin = ModDataComponents.SWAP_ORIGIN.get(event.getItemStack());
         if (origin != null)
         {
             event.getToolTip().add(Component.translatable("tooltip.megatools.swapped",

@@ -1,18 +1,11 @@
 package com.thevoos.megatools.recipe;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.NonNullList;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import com.google.gson.JsonObject;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.world.level.Level;
@@ -24,24 +17,23 @@ import net.minecraft.world.level.Level;
  */
 public class CarryOverShapelessRecipe extends ShapelessRecipe implements PreservesToolData
 {
-    private static final int MAX_INGREDIENTS = 9;
-
     private final ItemStack carryResult;
 
-    public CarryOverShapelessRecipe(String group, CraftingBookCategory category, ItemStack result, NonNullList<Ingredient> ingredients)
+    /** Copies a vanilla shapeless recipe (parsed by vanilla's serializer) into a carry-over recipe. */
+    public CarryOverShapelessRecipe(ShapelessRecipe parsed)
     {
-        super(group, category, result, ingredients);
-        this.carryResult = result;
+        super(parsed.getId(), parsed.getGroup(), parsed.category(), parsed.getResultItem(RegistryAccess.EMPTY), parsed.getIngredients());
+        this.carryResult = parsed.getResultItem(RegistryAccess.EMPTY);
     }
 
     @Override
-    public boolean matches(CraftingInput input, Level level)
+    public boolean matches(CraftingContainer input, Level level)
     {
         return super.matches(input, level) && ToolCarryOver.canCarryOver(input, carryResult);
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries)
+    public ItemStack assemble(CraftingContainer input, RegistryAccess registries)
     {
         ItemStack result = super.assemble(input, registries);
         ToolCarryOver.apply(input, result);
@@ -54,50 +46,25 @@ public class CarryOverShapelessRecipe extends ShapelessRecipe implements Preserv
         return ModRecipes.SHAPELESS_CARRY_OVER.get();
     }
 
-    // ---- JSON format: identical to minecraft:crafting_shapeless ----
-    public static final MapCodec<CarryOverShapelessRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("group", "").forGetter(ShapelessRecipe::getGroup),
-            CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC).forGetter(ShapelessRecipe::category),
-            ItemStack.STRICT_CODEC.fieldOf("result").forGetter(r -> r.carryResult),
-            Ingredient.CODEC_NONEMPTY.listOf().fieldOf("ingredients").flatXmap(
-                    CarryOverShapelessRecipe::validateIngredients,
-                    DataResult::success
-            ).forGetter(ShapelessRecipe::getIngredients)
-    ).apply(instance, CarryOverShapelessRecipe::new));
-
-    private static DataResult<NonNullList<Ingredient>> validateIngredients(java.util.List<Ingredient> list)
+    /** JSON and network format: identical to minecraft:crafting_shapeless (vanilla's serializer does the work). */
+    public static class Serializer implements RecipeSerializer<CarryOverShapelessRecipe>
     {
-        Ingredient[] ingredients = list.stream().filter(i -> !i.isEmpty()).toArray(Ingredient[]::new);
-        if (ingredients.length == 0)
-            return DataResult.error(() -> "No ingredients for shapeless carry-over recipe");
-        if (ingredients.length > MAX_INGREDIENTS)
-            return DataResult.error(() -> "Too many ingredients for shapeless carry-over recipe (max " + MAX_INGREDIENTS + ")");
-        return DataResult.success(NonNullList.of(Ingredient.EMPTY, ingredients));
-    }
+        @Override
+        public CarryOverShapelessRecipe fromJson(ResourceLocation id, JsonObject json)
+        {
+            return new CarryOverShapelessRecipe(RecipeSerializer.SHAPELESS_RECIPE.fromJson(id, json));
+        }
 
-    // ---- Network format ----
-    public static final StreamCodec<RegistryFriendlyByteBuf, CarryOverShapelessRecipe> STREAM_CODEC =
-            StreamCodec.of(CarryOverShapelessRecipe::toNetwork, CarryOverShapelessRecipe::fromNetwork);
+        @Override
+        public CarryOverShapelessRecipe fromNetwork(ResourceLocation id, FriendlyByteBuf buf)
+        {
+            return new CarryOverShapelessRecipe(RecipeSerializer.SHAPELESS_RECIPE.fromNetwork(id, buf));
+        }
 
-    private static void toNetwork(RegistryFriendlyByteBuf buf, CarryOverShapelessRecipe recipe)
-    {
-        ByteBufCodecs.STRING_UTF8.encode(buf, recipe.getGroup());
-        CraftingBookCategory.STREAM_CODEC.encode(buf, recipe.category());
-        buf.writeVarInt(recipe.getIngredients().size());
-        for (Ingredient ingredient : recipe.getIngredients())
-            Ingredient.CONTENTS_STREAM_CODEC.encode(buf, ingredient);
-        ItemStack.STREAM_CODEC.encode(buf, recipe.carryResult);
-    }
-
-    private static CarryOverShapelessRecipe fromNetwork(RegistryFriendlyByteBuf buf)
-    {
-        String group = ByteBufCodecs.STRING_UTF8.decode(buf);
-        CraftingBookCategory category = CraftingBookCategory.STREAM_CODEC.decode(buf);
-        int count = buf.readVarInt();
-        NonNullList<Ingredient> ingredients = NonNullList.withSize(count, Ingredient.EMPTY);
-        for (int i = 0; i < count; i++)
-            ingredients.set(i, Ingredient.CONTENTS_STREAM_CODEC.decode(buf));
-        ItemStack result = ItemStack.STREAM_CODEC.decode(buf);
-        return new CarryOverShapelessRecipe(group, category, result, ingredients);
+        @Override
+        public void toNetwork(FriendlyByteBuf buf, CarryOverShapelessRecipe recipe)
+        {
+            RecipeSerializer.SHAPELESS_RECIPE.toNetwork(buf, recipe);
+        }
     }
 }

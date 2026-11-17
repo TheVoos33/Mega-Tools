@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * The swap key in the Mega Tools GUI (R on a stored tool) comes before recipe viewers. EMI reads key presses in
- * container screens before the screen and before NeoForge's screen key events, and shows the hovered item's
+ * container screens before the screen and before Forge's screen key events, and shows the hovered item's
  * recipe on R; this runs at the very start of the key handling, so a quick swap wins and EMI never sees it.
  * Any other key, or R anywhere else, goes on as usual (see ToolScreen#tryQuickSwap).
  */

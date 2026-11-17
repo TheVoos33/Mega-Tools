@@ -9,10 +9,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.util.TriState;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.level.BlockEvent;
 
 /**
  * Stops a tool from breaking blocks and/or attacking, for two reasons:
@@ -49,7 +49,7 @@ public final class DisabledToolHandler
             if (player.getAbilities().instabuild)
                 event.setCanceled(true);
             else
-                event.setUseItem(TriState.FALSE);
+                event.setUseItem(Event.Result.DENY);
             showMessage(player, "message.megatools.break_disabled");
         }
     }

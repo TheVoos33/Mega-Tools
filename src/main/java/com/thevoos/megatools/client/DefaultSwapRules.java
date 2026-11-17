@@ -20,10 +20,10 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.ItemContainerContents;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.neoforge.network.PacketDistributor;
+import com.thevoos.megatools.component.ItemContainerContents;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.loading.FMLPaths;
+import com.thevoos.megatools.network.ModPackets;
 
 import java.io.Reader;
 import java.io.Writer;
@@ -118,7 +118,7 @@ public final class DefaultSwapRules
         List<SwapRules.Rule> filters = new ArrayList<>(missing.size());
         for (SwapRules.Rule rule : missing)
             filters.add(asFilter(rule));
-        PacketDistributor.sendToServer(new ApplyDefaultRulesPayload(new SwapRules(missing), new SwapRules(filters)));
+        ModPackets.sendToServer(new ApplyDefaultRulesPayload(new SwapRules(missing), new SwapRules(filters)));
     }
 
     private static boolean isStored(ItemContainerContents storage, ResourceLocation tool)

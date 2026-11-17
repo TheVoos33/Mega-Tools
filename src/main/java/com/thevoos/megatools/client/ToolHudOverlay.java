@@ -1,15 +1,14 @@
 package com.thevoos.megatools.client;
 
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import com.thevoos.megatools.MegaTools;
 import net.minecraft.client.AttackIndicatorStatus;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
-import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 import java.util.List;
 
@@ -35,12 +34,13 @@ public final class ToolHudOverlay
 
     private ToolHudOverlay() {}
 
-    public static void onRegisterGuiLayers(RegisterGuiLayersEvent event)
+    public static void onRegisterGuiOverlays(RegisterGuiOverlaysEvent event)
     {
-        event.registerAbove(VanillaGuiLayers.HOTBAR, MegaTools.id("auto_swap_indicator"), ToolHudOverlay::render);
+        event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "auto_swap_indicator",
+                (gui, graphics, partialTick, width, height) -> render(graphics));
     }
 
-    private static void render(GuiGraphics graphics, DeltaTracker deltaTracker)
+    private static void render(GuiGraphics graphics)
     {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null || mc.player.isSpectator())

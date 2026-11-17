@@ -1,12 +1,11 @@
 package com.thevoos.megatools.items;
 
 import com.thevoos.megatools.StartupConfig;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Tier;
+import net.minecraft.world.item.Tiers;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
 
 import java.util.function.Supplier;
 
@@ -29,23 +28,23 @@ import java.util.function.Supplier;
  */
 public enum ToolTier
 {
-    //      config section               vanilla speed storage support plates incorrect-for-drops tag             GUI accent   repair item
-    STONE  (StartupConfig.STONE_PAXEL,   4.0F,  0,      true,   true,  BlockTags.INCORRECT_FOR_STONE_TOOL,     0xFF5E5E5E, () -> Ingredient.of(ItemTags.STONE_TOOL_MATERIALS)),
-    IRON   (StartupConfig.IRON_PAXEL,    6.0F,  9,      true,   true,  BlockTags.INCORRECT_FOR_IRON_TOOL,      0xFF6B7782, () -> Ingredient.of(Items.IRON_INGOT)),
-    DIAMOND(StartupConfig.DIAMOND_PAXEL, 8.0F,  18,     true,   true,  BlockTags.INCORRECT_FOR_DIAMOND_TOOL,   0xFF1D8A86, () -> Ingredient.of(Items.DIAMOND)),
-    MEGA   (StartupConfig.MEGA_TOOL,     12.0F, 27,     true,   true,  BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF3E2050, () -> Ingredient.EMPTY);
+    //      config section               vanilla speed storage support plates harvest tier (drops)  GUI accent   repair item
+    STONE  (StartupConfig.STONE_PAXEL,   4.0F,  0,      true,   true,  Tiers.STONE,     0xFF5E5E5E, () -> Ingredient.of(ItemTags.STONE_TOOL_MATERIALS)),
+    IRON   (StartupConfig.IRON_PAXEL,    6.0F,  9,      true,   true,  Tiers.IRON,      0xFF6B7782, () -> Ingredient.of(Items.IRON_INGOT)),
+    DIAMOND(StartupConfig.DIAMOND_PAXEL, 8.0F,  18,     true,   true,  Tiers.DIAMOND,   0xFF1D8A86, () -> Ingredient.of(Items.DIAMOND)),
+    MEGA   (StartupConfig.MEGA_TOOL,     12.0F, 27,     true,   true,  Tiers.NETHERITE, 0xFF3E2050, () -> Ingredient.EMPTY);
 
     private final StartupConfig.ToolValues config;
     private final float vanillaSpeed;
     private final int storageSlots;
     private final boolean supportTools;
     private final boolean enchantPlates;
-    private final TagKey<Block> incorrectBlocksForDrops;
+    private final Tier harvestTier;
     private final int accentColor;
     private final Supplier<Ingredient> repairIngredient;
 
     ToolTier(StartupConfig.ToolValues config, float vanillaSpeed, int storageSlots,
-             boolean supportTools, boolean enchantPlates, TagKey<Block> incorrectBlocksForDrops,
+             boolean supportTools, boolean enchantPlates, Tier harvestTier,
              int accentColor, Supplier<Ingredient> repairIngredient)
     {
         this.config = config;
@@ -53,7 +52,7 @@ public enum ToolTier
         this.storageSlots = storageSlots;
         this.supportTools = supportTools;
         this.enchantPlates = enchantPlates;
-        this.incorrectBlocksForDrops = incorrectBlocksForDrops;
+        this.harvestTier = harvestTier;
         this.accentColor = accentColor;
         this.repairIngredient = repairIngredient;
     }
@@ -116,7 +115,8 @@ public enum ToolTier
     public int toggleRows() { return 1 + (supportTools ? 2 : 1) + 1; }
     /** Auto-swap only makes sense when there is wrench storage to swap from. */
     public boolean hasAutoSwap() { return storageSlots > 0; }
-    public TagKey<Block> incorrectBlocksForDrops() { return incorrectBlocksForDrops; }
+    /** Vanilla tier whose blocks this tool can harvest (with drops). */
+    public Tier harvestTier() { return harvestTier; }
     /** Colour of the title bar in the GUI, so every tool's GUI looks different. */
     public int accentColor() { return accentColor; }
     public Ingredient repairIngredient() { return repairIngredient.get(); }

@@ -6,16 +6,13 @@ import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.items.ToolTier;
 import com.thevoos.megatools.tool.ToolData;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,10 +40,10 @@ public final class ToolCarryOver
     private ToolCarryOver() {}
 
     /** The tool ingredient whose data is carried over (first one holding items, else first tool), or EMPTY. */
-    private static ItemStack findSource(CraftingInput input)
+    private static ItemStack findSource(CraftingContainer input)
     {
         ItemStack firstTool = ItemStack.EMPTY;
-        for (ItemStack stack : input.items())
+        for (ItemStack stack : input.getItems())
         {
             if (!(stack.getItem() instanceof MultiToolItem))
                 continue;
@@ -59,10 +56,10 @@ public final class ToolCarryOver
     }
 
     /** True if the carry-over is possible without losing any items. Called from matches(). */
-    public static boolean canCarryOver(CraftingInput input, ItemStack result)
+    public static boolean canCarryOver(CraftingContainer input, ItemStack result)
     {
         int toolsWithContents = 0;
-        for (ItemStack stack : input.items())
+        for (ItemStack stack : input.getItems())
             if (stack.getItem() instanceof MultiToolItem && hasContents(stack))
                 toolsWithContents++;
         if (toolsWithContents == 0)
@@ -77,13 +74,13 @@ public final class ToolCarryOver
         ToolTier resultTier = resultTool.getTier();
         if (storedItems(source).size() > resultTier.storageSlots())
             return false;
-        if (!resultTier.supportTools() && ToolData.hasAnyItem(source.get(ModDataComponents.SUPPORT_TOOL.get())))
+        if (!resultTier.supportTools() && ToolData.hasAnyItem(ModDataComponents.SUPPORT_TOOL.get(source)))
             return false;
         return resultTier.hasEnchantPlates() || ToolData.getPlates(source).stream().allMatch(ItemStack::isEmpty);
     }
 
     /** Copies the data onto the freshly assembled result. Called from assemble(). */
-    public static void apply(CraftingInput input, ItemStack result)
+    public static void apply(CraftingContainer input, ItemStack result)
     {
         ItemStack source = findSource(input);
         if (source.isEmpty() || !(result.getItem() instanceof MultiToolItem resultTool))
@@ -91,10 +88,10 @@ public final class ToolCarryOver
         ToolTier resultTier = resultTool.getTier();
 
         // Settings (toggles + which plate is loaded) and custom name
-        if (source.has(ModDataComponents.TOOL_SETTINGS.get()))
+        if (ModDataComponents.TOOL_SETTINGS.has(source))
             ToolData.setSettings(result, ToolData.getSettings(source));
-        if (source.has(DataComponents.CUSTOM_NAME))
-            result.set(DataComponents.CUSTOM_NAME, source.get(DataComponents.CUSTOM_NAME));
+        if (source.hasCustomHoverName())
+            result.setHoverName(source.getHoverName());
 
         // Wrench storage: keep slot positions when they fit, otherwise pack into the first slots
         if (resultTier.storageSlots() > 0 && sourceTier(source).storageSlots() > 0)
@@ -161,12 +158,12 @@ public final class ToolCarryOver
         if (!swappedOut && !containsToolWithContents(grid))
             return;
 
-        CraftingInput input = grid.asCraftInput();
-        Optional<RecipeHolder<CraftingRecipe>> recipe =
+        CraftingContainer input = grid;
+        Optional<CraftingRecipe> recipe =
                 player.level().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, player.level());
         if (recipe.isEmpty())
             return;
-        CraftingRecipe value = recipe.get().value();
+        CraftingRecipe value = recipe.get();
 
         if (swappedOut)
             returnSwapOrigins(player, grid, value.getRemainingItems(input), event.getCrafting());
@@ -208,10 +205,10 @@ public final class ToolCarryOver
             }
 
             // Clear the consumed tool so its contents can never exist twice.
-            stack.remove(ModDataComponents.TOOL_STORAGE.get());
-            stack.remove(ModDataComponents.ENCHANTMENT_PLATES.get());
-            stack.remove(ModDataComponents.TORCHES.get());
-            stack.remove(ModDataComponents.SUPPORT_TOOL.get());
+            ModDataComponents.TOOL_STORAGE.remove(stack);
+            ModDataComponents.ENCHANTMENT_PLATES.remove(stack);
+            ModDataComponents.TORCHES.remove(stack);
+            ModDataComponents.SUPPORT_TOOL.remove(stack);
             refunded = true;
         }
         if (refunded)
@@ -238,10 +235,10 @@ public final class ToolCarryOver
     /** Stored tools, plates, torches or a Support Tool. Read-only component checks: no item copies. */
     private static boolean hasContents(ItemStack tool)
     {
-        return ToolData.hasAnyItem(tool.get(ModDataComponents.TOOL_STORAGE.get()))
-                || ToolData.hasAnyItem(tool.get(ModDataComponents.ENCHANTMENT_PLATES.get()))
-                || tool.has(ModDataComponents.TORCHES.get())
-                || ToolData.hasAnyItem(tool.get(ModDataComponents.SUPPORT_TOOL.get()));
+        return ToolData.hasAnyItem(ModDataComponents.TOOL_STORAGE.get(tool))
+                || ToolData.hasAnyItem(ModDataComponents.ENCHANTMENT_PLATES.get(tool))
+                || ModDataComponents.TORCHES.has(tool)
+                || ToolData.hasAnyItem(ModDataComponents.SUPPORT_TOOL.get(tool));
     }
 
     /**
@@ -252,18 +249,18 @@ public final class ToolCarryOver
     private static void returnSwapOrigins(Player player, CraftingContainer grid, List<ItemStack> remaining, ItemStack crafted)
     {
         // The recipe hands the tool back, or copied its data onto the result: the Mega Tools tool is still inside.
-        if (crafted.has(ModDataComponents.SWAP_ORIGIN.get())
-                || remaining.stream().anyMatch(s -> s.has(ModDataComponents.SWAP_ORIGIN.get())))
+        if (ModDataComponents.SWAP_ORIGIN.has(crafted)
+                || remaining.stream().anyMatch(s -> ModDataComponents.SWAP_ORIGIN.has(s)))
             return;
 
         for (int i = 0; i < grid.getContainerSize(); i++)
         {
             ItemStack stack = grid.getItem(i);
-            SwapOrigin origin = stack.get(ModDataComponents.SWAP_ORIGIN.get());
+            SwapOrigin origin = ModDataComponents.SWAP_ORIGIN.get(stack);
             if (origin == null)
                 continue;
             ItemStack tool = origin.tool().copy();
-            stack.remove(ModDataComponents.SWAP_ORIGIN.get()); // so it can never exist twice
+            ModDataComponents.SWAP_ORIGIN.remove(stack); // so it can never exist twice
             player.displayClientMessage(Component.translatable("message.megatools.swap_restored", tool.getHoverName()), true);
             if (!player.getInventory().add(tool))
                 player.drop(tool, false);
@@ -273,7 +270,7 @@ public final class ToolCarryOver
     private static boolean containsSwappedOutTool(CraftingContainer grid)
     {
         for (int i = 0; i < grid.getContainerSize(); i++)
-            if (grid.getItem(i).has(ModDataComponents.SWAP_ORIGIN.get()))
+            if (ModDataComponents.SWAP_ORIGIN.has(grid.getItem(i)))
                 return true;
         return false;
     }

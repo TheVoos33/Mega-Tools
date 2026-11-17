@@ -1,5 +1,7 @@
 package com.thevoos.megatools.items;
 
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 import com.thevoos.megatools.KeyNames;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -23,7 +25,7 @@ public class SupportToolItem extends Item
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag)
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag)
     {
         tooltip.add(Component.translatable("tooltip.megatools.support_tool").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.megatools.support_tool.usage", Component.keybind(KeyNames.OPEN_GUI)).withStyle(ChatFormatting.DARK_GRAY));

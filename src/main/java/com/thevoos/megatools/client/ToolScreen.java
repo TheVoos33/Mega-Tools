@@ -26,7 +26,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.PacketDistributor;
+import com.thevoos.megatools.network.ModPackets;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -273,7 +273,7 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     private void openSwapRules()
     {
         commitRename(); // before the menu changes, so the new name isn't lost
-        PacketDistributor.sendToServer(OpenSwapRulesPayload.INSTANCE);
+        ModPackets.sendToServer(OpenSwapRulesPayload.INSTANCE);
     }
 
     /** Resizing the window rebuilds the widgets: keep a name that is typed but not confirmed yet. */
@@ -376,7 +376,7 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
         if (!value.equals(lastSentName))
         {
             lastSentName = value;
-            PacketDistributor.sendToServer(new RenameToolPayload(value));
+            ModPackets.sendToServer(new RenameToolPayload(value));
         }
     }
 
@@ -421,7 +421,7 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
 
         int storageIndex = storageSlot.getContainerSlot();
         onClose();
-        PacketDistributor.sendToServer(new SwapToolPayload(storageIndex));
+        ModPackets.sendToServer(new SwapToolPayload(storageIndex));
         return true;
     }
 
@@ -553,7 +553,7 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
      * Vanilla's chest GUI (176 x 222 on a 256 x 256 sheet). The panel and slots are assembled from its
      * pieces, so whatever a resource pack does to the chest GUI (dark themes...) applies here as well.
      */
-    private static final ResourceLocation CONTAINER_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+    private static final ResourceLocation CONTAINER_TEXTURE = new ResourceLocation("textures/gui/container/generic_54.png");
     private static final int TEX_W = 176;
     private static final int TEX_H = 222;
     /** Border thickness, including the rounded corners. */

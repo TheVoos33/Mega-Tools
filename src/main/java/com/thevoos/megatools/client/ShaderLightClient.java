@@ -1,9 +1,10 @@
 package com.thevoos.megatools.client;
 
+import com.thevoos.megatools.network.ModNetworking;
 import com.thevoos.megatools.MegaTools;
 import com.thevoos.megatools.network.ShaderLightPayload;
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.network.PacketDistributor;
+import com.thevoos.megatools.network.ModPackets;
 
 import java.lang.reflect.Method;
 
@@ -43,10 +44,10 @@ public final class ShaderLightClient
         cooldown = CHECK_TICKS;
 
         boolean active = DynamicLightsCompat.isActive() || isShaderPackActive();
-        if ((lastSent == null || lastSent != active) && mc.getConnection().hasChannel(ShaderLightPayload.TYPE))
+        if ((lastSent == null || lastSent != active) && ModNetworking.CHANNEL.isRemotePresent(mc.getConnection().getConnection()))
         {
             lastSent = active;
-            PacketDistributor.sendToServer(new ShaderLightPayload(active));
+            ModPackets.sendToServer(new ShaderLightPayload(active));
         }
     }
 

@@ -2,7 +2,6 @@ package com.thevoos.megatools.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import com.thevoos.megatools.items.ModItems;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.tool.MegaToolMining;
 import com.thevoos.megatools.tool.MegaToolPoke;
@@ -15,8 +14,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 
 /**
  * Mega Tool "poke" animation, first person (applyForgeHandTransform) and third person (getArmPose,
@@ -75,9 +73,10 @@ public final class MegaToolClientExtensions
 
     private MegaToolClientExtensions() {}
 
-    public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event)
+    /** The Mega Tool's client extensions (MultiToolItem#initializeClient). */
+    public static IClientItemExtensions create()
     {
-        event.registerItem(new IClientItemExtensions()
+        return new IClientItemExtensions()
         {
             // ---------------- first person ----------------
             @Override
@@ -85,6 +84,9 @@ public final class MegaToolClientExtensions
                                                    ItemStack itemInHand, float partialTick,
                                                    float equipProcess, float swingProcess)
             {
+                // Paxels share this item class but keep vanilla's hand rendering.
+                if (!MegaToolMining.isMegaTool(itemInHand))
+                    return false;
                 // While brushing, keep vanilla's brush animation.
                 if (player.isUsingItem() && player.getUseItem() == itemInHand)
                     return false;
@@ -123,11 +125,13 @@ public final class MegaToolClientExtensions
             @Override
             public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack itemStack)
             {
+                if (!MegaToolMining.isMegaTool(itemStack))
+                    return null; // paxels: vanilla pose
                 if (entity.isUsingItem() && entity.getUseItem() == itemStack)
                     return null; // brushing: vanilla brush pose
                 return MegaToolArmPose.poke();
             }
-        }, ModItems.MEGA_TOOL.get());
+        };
     }
 
     /** Vanilla's first-person tool swing: the arm offset plus ItemInHandRenderer#applyItemArmAttackTransform. */

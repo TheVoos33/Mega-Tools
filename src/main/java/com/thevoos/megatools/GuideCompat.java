@@ -1,8 +1,12 @@
 package com.thevoos.megatools;
 
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 
 import java.lang.reflect.Method;
 
@@ -28,6 +32,19 @@ public final class GuideCompat
         if (loaded == null)
             loaded = ModList.get().isLoaded(MOD_ID);
         return loaded;
+    }
+
+    /** The Mega Tools guide book: GuideME's generic guide item with our guide id (NBT "guideId"), or EMPTY without GuideME. */
+    public static ItemStack createGuideItem()
+    {
+        if (!isLoaded())
+            return ItemStack.EMPTY;
+        Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(MOD_ID, "guide"));
+        if (item == null || item == Items.AIR)
+            return ItemStack.EMPTY;
+        ItemStack stack = new ItemStack(item);
+        stack.getOrCreateTag().putString("guideId", GUIDE.toString());
+        return stack;
     }
 
     /** Opens the Mega Tools guide at {@code page} (e.g. "tool_menu.md"), or its start page if null. */

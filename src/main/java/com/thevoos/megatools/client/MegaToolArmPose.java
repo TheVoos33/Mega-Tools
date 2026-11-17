@@ -6,8 +6,7 @@ import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.fml.common.asm.enumextension.EnumProxy;
-import net.neoforged.neoforge.client.IArmPoseTransformer;
+import net.minecraftforge.client.IArmPoseTransformer;
 
 /**
  * Third-person pose for the Mega Tool (F5 view and other players): a simple prod.
@@ -17,9 +16,8 @@ import net.neoforged.neoforge.client.IArmPoseTransformer;
  * active (left click held or a jab playing), vanilla's arm swing is switched off so the arm doesn't
  * chop up and down during the hold delay.
  *
- * NeoForge adds this arm pose to the vanilla ArmPose enum through META-INF/enumextensions.json
- * (listed in neoforge.mods.toml). POKE_PARAMS holds the constructor arguments: not two-handed,
- * and the transformer below.
+ * Forge adds this arm pose to the vanilla ArmPose enum (ArmPose.create): not two-handed, with the
+ * transformer below.
  */
 public final class MegaToolArmPose
 {
@@ -28,14 +26,24 @@ public final class MegaToolArmPose
     /** How far the arm swings forward at the peak of a jab (radians, ~30 degrees). */
     private static final float REACH_RADIANS = 0.5F;
 
-    public static final EnumProxy<HumanoidModel.ArmPose> POKE_PARAMS = new EnumProxy<>(
-            HumanoidModel.ArmPose.class, false, (IArmPoseTransformer) MegaToolArmPose::applyTransform);
+    private static HumanoidModel.ArmPose pose;
 
     private MegaToolArmPose() {}
 
+    /**
+     * Adds the pose to the enum. Called once during client mod construction (MegaToolsClient#init):
+     * HumanoidModel's arm pose switch builds its lookup table from the enum's size the first time a
+     * player model is drawn, so a pose added after that is out of range and crashes the game.
+     */
+    public static void init()
+    {
+        if (pose == null)
+            pose = HumanoidModel.ArmPose.create("MEGATOOLS_POKE", false, (IArmPoseTransformer) MegaToolArmPose::applyTransform);
+    }
+
     public static HumanoidModel.ArmPose poke()
     {
-        return POKE_PARAMS.getValue();
+        return pose;
     }
 
     private static void applyTransform(HumanoidModel<?> model, LivingEntity entity, HumanoidArm arm)

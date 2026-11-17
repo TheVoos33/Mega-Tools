@@ -9,7 +9,7 @@
   ],
   "key": {
     "A": {
-      "item": "megatools:netherite_head"
+      "item": "megatools:iron_head"
     },
     "B": {
       "item": "minecraft:chest"
@@ -19,6 +19,6 @@
     }
   },
   "result": {
-    "id": "megatools:mega_tool"
+    "item": "megatools:iron_paxel"
   }
 }

@@ -5,7 +5,7 @@
 <p align="center">
   <b>Paxels and the Mega Tool</b>: a pickaxe, axe, shovel, hoe and sword in one item, with built-in storage for your
   other tools, swappable enchantments and a torch slot that lights your way.<br>
-  <sub>Minecraft 1.21.1 · NeoForge</sub>
+  <sub>Minecraft 1.20.1 · Forge</sub>
 </p>
 
 ---
@@ -50,7 +50,7 @@
 | **Durability** | 655 | 1,616 | 8,171 | Unbreakable |
 | **Tool storage** | – | 9 slots | 18 slots | 27 slots |
 
-Every tool also has a **Support Tool slot**, **two Enchantment Plate slots** and a **torch slot** (up to 256 torches).
+Every tool also has a **Support Tool slot**, **two Enchantment Plate slots** and a **torch slot** (up to 64 torches).
 
 ---
 
@@ -137,7 +137,7 @@ Hold a paxel or the Mega Tool and press **Ctrl + R**.
 | **1** | **Name.** Click it to rename the tool, then press Enter. |
 | **2** | **Ability buttons.** Green ✔ = on, red ✖ = off. Row 1: Break and Attack (see [Break and Attack](#break-and-attack)). Row 2: Strip, Path, Till. Row 3: Shear, Brush, Ignite (only shown while a Support Tool is in its slot). Last row: Delayed Break (Mega Tool only) and Place Torch. |
 | **3** | **Support Tool slot.** Unlocks Shear, Brush and Ignite. |
-| **4** | **Torch slot** (up to 256 torches). The small button below it switches the light on or off. |
+| **4** | **Torch slot** (up to 64 torches). The small button below it switches the light on or off. |
 | **5** | **Enchantment Plates.** Primary (top) and secondary (bottom). The gold frame marks the loaded plate. |
 | **6** | **Tool storage.** Hover a stored tool and press **R** to close the menu and swap straight to it. |
 | **7** | **Custom Rule.** Opens the [Custom Rules menu](#custom-rules) of this tool, where you choose which blocks pre-select which stored tool. Only on tools with tool storage. |
@@ -196,7 +196,7 @@ Plates only accept enchantments for swords, pickaxes, axes, shovels, hoes, shear
 
 ## Torches and light
 
-Put **torches** or **soul torches** in the torch slot (up to 256).
+Put **torches** or **soul torches** in the torch slot (up to 64).
 
 - **Light.** While you hold the tool in either hand, the area around you is lit like a torch at full brightness. The light follows you, and other players see it too. Use the small button under the torch slot to switch it off.
 - **Place Torch.** Switch it on in the menu, then right-click a block to place a torch from the slot.
@@ -314,7 +314,7 @@ All keys can be changed under *Options → Controls → Key Binds → Mega Tools
 
 ## Settings
 
-Open *Mods → Mega Tools → Config* in game.
+Forge 1.20.1 has no in-game config screen: edit the files in your `config` folder (see [Config files](#config-files) below) and restart the game.
 
 | Setting | What it changes |
 |---|---|
@@ -322,7 +322,7 @@ Open *Mods → Mega Tools → Config* in game.
 | **Held tool light** | Whether a held tool with torches lights the area around you. On a server, the server's setting decides. On by default. |
 | **Tool Stats** | Attack damage, attack speed, durability and mining speed of each tool. A restart is needed after changing these. |
 
-**Tool Stats need permission.** They can only be changed from inside a world you host (singleplayer or open to LAN) with cheats enabled, or as its operator. On a server, the server's own tool stats are always used: server operators change them in the server's `config/megatools-startup.toml` and restart it. If your game's tool stats differ from the server's, you get a chat message when you join, because durability and mining would otherwise look wrong.
+**Tool Stats** live in `config/megatools-startup.toml`. On a server, the server's own tool stats are always used: server operators change them in the server's `config/megatools-startup.toml` and restart it. If your game's tool stats differ from the server's, you get a chat message when you join, because durability and mining would otherwise look wrong.
 
 **Operators** can use `/megatools kit` to get every tool, Support Tools, Enchantment Plates, torches and enchanted books for testing.
 

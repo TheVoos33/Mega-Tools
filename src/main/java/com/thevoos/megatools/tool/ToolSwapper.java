@@ -14,7 +14,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.event.entity.player.PlayerDestroyItemEvent;
+import net.minecraftforge.event.entity.player.PlayerDestroyItemEvent;
 
 /**
  * Tool auto-swap (R key), executed on the server.
@@ -46,7 +46,7 @@ public final class ToolSwapper
 
         ItemStack held = player.getMainHandItem();
 
-        SwapOrigin origin = held.get(ModDataComponents.SWAP_ORIGIN.get());
+        SwapOrigin origin = ModDataComponents.SWAP_ORIGIN.get(held);
         if (origin != null)
         {
             swapBack(player, held, origin);
@@ -65,7 +65,7 @@ public final class ToolSwapper
             requestedSlot = findLastSwapped(held, storage);
             if (requestedSlot < 0)
             {
-                LastSwap last = held.get(ModDataComponents.LAST_SWAP.get());
+                LastSwap last = ModDataComponents.LAST_SWAP.get(held);
                 player.displayClientMessage(last == null || last.item() == Items.AIR
                         ? Component.translatable("message.megatools.no_last_tool")
                         : Component.translatable("message.megatools.last_tool_gone", last.item().getDescription()), true);
@@ -83,11 +83,11 @@ public final class ToolSwapper
         ItemStack megaTool = held.copy();
         storage.set(requestedSlot, ItemStack.EMPTY);
         ToolData.setStorage(megaTool, storage);
-        megaTool.set(ModDataComponents.LAST_SWAP.get(), new LastSwap(requestedSlot, stored.getItem()));
+        ModDataComponents.LAST_SWAP.set(megaTool, new LastSwap(requestedSlot, stored.getItem()));
 
         // ...travels inside the swapped-out tool.
         ItemStack swappedOut = stored.copy();
-        swappedOut.set(ModDataComponents.SWAP_ORIGIN.get(), new SwapOrigin(megaTool, requestedSlot));
+        ModDataComponents.SWAP_ORIGIN.set(swappedOut, new SwapOrigin(megaTool, requestedSlot));
         player.setItemInHand(InteractionHand.MAIN_HAND, swappedOut);
 
         playSwapSound(player);
@@ -97,7 +97,7 @@ public final class ToolSwapper
     {
         ItemStack megaTool = origin.tool().copy();
         ItemStack returned = held.copy();
-        returned.remove(ModDataComponents.SWAP_ORIGIN.get());
+        ModDataComponents.SWAP_ORIGIN.remove(returned);
 
         if (megaTool.getItem() instanceof MultiToolItem multiTool)
         {
@@ -126,7 +126,7 @@ public final class ToolSwapper
      */
     public static void onItemDestroyed(PlayerDestroyItemEvent event)
     {
-        SwapOrigin origin = event.getOriginal().get(ModDataComponents.SWAP_ORIGIN.get());
+        SwapOrigin origin = ModDataComponents.SWAP_ORIGIN.get(event.getOriginal());
         if (origin == null)
             return;
 
@@ -143,7 +143,7 @@ public final class ToolSwapper
     /** Storage slot of the last swapped-to tool: its old slot if it's still there, else the first of that item. */
     private static int findLastSwapped(ItemStack tool, NonNullList<ItemStack> storage)
     {
-        LastSwap last = tool.get(ModDataComponents.LAST_SWAP.get());
+        LastSwap last = ModDataComponents.LAST_SWAP.get(tool);
         if (last == null || last.item() == Items.AIR) // air: the tool's mod was removed (empty slots "are" air)
             return -1;
         if (last.slot() >= 0 && last.slot() < storage.size() && storage.get(last.slot()).is(last.item()))

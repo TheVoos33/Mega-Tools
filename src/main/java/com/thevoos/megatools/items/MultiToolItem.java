@@ -1,5 +1,9 @@
 package com.thevoos.megatools.items;
 
+import com.thevoos.megatools.client.MegaToolClientExtensions;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import com.thevoos.megatools.KeyNames;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.StoredTorches;
@@ -10,7 +14,6 @@ import com.thevoos.megatools.tool.ToolData;
 import com.thevoos.megatools.tool.ToolLightManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.BlockTags;
@@ -18,8 +21,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -30,8 +33,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
-import net.minecraft.world.item.component.ItemAttributeModifiers;
-import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
@@ -41,10 +42,11 @@ import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.entity.BrushableBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.common.ItemAbilities;
-import net.neoforged.neoforge.common.ItemAbility;
+import net.minecraftforge.common.TierSortingRegistry;
+import net.minecraftforge.common.ToolAction;
+import net.minecraftforge.common.ToolActions;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -53,29 +55,32 @@ import java.util.function.Consumer;
  * Behaviour differences come from {@link ToolTier}.
  *
  * How the vanilla abilities are provided:
- *  - Mining: a custom {@link Tool} data component (pickaxe+axe+shovel+hoe tag, cobweb like a sword,
- *    leaves/wool like shears). Vanilla reads this component for speed and "correct tool" checks.
+ *  - Mining: {@link #getDestroySpeed} and {@link #isCorrectToolForDrops} (pickaxe+axe+shovel+hoe tag,
+ *    cobweb like a sword, leaves/wool like shears); harvest levels use the tier's vanilla Tier.
  *  - Right-click on blocks: we delegate to the vanilla AxeItem/ShovelItem/HoeItem/FlintAndSteelItem
  *    useOn() with OUR stack in the context. Those methods damage the stack in the context (ours),
- *    and NeoForge asks our {@link #canPerformAction} whether the action is allowed - which is where
+ *    and Forge asks our {@link #canPerformAction} whether the action is allowed - which is where
  *    the GUI toggles are enforced.
  *  - Brushing: we start "using" the item and forward onUseTick() to the vanilla BrushItem.
- *  - Shearing mobs: delegated to the vanilla ShearsItem (NeoForge IShearable: sheep, mooshroom,
- *    snow golem, bogged and modded mobs).
+ *  - Shearing mobs: delegated to the vanilla ShearsItem (Forge IForgeShearable: sheep, mooshroom,
+ *    snow golem and modded mobs).
  *  - Shears, brush and flint and steel only work while a Support Tool is in the tool's Support Tool
  *    slot (ToolData#hasSupportTool), each with its own GUI toggle.
  */
 public class MultiToolItem extends Item
 {
     private final ToolTier tier;
-    /** Mining rules without the shears speeds, used while no Support Tool (or Shear toggle) is active. */
-    private final Tool toolWithoutShears;
+    /** Main-hand attack damage and speed. */
+    private final Multimap<Attribute, AttributeModifier> attributes;
+    /** Mining speed of the pickaxe/axe/shovel/hoe blocks (read once, from the startup config). */
+    private final float miningSpeed;
 
     public MultiToolItem(ToolTier tier, Item.Properties properties)
     {
         super(applyTier(tier, properties));
         this.tier = tier;
-        this.toolWithoutShears = createToolComponent(tier, false);
+        this.attributes = createAttributes(tier);
+        this.miningSpeed = tier.miningSpeed();
     }
 
     public ToolTier getTier()
@@ -99,12 +104,12 @@ public class MultiToolItem extends Item
     }
 
     /**
-     * NeoForge hook called by ItemStack#hurtAndBreak before damage is applied. Trimming the amount so
+     * Forge hook called by ItemStack#hurtAndBreak before damage is applied. Trimming the amount so
      * the tool keeps at least 1 durability means vanilla's "durability reached 0 -> destroy the item"
      * step never happens, whatever caused the damage (mining, combat, abilities, other mods).
      */
     @Override
-    public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, T entity, Consumer<Item> onBroken)
+    public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, T entity, Consumer<T> onBroken)
     {
         if (amount <= 0 || !stack.isDamageableItem())
             return amount; // repairs (negative amounts) and unbreakable tools are untouched
@@ -128,14 +133,11 @@ public class MultiToolItem extends Item
     }
 
     // =====================================================================================
-    //  Item properties: tool component, attributes, durability, fire resistance
+    //  Item properties: attributes, durability, fire resistance
     // =====================================================================================
 
     private static Item.Properties applyTier(ToolTier tier, Item.Properties properties)
     {
-        properties.component(DataComponents.TOOL, createToolComponent(tier, tier.supportTools()))
-                  .attributes(createAttributes(tier));
-
         if (tier.durability() > 0)
             properties.durability(tier.durability());   // also forces stack size 1
         else
@@ -147,41 +149,22 @@ public class MultiToolItem extends Item
         return properties;
     }
 
-    /**
-     * Mining rules (first matching rule wins for speed; first rule with a drop flag wins for drops).
-     */
-    private static Tool createToolComponent(ToolTier tier, boolean withShears)
+    /** Attack damage/speed. The player has 1 base damage, so the modifier is (total - 1). */
+    private static Multimap<Attribute, AttributeModifier> createAttributes(ToolTier tier)
     {
-        List<Tool.Rule> rules = new ArrayList<>();
-        // Blocks this tier is too weak for (e.g. obsidian for stone) mine but do not drop.
-        if (!tier.isMega())
-            rules.add(Tool.Rule.deniesDrops(tier.incorrectBlocksForDrops()));
-        // Sword ability: cobwebs break fast and drop string.
-        rules.add(Tool.Rule.minesAndDrops(List.<Block>of(Blocks.COBWEB), 15.0F));
-        // Shears ability: same speeds as vanilla shears (only used while a Support Tool is in, see getDestroySpeed).
-        if (withShears)
-        {
-            rules.add(Tool.Rule.overrideSpeed(BlockTags.LEAVES, 15.0F));
-            rules.add(Tool.Rule.overrideSpeed(BlockTags.WOOL, 5.0F));
-            rules.add(Tool.Rule.overrideSpeed(List.<Block>of(Blocks.VINE, Blocks.GLOW_LICHEN), 2.0F));
-        }
-        // Pickaxe + axe + shovel + hoe.
-        rules.add(Tool.Rule.minesAndDrops(ModTags.MINEABLE_WITH_PAXEL, tier.miningSpeed()));
-        // Mega Tool takes no damage per block.
-        return new Tool(rules, 1.0F, tier.isMega() ? 0 : 1);
+        return ImmutableMultimap.<Attribute, AttributeModifier>builder()
+                .put(Attributes.ATTACK_DAMAGE, new AttributeModifier(BASE_ATTACK_DAMAGE_UUID, "Tool modifier",
+                        tier.attackDamage() - 1.0D, AttributeModifier.Operation.ADDITION))
+                .put(Attributes.ATTACK_SPEED, new AttributeModifier(BASE_ATTACK_SPEED_UUID, "Tool modifier",
+                        tier.attackSpeed() - 4.0D, AttributeModifier.Operation.ADDITION))
+                .build();
     }
 
-    /** Attack damage/speed. The player has 1 base damage, so the modifier is (total - 1). */
-    private static ItemAttributeModifiers createAttributes(ToolTier tier)
+    @Override
+    @SuppressWarnings("deprecation")
+    public Multimap<Attribute, AttributeModifier> getDefaultAttributeModifiers(EquipmentSlot slot)
     {
-        return ItemAttributeModifiers.builder()
-                .add(Attributes.ATTACK_DAMAGE,
-                        new AttributeModifier(BASE_ATTACK_DAMAGE_ID, tier.attackDamage() - 1.0D, AttributeModifier.Operation.ADD_VALUE),
-                        EquipmentSlotGroup.MAINHAND)
-                .add(Attributes.ATTACK_SPEED,
-                        new AttributeModifier(BASE_ATTACK_SPEED_ID, tier.attackSpeed() - 4.0D, AttributeModifier.Operation.ADD_VALUE),
-                        EquipmentSlotGroup.MAINHAND)
-                .build();
+        return slot == EquipmentSlot.MAINHAND ? attributes : super.getDefaultAttributeModifiers(slot);
     }
 
     // =====================================================================================
@@ -190,7 +173,7 @@ public class MultiToolItem extends Item
 
     /**
      * Only a real switch (other hotbar slot or other item) plays the lower-and-raise equip animation.
-     * NeoForge's default re-equips whenever the stack object is replaced, which for these tools happens on
+     * Forge's default re-equips whenever the stack object is replaced, which for these tools happens on
      * every data update (torch count, toggles, plates, durability sync).
      */
     @Override
@@ -218,70 +201,103 @@ public class MultiToolItem extends Item
      * vanilla swing itself always continues (false), so third person and other players see it as usual.
      */
     @Override
-    public boolean onEntitySwing(ItemStack stack, LivingEntity entity, InteractionHand hand)
+    public boolean onEntitySwing(ItemStack stack, LivingEntity entity)
     {
-        if (tier.isMega() && hand == InteractionHand.MAIN_HAND && entity instanceof Player player && player.isLocalPlayer())
+        if (tier.isMega() && entity.getMainHandItem() == stack && entity instanceof Player player && player.isLocalPlayer())
             MegaToolPoke.onLocalSwing();
         return false;
     }
 
-    /** Shears speeds (leaves, wool, vines) only while the shears ability is active. */
+    /**
+     * The Mega Tool poke animation (first and third person). Forge calls this on the client only, from
+     * Item's constructor, before this class has set tier, so the extensions check for a Mega Tool when
+     * they run (other tiers fall back to vanilla).
+     */
+    @Override
+    public void initializeClient(Consumer<IClientItemExtensions> consumer)
+    {
+        consumer.accept(MegaToolClientExtensions.create());
+    }
+
+    /**
+     * Mining speed (first match wins): cobweb like a sword, then the shears speeds (leaves, wool, vines;
+     * only while the shears ability is active), then pickaxe + axe + shovel + hoe blocks.
+     */
     @Override
     public float getDestroySpeed(ItemStack stack, BlockState state)
     {
-        if (tier.supportTools() && !ToolData.supportAbility(stack, ToolSettings.SHEAR))
-            return toolWithoutShears.getMiningSpeed(state);
-        return super.getDestroySpeed(stack, state);
+        if (state.is(Blocks.COBWEB))
+            return 15.0F;
+        if (tier.supportTools() && ToolData.supportAbility(stack, ToolSettings.SHEAR))
+        {
+            if (state.is(BlockTags.LEAVES))
+                return 15.0F;
+            if (state.is(BlockTags.WOOL))
+                return 5.0F;
+            if (state.is(Blocks.VINE) || state.is(Blocks.GLOW_LICHEN))
+                return 2.0F;
+        }
+        return state.is(ModTags.MINEABLE_WITH_PAXEL) ? miningSpeed : 1.0F;
     }
 
-    /** The Mega Tool counts as the correct tool for every block, so everything drops. */
+    /**
+     * Drops: cobwebs, and the pickaxe/axe/shovel/hoe blocks this tier is strong enough for (obsidian
+     * mines with a stone tool but drops nothing). The Mega Tool counts as the correct tool for every block.
+     */
     @Override
     public boolean isCorrectToolForDrops(ItemStack stack, BlockState state)
     {
         if (isBroken(stack))
             return false; // broken: no tool drops, like an empty hand
-        return tier.isMega() || super.isCorrectToolForDrops(stack, state);
+        if (tier.isMega() || state.is(Blocks.COBWEB))
+            return true;
+        return state.is(ModTags.MINEABLE_WITH_PAXEL) && TierSortingRegistry.isCorrectTierForDrops(tier.harvestTier(), state);
+    }
+
+    /** 1 durability per block that isn't instantly broken (the Mega Tool takes none). */
+    @Override
+    public boolean mineBlock(ItemStack stack, Level level, BlockState state, BlockPos pos, LivingEntity miner)
+    {
+        if (!level.isClientSide() && !tier.isMega() && state.getDestroySpeed(level, pos) != 0.0F)
+            stack.hurtAndBreak(1, miner, entity -> entity.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+        return true;
     }
 
     /** Sword behaviour: lose 1 durability per hit (no-op for the unbreakable Mega Tool). */
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker)
     {
-        stack.hurtAndBreak(1, attacker, EquipmentSlot.MAINHAND);
+        stack.hurtAndBreak(1, attacker, entity -> entity.broadcastBreakEvent(EquipmentSlot.MAINHAND));
         return true;
     }
 
     /**
-     * NeoForge "item abilities": which vanilla tool actions this item can perform.
+     * Forge "tool actions": which vanilla tool actions this item can perform.
      * Used by block interactions (stripping, pathing, tilling), shear loot checks, sweep attacks, etc.
      * The right-click abilities honour the GUI toggles stored on the stack.
      */
     @Override
-    public boolean canPerformAction(ItemStack stack, ItemAbility ability)
+    public boolean canPerformAction(ItemStack stack, ToolAction ability)
     {
         if (isBroken(stack))
             return false; // broken: no stripping, shearing, sweeping...
         ToolSettings settings = ToolData.getSettings(stack);
 
-        if (ability == ItemAbilities.AXE_STRIP || ability == ItemAbilities.AXE_SCRAPE || ability == ItemAbilities.AXE_WAX_OFF)
+        if (ability == ToolActions.AXE_STRIP || ability == ToolActions.AXE_SCRAPE || ability == ToolActions.AXE_WAX_OFF)
             return settings.has(ToolSettings.STRIP);
-        if (ability == ItemAbilities.SHOVEL_FLATTEN)
+        if (ability == ToolActions.SHOVEL_FLATTEN)
             return settings.has(ToolSettings.PATH);
-        if (ability == ItemAbilities.HOE_TILL)
+        if (ability == ToolActions.HOE_TILL)
             return settings.has(ToolSettings.TILL);
         // Support Tool abilities: other mods' blocks and loot tables ask for these too.
-        if (ItemAbilities.DEFAULT_SHEARS_ACTIONS.contains(ability))
+        if (ToolActions.DEFAULT_SHEARS_ACTIONS.contains(ability))
             return ToolData.supportAbility(stack, ToolSettings.SHEAR);
-        if (ItemAbilities.DEFAULT_BRUSH_ACTIONS.contains(ability))
-            return ToolData.supportAbility(stack, ToolSettings.BRUSH);
-        if (ItemAbilities.DEFAULT_FLINT_ACTIONS.contains(ability))
-            return ToolData.supportAbility(stack, ToolSettings.IGNITE);
 
-        return ItemAbilities.DEFAULT_PICKAXE_ACTIONS.contains(ability)
-                || ItemAbilities.DEFAULT_AXE_ACTIONS.contains(ability)
-                || ItemAbilities.DEFAULT_SHOVEL_ACTIONS.contains(ability)
-                || ItemAbilities.DEFAULT_HOE_ACTIONS.contains(ability)
-                || ItemAbilities.DEFAULT_SWORD_ACTIONS.contains(ability);
+        return ToolActions.DEFAULT_PICKAXE_ACTIONS.contains(ability)
+                || ToolActions.DEFAULT_AXE_ACTIONS.contains(ability)
+                || ToolActions.DEFAULT_SHOVEL_ACTIONS.contains(ability)
+                || ToolActions.DEFAULT_HOE_ACTIONS.contains(ability)
+                || ToolActions.DEFAULT_SWORD_ACTIONS.contains(ability);
     }
 
     // =====================================================================================
@@ -329,8 +345,7 @@ public class MultiToolItem extends Item
             return InteractionResult.CONSUME;
         }
 
-        // 4. Shears: trim growing plants (cave vines, kelp, weeping/twisting vines) so they stop growing,
-        //    plus anything other mods add through the SHEARS_TRIM ability.
+        // 4. Shears: trim growing plants (cave vines, kelp, weeping/twisting vines) so they stop growing.
         if (support && settings.has(ToolSettings.SHEAR))
         {
             InteractionResult trim = Items.SHEARS.useOn(context);
@@ -376,7 +391,7 @@ public class MultiToolItem extends Item
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL_IMMEDIATE);
             if (player != null)
             {
-                tool.hurtAndBreak(1, player, LivingEntity.getSlotForHand(context.getHand()));
+                tool.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(context.getHand()));
                 player.awardStat(Stats.ITEM_USED.get(Items.FLINT_AND_STEEL));
             }
         }
@@ -414,16 +429,16 @@ public class MultiToolItem extends Item
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected)
     {
-        if (level.isClientSide() || !stack.has(ModDataComponents.TOOL_LIGHT.get()))
+        if (level.isClientSide() || !ModDataComponents.TOOL_LIGHT.has(stack))
             return;
         ItemStack legacy = ToolData.getLegacyLight(stack);
-        stack.remove(ModDataComponents.TOOL_LIGHT.get());
+        ModDataComponents.TOOL_LIGHT.remove(stack);
         if (legacy.isEmpty())
             return;
 
         ItemStack current = ToolData.getTorches(stack);
         boolean fits = LightSources.isTorch(legacy)
-                && (current.isEmpty() || ItemStack.isSameItemSameComponents(current, legacy))
+                && (current.isEmpty() || ItemStack.isSameItemSameTags(current, legacy))
                 && current.getCount() + legacy.getCount() <= StoredTorches.MAX;
         if (fits)
             ToolData.setTorches(stack, legacy.copyWithCount(current.getCount() + legacy.getCount()));
@@ -443,7 +458,7 @@ public class MultiToolItem extends Item
     // =====================================================================================
 
     @Override
-    public int getUseDuration(ItemStack stack, LivingEntity entity)
+    public int getUseDuration(ItemStack stack)
     {
         return ToolData.hasSupportTool(stack) ? 200 : 0; // same duration as the vanilla brush
     }
@@ -520,7 +535,7 @@ public class MultiToolItem extends Item
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag)
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag)
     {
         if (isBroken(stack))
         {

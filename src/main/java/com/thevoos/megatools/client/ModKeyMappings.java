@@ -4,13 +4,13 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.thevoos.megatools.KeyNames;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.Screen;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.client.settings.KeyConflictContext;
-import net.neoforged.neoforge.client.settings.KeyModifier;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.client.settings.KeyModifier;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Four key bindings on the same physical key, separated by NeoForge key modifiers.
+ * Four key bindings on the same physical key, separated by Forge key modifiers.
  * All four are rebindable under Options > Controls > Key Binds > "Mega Tools".
  */
 public final class ModKeyMappings

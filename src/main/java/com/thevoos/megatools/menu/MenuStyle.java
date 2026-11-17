@@ -1,7 +1,6 @@
 package com.thevoos.megatools.menu;
 
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.common.TranslatableEnum;
 
 import java.util.Locale;
 
@@ -10,7 +9,7 @@ import java.util.Locale;
  * game: both menus hold the same slots and buttons, only where they are drawn differs, so the server
  * never needs to know (see GuiLayout).
  */
-public enum MenuStyle implements TranslatableEnum
+public enum MenuStyle
 {
     /** Not chosen yet: the next time the tool menu is opened, the player is asked (MenuStyleScreen). */
     ASK,
@@ -19,7 +18,6 @@ public enum MenuStyle implements TranslatableEnum
     /** Chest-sized menu, every button an item icon. */
     ICONS;
 
-    @Override
     public Component getTranslatedName()
     {
         return Component.translatable("megatools.menu_style." + name().toLowerCase(Locale.ROOT));

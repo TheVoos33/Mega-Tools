@@ -1,7 +1,7 @@
 {
-  "neoforge:conditions": [
+  "conditions": [
     {
-      "type": "neoforge:mod_loaded",
+      "type": "forge:mod_loaded",
       "modid": "guideme"
     }
   ],
@@ -16,10 +16,9 @@
     }
   ],
   "result": {
-    "id": "guideme:guide",
-    "count": 1,
-    "components": {
-      "guideme:guide_id": "megatools:guide"
+    "item": "guideme:guide",
+    "nbt": {
+      "guideId": "megatools:guide"
     }
   }
 }

@@ -1,5 +1,7 @@
 package com.thevoos.megatools.menu;
 
+import java.util.ArrayList;
+import java.util.List;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.StoredTorches;
 import com.thevoos.megatools.component.ToolSettings;
@@ -11,7 +13,7 @@ import com.thevoos.megatools.items.ToolTier;
 import com.thevoos.megatools.tool.LightSources;
 import com.thevoos.megatools.tool.ToolData;
 import net.minecraft.core.NonNullList;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -58,11 +60,6 @@ public class ToolMenu extends AbstractContainerMenu
             return StoredTorches.MAX;
         }
 
-        @Override
-        public int getMaxStackSize(ItemStack stack)
-        {
-            return StoredTorches.MAX;
-        }
     };
 
     private final int supportIndex;     // -1 if the tier has no Support Tool slot
@@ -79,7 +76,7 @@ public class ToolMenu extends AbstractContainerMenu
     public static void setClientLayoutFactory(Function<ToolTier, GuiLayout> factory) { clientLayoutFactory = factory; }
 
     /** Client side factory - called by the MenuType with the extra data written in ServerPayloadHandler. */
-    public static ToolMenu fromNetwork(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData)
+    public static ToolMenu fromNetwork(int containerId, Inventory playerInventory, FriendlyByteBuf extraData)
     {
         int toolSlot = extraData.readVarInt();
         return new ToolMenu(containerId, playerInventory, toolSlot, clientLayoutFactory);
@@ -196,10 +193,10 @@ public class ToolMenu extends AbstractContainerMenu
         else if (container == support)
             ToolData.setSupportTool(tool, support.getItem(0));   // abilities + their buttons follow immediately
         else if (container == storage)
-            ToolData.setStorage(tool, storage.getItems());
+            ToolData.setStorage(tool, contents(storage));
         else if (container == plates)
         {
-            ToolData.setPlates(tool, plates.getItems());
+            ToolData.setPlates(tool, contents(plates));
             ToolData.applyActivePlate(tool); // putting/removing a plate updates enchantments immediately
         }
     }
@@ -248,6 +245,14 @@ public class ToolMenu extends AbstractContainerMenu
                 return;
         }
         super.clicked(slotId, button, clickType, player);
+    }
+
+    private static List<ItemStack> contents(Container container)
+    {
+        List<ItemStack> items = new ArrayList<>(container.getContainerSize());
+        for (int i = 0; i < container.getContainerSize(); i++)
+            items.add(container.getItem(i));
+        return items;
     }
 
     @Override
@@ -411,7 +416,7 @@ public class ToolMenu extends AbstractContainerMenu
             if (stack.isEmpty()
                     || stack.getItem() instanceof MultiToolItem
                     || stack.getItem() instanceof EnchantmentPlateItem
-                    || stack.has(ModDataComponents.SWAP_ORIGIN.get()))
+                    || ModDataComponents.SWAP_ORIGIN.has(stack))
                 return false;
 
             return stack.is(ModTags.STORABLE_ITEM);

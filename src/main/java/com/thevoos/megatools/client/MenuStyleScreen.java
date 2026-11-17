@@ -12,7 +12,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
-import net.neoforged.neoforge.network.PacketDistributor;
+import com.thevoos.megatools.network.ModPackets;
 
 /**
  * Shown instead of the tool menu while no menu style is chosen (Config: menuStyle = ASK), which is the
@@ -111,7 +111,7 @@ public class MenuStyleScreen extends Screen
         Config.MENU_STYLE.save();
         onClose();
         if (minecraft != null && minecraft.player != null && minecraft.player.getMainHandItem().getItem() instanceof MultiToolItem)
-            PacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE);
+            ModPackets.sendToServer(OpenToolGuiPayload.INSTANCE);
     }
 
     private int previewAt(double mouseX, double mouseY)

@@ -2,10 +2,8 @@ package com.thevoos.megatools.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
@@ -82,7 +80,6 @@ public record SwapRules(List<Rule> rules)
         }
 
         static final Codec<Mode> CODEC = Codec.STRING.xmap(Mode::byName, mode -> mode.name);
-        static final StreamCodec<ByteBuf, Mode> STREAM_CODEC = ByteBufCodecs.VAR_INT.map(Mode::byId, Mode::ordinal);
     }
 
     /**
@@ -96,13 +93,6 @@ public record SwapRules(List<Rule> rules)
                 Mode.CODEC.optionalFieldOf("mode", Mode.ITEM).forGetter(Rule::mode),
                 ResourceLocation.CODEC.optionalFieldOf("tag").forGetter(Rule::tag)
         ).apply(instance, Rule::new));
-
-        public static final StreamCodec<ByteBuf, Rule> STREAM_CODEC = StreamCodec.composite(
-                ResourceLocation.STREAM_CODEC, Rule::tool,
-                ResourceLocation.STREAM_CODEC, Rule::target,
-                Mode.STREAM_CODEC, Rule::mode,
-                ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC), Rule::tag,
-                Rule::new);
 
         /** Keeps mode and tag consistent: only a TAG rule has a tag, and a TAG rule without one is an ITEM rule. */
         public Rule
@@ -141,9 +131,6 @@ public record SwapRules(List<Rule> rules)
     /** Disk format. Loaded lists are cleaned up, so hand-edited data can't exceed the limits. */
     public static final Codec<SwapRules> CODEC = Rule.CODEC.listOf().xmap(list -> new SwapRules(list).sanitized(), SwapRules::rules);
 
-    /** Network format (synced to clients: the pre-selection runs there; and sent by the Swap Rules GUI). */
-    public static final StreamCodec<ByteBuf, SwapRules> STREAM_CODEC =
-            Rule.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_TOTAL)).map(SwapRules::new, SwapRules::rules);
 
     /**
      * Disk and network format of the "applied default rules" list of a tool (ModDataComponents.APPLIED_DEFAULT_RULES):
@@ -151,8 +138,31 @@ public record SwapRules(List<Rule> rules)
      * exactly as it is: the per-tool limits of real rules don't apply to it.
      */
     public static final Codec<SwapRules> APPLIED_CODEC = Rule.CODEC.listOf().xmap(SwapRules::new, SwapRules::rules);
-    public static final StreamCodec<ByteBuf, SwapRules> APPLIED_STREAM_CODEC =
-            Rule.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_APPLIED)).map(SwapRules::new, SwapRules::rules);
+
+    /** Network format (no clean-up: the server re-validates what it receives). At most {@code max} rules are read. */
+    public void write(FriendlyByteBuf buf)
+    {
+        buf.writeVarInt(rules.size());
+        for (Rule rule : rules)
+        {
+            buf.writeResourceLocation(rule.tool());
+            buf.writeResourceLocation(rule.target());
+            buf.writeVarInt(rule.mode().ordinal());
+            buf.writeOptional(rule.tag(), FriendlyByteBuf::writeResourceLocation);
+        }
+    }
+
+    public static SwapRules read(FriendlyByteBuf buf, int max)
+    {
+        int size = buf.readVarInt();
+        if (size < 0 || size > max)
+            throw new io.netty.handler.codec.DecoderException("Too many swap rules: " + size + " (max " + max + ")");
+        List<Rule> rules = new ArrayList<>(size);
+        for (int i = 0; i < size; i++)
+            rules.add(new Rule(buf.readResourceLocation(), buf.readResourceLocation(), Mode.byId(buf.readVarInt()),
+                    buf.readOptional(FriendlyByteBuf::readResourceLocation)));
+        return new SwapRules(rules);
+    }
 
     public SwapRules
     {
@@ -224,7 +234,7 @@ public record SwapRules(List<Rule> rules)
         {
             case ITEM -> blockTags.isEmpty()
                     ? new Rule(old.tool(), old.target(), Mode.MOD, Optional.empty())
-                    : new Rule(old.tool(), old.target(), Mode.TAG, Optional.of(blockTags.getFirst()));
+                    : new Rule(old.tool(), old.target(), Mode.TAG, Optional.of(blockTags.get(0)));
             case TAG -> new Rule(old.tool(), old.target(), Mode.MOD, Optional.empty());
             case MOD -> new Rule(old.tool(), old.target());
         };

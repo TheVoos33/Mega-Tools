@@ -14,7 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.ItemContainerContents;
+import com.thevoos.megatools.component.ItemContainerContents;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -78,7 +78,7 @@ public final class AutoSwapClient
 
         ItemStack held = mc.player.getMainHandItem();
         int hotbarSlot = mc.player.getInventory().selected;
-        ItemContainerContents storage = held.get(ModDataComponents.TOOL_STORAGE.get());
+        ItemContainerContents storage = ModDataComponents.TOOL_STORAGE.get(held);
         SwapRules rules = ToolData.getSwapRules(held);
         BlockHitResult hit = targetedBlock(mc);
         Block block = hit == null ? null : mc.level.getBlockState(hit.getBlockPos()).getBlock();
@@ -243,7 +243,7 @@ public final class AutoSwapClient
     /** While a swapped-out tool is held: the Mega Tools tool that R swaps back to (else empty). */
     public static ItemStack getSwapBackIcon(Player player)
     {
-        SwapOrigin origin = player.getMainHandItem().get(ModDataComponents.SWAP_ORIGIN.get());
+        SwapOrigin origin = ModDataComponents.SWAP_ORIGIN.get(player.getMainHandItem());
         return origin != null ? origin.tool() : ItemStack.EMPTY;
     }
 

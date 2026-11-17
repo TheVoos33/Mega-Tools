@@ -1,5 +1,6 @@
 package com.thevoos.megatools.tool;
 
+import com.thevoos.megatools.component.ItemEnchantments;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.StoredTorches;
 import com.thevoos.megatools.component.SwapRules;
@@ -8,11 +9,9 @@ import com.thevoos.megatools.items.EnchantmentPlateItem;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.items.SupportToolItem;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.ItemContainerContents;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
+import com.thevoos.megatools.component.ItemContainerContents;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
@@ -39,12 +38,12 @@ public final class ToolData
 
     public static ToolSettings getSettings(ItemStack tool)
     {
-        return tool.getOrDefault(ModDataComponents.TOOL_SETTINGS.get(), ToolSettings.DEFAULT);
+        return ModDataComponents.TOOL_SETTINGS.getOrDefault(tool, ToolSettings.DEFAULT);
     }
 
     public static void setSettings(ItemStack tool, ToolSettings settings)
     {
-        tool.set(ModDataComponents.TOOL_SETTINGS.get(), settings);
+        ModDataComponents.TOOL_SETTINGS.set(tool, settings);
     }
 
     public static boolean hasFlag(ItemStack tool, int flag)
@@ -58,19 +57,19 @@ public final class ToolData
     public static NonNullList<ItemStack> getStorage(ItemStack tool, int size)
     {
         NonNullList<ItemStack> items = NonNullList.withSize(size, ItemStack.EMPTY);
-        tool.getOrDefault(ModDataComponents.TOOL_STORAGE.get(), ItemContainerContents.EMPTY).copyInto(items);
+        ModDataComponents.TOOL_STORAGE.getOrDefault(tool, ItemContainerContents.EMPTY).copyInto(items);
         return items;
     }
 
     public static void setStorage(ItemStack tool, List<ItemStack> items)
     {
-        tool.set(ModDataComponents.TOOL_STORAGE.get(), ItemContainerContents.fromItems(items));
+        ModDataComponents.TOOL_STORAGE.set(tool, ItemContainerContents.fromItems(items));
     }
 
     /** Number of stored tools (read-only, no copies). */
     public static int countStoredItems(ItemStack tool)
     {
-        ItemContainerContents contents = tool.get(ModDataComponents.TOOL_STORAGE.get());
+        ItemContainerContents contents = ModDataComponents.TOOL_STORAGE.get(tool);
         if (contents == null)
             return 0;
         int count = 0;
@@ -90,30 +89,30 @@ public final class ToolData
     /** This tool's custom swap rules (read-only, no copies); EMPTY if it has none. */
     public static SwapRules getSwapRules(ItemStack tool)
     {
-        return tool.getOrDefault(ModDataComponents.SWAP_RULES.get(), SwapRules.EMPTY);
+        return ModDataComponents.SWAP_RULES.getOrDefault(tool, SwapRules.EMPTY);
     }
 
     /** EMPTY removes the component, so a tool without rules is identical to a fresh one. */
     public static void setSwapRules(ItemStack tool, SwapRules rules)
     {
         if (rules.isEmpty())
-            tool.remove(ModDataComponents.SWAP_RULES.get());
+            ModDataComponents.SWAP_RULES.remove(tool);
         else
-            tool.set(ModDataComponents.SWAP_RULES.get(), rules);
+            ModDataComponents.SWAP_RULES.set(tool, rules);
     }
 
     /** The default rules this tool already received (read-only); EMPTY if none. */
     public static SwapRules getAppliedDefaults(ItemStack tool)
     {
-        return tool.getOrDefault(ModDataComponents.APPLIED_DEFAULT_RULES.get(), SwapRules.EMPTY);
+        return ModDataComponents.APPLIED_DEFAULT_RULES.getOrDefault(tool, SwapRules.EMPTY);
     }
 
     public static void setAppliedDefaults(ItemStack tool, SwapRules applied)
     {
         if (applied.isEmpty())
-            tool.remove(ModDataComponents.APPLIED_DEFAULT_RULES.get());
+            ModDataComponents.APPLIED_DEFAULT_RULES.remove(tool);
         else
-            tool.set(ModDataComponents.APPLIED_DEFAULT_RULES.get(), applied);
+            ModDataComponents.APPLIED_DEFAULT_RULES.set(tool, applied);
     }
 
     // ---- Torch slot (light) -------------------------------------------------------------------
@@ -121,7 +120,7 @@ public final class ToolData
     /** The torches in the light slot as one stack (count up to 256), or EMPTY. */
     public static ItemStack getTorches(ItemStack tool)
     {
-        StoredTorches torches = tool.get(ModDataComponents.TORCHES.get());
+        StoredTorches torches = ModDataComponents.TORCHES.get(tool);
         return torches == null ? ItemStack.EMPTY : torches.asStack();
     }
 
@@ -129,9 +128,9 @@ public final class ToolData
     public static void setTorches(ItemStack tool, ItemStack torches)
     {
         if (torches.isEmpty())
-            tool.remove(ModDataComponents.TORCHES.get());
+            ModDataComponents.TORCHES.remove(tool);
         else
-            tool.set(ModDataComponents.TORCHES.get(),
+            ModDataComponents.TORCHES.set(tool,
                     new StoredTorches(torches.copyWithCount(1), Math.min(torches.getCount(), StoredTorches.MAX)));
     }
 
@@ -139,7 +138,7 @@ public final class ToolData
     public static ItemStack getLegacyLight(ItemStack tool)
     {
         NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
-        tool.getOrDefault(ModDataComponents.TOOL_LIGHT.get(), ItemContainerContents.EMPTY).copyInto(items);
+        ModDataComponents.TOOL_LIGHT.getOrDefault(tool, ItemContainerContents.EMPTY).copyInto(items);
         return items.get(0);
     }
 
@@ -150,7 +149,7 @@ public final class ToolData
     public static ItemStack getSupportTool(ItemStack tool)
     {
         NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
-        tool.getOrDefault(ModDataComponents.SUPPORT_TOOL.get(), ItemContainerContents.EMPTY).copyInto(items);
+        ModDataComponents.SUPPORT_TOOL.getOrDefault(tool, ItemContainerContents.EMPTY).copyInto(items);
         return items.get(0);
     }
 
@@ -158,9 +157,9 @@ public final class ToolData
     public static void setSupportTool(ItemStack tool, ItemStack support)
     {
         if (support.isEmpty())
-            tool.remove(ModDataComponents.SUPPORT_TOOL.get());
+            ModDataComponents.SUPPORT_TOOL.remove(tool);
         else
-            tool.set(ModDataComponents.SUPPORT_TOOL.get(), ItemContainerContents.fromItems(List.of(support.copyWithCount(1))));
+            ModDataComponents.SUPPORT_TOOL.set(tool, ItemContainerContents.fromItems(List.of(support.copyWithCount(1))));
     }
 
     /**
@@ -172,7 +171,7 @@ public final class ToolData
         if (!(tool.getItem() instanceof MultiToolItem multiTool) || !multiTool.getTier().supportTools())
             return false;
         // Hot path (mining speed, item abilities, GUI tick): look at the slot without copying the item.
-        ItemContainerContents slot = tool.get(ModDataComponents.SUPPORT_TOOL.get());
+        ItemContainerContents slot = ModDataComponents.SUPPORT_TOOL.get(tool);
         if (slot == null)
             return false;
         Iterator<ItemStack> items = slot.nonEmptyItems().iterator();
@@ -190,13 +189,13 @@ public final class ToolData
     public static NonNullList<ItemStack> getPlates(ItemStack tool)
     {
         NonNullList<ItemStack> items = NonNullList.withSize(PLATE_SLOTS, ItemStack.EMPTY);
-        tool.getOrDefault(ModDataComponents.ENCHANTMENT_PLATES.get(), ItemContainerContents.EMPTY).copyInto(items);
+        ModDataComponents.ENCHANTMENT_PLATES.getOrDefault(tool, ItemContainerContents.EMPTY).copyInto(items);
         return items;
     }
 
     public static void setPlates(ItemStack tool, List<ItemStack> items)
     {
-        tool.set(ModDataComponents.ENCHANTMENT_PLATES.get(), ItemContainerContents.fromItems(items));
+        ModDataComponents.ENCHANTMENT_PLATES.set(tool, ItemContainerContents.fromItems(items));
     }
 
     /**
@@ -220,7 +219,7 @@ public final class ToolData
             return plates;
 
         ItemEnchantments onTool = EnchantmentPlateItem.onlyAllowed(
-                tool.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY));
+                ItemEnchantments.of(tool));
         if (!onTool.equals(EnchantmentPlateItem.getStoredEnchantments(plate)))
         {
             ItemStack updated = plate.copy();
@@ -230,17 +229,27 @@ public final class ToolData
         return plates;
     }
 
+    private static boolean listMatches(List<ItemStack> a, List<ItemStack> b)
+    {
+        if (a.size() != b.size())
+            return false;
+        for (int i = 0; i < a.size(); i++)
+            if (!ItemStack.matches(a.get(i), b.get(i)))
+                return false;
+        return true;
+    }
+
     /** Writes the tool's current enchantments back onto its loaded plate (see getPlatesSynced). */
     public static void syncLoadedPlate(ItemStack tool)
     {
         NonNullList<ItemStack> synced = getPlatesSynced(tool);
-        if (!ItemStack.listMatches(synced, getPlates(tool)))
+        if (!listMatches(synced, getPlates(tool)))
             setPlates(tool, synced); // only when something actually changed
     }
 
     /**
      * Copies the enchantments of the currently selected plate onto the tool.
-     * Because the tool's real ENCHANTMENTS component is replaced, every vanilla and modded
+     * Because the tool's real enchantment list is replaced, every vanilla and modded
      * enchantment (Silk Touch, Fortune, Efficiency, Mending, ...) works without any special code.
      */
     public static void applyActivePlate(ItemStack tool)
@@ -254,7 +263,6 @@ public final class ToolData
                 ? ItemEnchantments.EMPTY
                 : EnchantmentPlateItem.getStoredEnchantments(plate);
 
-        // EMPTY (the default) rather than removing the component, so vanilla code always finds it.
-        tool.set(DataComponents.ENCHANTMENTS, enchantments);
+        ItemEnchantments.setOn(tool, enchantments);
     }
 }

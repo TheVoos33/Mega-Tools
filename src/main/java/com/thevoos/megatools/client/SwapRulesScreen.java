@@ -28,11 +28,11 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.ItemContainerContents;
+import com.thevoos.megatools.component.ItemContainerContents;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.fml.ModList;
+import com.thevoos.megatools.network.ModPackets;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -125,7 +125,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
         super.init(); // computes leftPos / topPos
 
         addRenderableWidget(Button.builder(Component.literal("<"),
-                        b -> PacketDistributor.sendToServer(OpenToolGuiPayload.INSTANCE)) // the server reopens the tool GUI
+                        b -> ModPackets.sendToServer(OpenToolGuiPayload.INSTANCE)) // the server reopens the tool GUI
                 .bounds(leftPos + 7, topPos + 4, 12, 12)
                 .tooltip(Tooltip.create(Component.translatable("gui.megatools.swap_rules.back")))
                 .build());
@@ -168,7 +168,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
             return;
         apply(clipboard.rules());
         if (!clipboard.appliedDefaults().isEmpty())
-            PacketDistributor.sendToServer(new ApplyDefaultRulesPayload(clipboard.appliedDefaults(), SwapRules.EMPTY));
+            ModPackets.sendToServer(new ApplyDefaultRulesPayload(clipboard.appliedDefaults(), SwapRules.EMPTY));
         showStatus("gui.megatools.swap_rules.pasted");
     }
 
@@ -206,7 +206,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
         // Stored tools first (storage order, each kind once), then tools that only have rules.
         entries.clear();
         Set<ResourceLocation> seen = new HashSet<>();
-        ItemContainerContents storage = tool.getOrDefault(ModDataComponents.TOOL_STORAGE.get(), ItemContainerContents.EMPTY);
+        ItemContainerContents storage = ModDataComponents.TOOL_STORAGE.getOrDefault(tool, ItemContainerContents.EMPTY);
         for (ItemStack stored : storage.nonEmptyItems())
         {
             ResourceLocation id = BuiltInRegistries.ITEM.getKey(stored.getItem());
@@ -217,10 +217,10 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
             if (seen.add(id))
                 entries.add(new Entry(id, icon(id), false));
         while (entries.size() > menu.selectorCells())
-            entries.removeLast();
+            entries.remove(entries.size() - 1);
 
         if (selectedEntry() == null)
-            selectedTool = entries.isEmpty() ? null : entries.getFirst().id();
+            selectedTool = entries.isEmpty() ? null : entries.get(0).id();
     }
 
     private Entry selectedEntry()
@@ -238,7 +238,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
         if (changed.equals(rules))
             return;
         rules = changed;
-        PacketDistributor.sendToServer(new SetSwapRulesPayload(changed));
+        ModPackets.sendToServer(new SetSwapRulesPayload(changed));
         playClick();
     }
 
@@ -418,7 +418,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
 
     /** Mouse wheel over a tag filter: pick the previous / next tag of its block. */
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY)
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY)
     {
         int filter = filterAt(mouseX, mouseY);
         if (filter >= 0 && selectedTool != null && scrollY != 0)
@@ -438,7 +438,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
                 return true;
             }
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     /** Shift-click an item in the inventory: add it as a filter (there is nowhere to move it to anyway). */

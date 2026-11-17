@@ -2,9 +2,6 @@ package com.thevoos.megatools.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 
 /**
  * Per-tool settings stored as a data component on the ItemStack.
@@ -56,10 +53,6 @@ public record ToolSettings(int flags, int activePlate)
     ).apply(instance, ToolSettings::new));
 
     /** Network format (synced to clients so the GUI/tooltip can show it). */
-    public static final StreamCodec<ByteBuf, ToolSettings> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, ToolSettings::flags,
-            ByteBufCodecs.VAR_INT, ToolSettings::activePlate,
-            ToolSettings::new);
 
     public boolean has(int flag)
     {

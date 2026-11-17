@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = Player.class, priority = 1500)
 public abstract class PlayerMixin
 {
-    @Inject(method = "getDigSpeed", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getDigSpeed", at = @At("RETURN"), cancellable = true, remap = false) // Forge-added method
     private void megatools$finalDigSpeed(BlockState state, @Nullable BlockPos pos, CallbackInfoReturnable<Float> cir)
     {
         float speed = cir.getReturnValueF();

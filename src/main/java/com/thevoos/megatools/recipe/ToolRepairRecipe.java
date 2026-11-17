@@ -1,19 +1,16 @@
 package com.thevoos.megatools.recipe;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.google.gson.JsonObject;
 import com.thevoos.megatools.items.MultiToolItem;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
-import net.minecraft.world.item.crafting.ShapedRecipePattern;
 import net.minecraft.world.level.Level;
 
 /**
@@ -27,25 +24,21 @@ import net.minecraft.world.level.Level;
  */
 public class ToolRepairRecipe extends ShapedRecipe implements PreservesToolData
 {
-    private final ShapedRecipePattern repairPattern;
-    private final ItemStack displayResult;
-
-    public ToolRepairRecipe(String group, CraftingBookCategory category, ShapedRecipePattern pattern,
-                            ItemStack result, boolean showNotification)
+    /** Copies a vanilla shaped recipe; category and notification come from the repair defaults (see Serializer). */
+    public ToolRepairRecipe(ShapedRecipe parsed, CraftingBookCategory category, boolean showNotification)
     {
-        super(group, category, pattern, result, showNotification);
-        this.repairPattern = pattern;
-        this.displayResult = result;
+        super(parsed.getId(), parsed.getGroup(), category, parsed.getWidth(), parsed.getHeight(),
+                parsed.getIngredients(), parsed.getResultItem(RegistryAccess.EMPTY), showNotification);
     }
 
     @Override
-    public boolean matches(CraftingInput input, Level level)
+    public boolean matches(CraftingContainer input, Level level)
     {
         return super.matches(input, level) && !findTool(input).isEmpty();
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries)
+    public ItemStack assemble(CraftingContainer input, RegistryAccess registries)
     {
         ItemStack tool = findTool(input);
         if (tool.isEmpty())
@@ -56,9 +49,9 @@ public class ToolRepairRecipe extends ShapedRecipe implements PreservesToolData
     }
 
     /** The damaged Mega Tools tool in the grid, or EMPTY. */
-    private static ItemStack findTool(CraftingInput input)
+    private static ItemStack findTool(CraftingContainer input)
     {
-        for (ItemStack stack : input.items())
+        for (ItemStack stack : input.getItems())
             if (stack.getItem() instanceof MultiToolItem && stack.isDamageableItem() && stack.isDamaged())
                 return stack;
         return ItemStack.EMPTY;
@@ -70,21 +63,32 @@ public class ToolRepairRecipe extends ShapedRecipe implements PreservesToolData
         return ModRecipes.TOOL_REPAIR.get();
     }
 
-    // ---- JSON format: identical to minecraft:crafting_shaped ----
-    public static final MapCodec<ToolRepairRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("group", "").forGetter(ShapedRecipe::getGroup),
-            CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.EQUIPMENT).forGetter(ShapedRecipe::category),
-            ShapedRecipePattern.MAP_CODEC.forGetter(r -> r.repairPattern),
-            ItemStack.STRICT_CODEC.fieldOf("result").forGetter(r -> r.displayResult),
-            Codec.BOOL.optionalFieldOf("show_notification", false).forGetter(ShapedRecipe::showNotification)
-    ).apply(instance, ToolRepairRecipe::new));
+    /**
+     * JSON format: identical to minecraft:crafting_shaped, but "category" defaults to equipment and
+     * "show_notification" to false. Network format: vanilla shaped (it includes both values).
+     */
+    public static class Serializer implements RecipeSerializer<ToolRepairRecipe>
+    {
+        @Override
+        public ToolRepairRecipe fromJson(ResourceLocation id, JsonObject json)
+        {
+            CraftingBookCategory category = CraftingBookCategory.CODEC.byName(
+                    GsonHelper.getAsString(json, "category", null), CraftingBookCategory.EQUIPMENT);
+            boolean notify = GsonHelper.getAsBoolean(json, "show_notification", false);
+            return new ToolRepairRecipe(RecipeSerializer.SHAPED_RECIPE.fromJson(id, json), category, notify);
+        }
 
-    // ---- Network format ----
-    public static final StreamCodec<RegistryFriendlyByteBuf, ToolRepairRecipe> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.STRING_UTF8, ShapedRecipe::getGroup,
-            CraftingBookCategory.STREAM_CODEC, ShapedRecipe::category,
-            ShapedRecipePattern.STREAM_CODEC, r -> r.repairPattern,
-            ItemStack.STREAM_CODEC, r -> r.displayResult,
-            ByteBufCodecs.BOOL, ShapedRecipe::showNotification,
-            ToolRepairRecipe::new);
+        @Override
+        public ToolRepairRecipe fromNetwork(ResourceLocation id, FriendlyByteBuf buf)
+        {
+            ShapedRecipe parsed = RecipeSerializer.SHAPED_RECIPE.fromNetwork(id, buf);
+            return new ToolRepairRecipe(parsed, parsed.category(), parsed.showNotification());
+        }
+
+        @Override
+        public void toNetwork(FriendlyByteBuf buf, ToolRepairRecipe recipe)
+        {
+            RecipeSerializer.SHAPED_RECIPE.toNetwork(buf, recipe);
+        }
+    }
 }

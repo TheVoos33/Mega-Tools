@@ -5,8 +5,8 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
@@ -22,17 +22,17 @@ public class ModCreativeModeTab
                     .displayItems((itemDisplayParameters, output) ->
                     {
                         // Tools
-                        output.accept(ModItems.STONE_PAXEL);
-                        output.accept(ModItems.IRON_PAXEL);
-                        output.accept(ModItems.DIAMOND_PAXEL);
-                        output.accept(ModItems.MEGA_TOOL);
+                        output.accept(ModItems.STONE_PAXEL.get());
+                        output.accept(ModItems.IRON_PAXEL.get());
+                        output.accept(ModItems.DIAMOND_PAXEL.get());
+                        output.accept(ModItems.MEGA_TOOL.get());
                         // Ingredients
-                        output.accept(ModItems.IRON_HEAD);
-                        output.accept(ModItems.DIAMOND_HEAD);
-                        output.accept(ModItems.NETHERITE_HEAD);
+                        output.accept(ModItems.IRON_HEAD.get());
+                        output.accept(ModItems.DIAMOND_HEAD.get());
+                        output.accept(ModItems.NETHERITE_HEAD.get());
                         // Upgrade
-                        output.accept(ModItems.ENCHANTMENT_PLATE);
-                        output.accept(ModItems.SUPPORT_TOOL);
+                        output.accept(ModItems.ENCHANTMENT_PLATE.get());
+                        output.accept(ModItems.SUPPORT_TOOL.get());
                     }).build());
 
     public static void register(IEventBus eventBus)

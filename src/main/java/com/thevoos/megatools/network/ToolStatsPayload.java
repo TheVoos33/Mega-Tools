@@ -1,17 +1,11 @@
 package com.thevoos.megatools.network;
 
-import com.thevoos.megatools.MegaTools;
+import net.minecraft.network.FriendlyByteBuf;
 import com.thevoos.megatools.StartupConfig;
-import io.netty.buffer.ByteBuf;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,18 +16,8 @@ import java.util.List;
  * would show wrong durability and mine at a different speed than the server (ghost blocks). The client
  * compares and warns the player if they differ. Uses only common classes, so it is safe on servers.
  */
-public record ToolStatsPayload(List<Double> stats) implements CustomPacketPayload
+public record ToolStatsPayload(List<Double> stats) implements Payload
 {
-    public static final CustomPacketPayload.Type<ToolStatsPayload> TYPE = new CustomPacketPayload.Type<>(MegaTools.id("tool_stats"));
-    public static final StreamCodec<ByteBuf, ToolStatsPayload> STREAM_CODEC =
-            ByteBufCodecs.DOUBLE.apply(ByteBufCodecs.list()).map(ToolStatsPayload::new, ToolStatsPayload::stats);
-
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type()
-    {
-        return TYPE;
-    }
-
     /** This side's stats, in a fixed order. */
     public static ToolStatsPayload local()
     {
@@ -53,11 +37,11 @@ public record ToolStatsPayload(List<Double> stats) implements CustomPacketPayloa
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event)
     {
         if (event.getEntity() instanceof ServerPlayer player)
-            PacketDistributor.sendToPlayer(player, local());
+            ModPackets.sendToPlayer(player, local());
     }
 
     /** Client: warn if the server's stats differ from ours. */
-    public static void handle(ToolStatsPayload server, IPayloadContext context)
+    public static void handle(ToolStatsPayload server, PayloadContext context)
     {
         context.enqueueWork(() ->
         {
@@ -69,5 +53,16 @@ public record ToolStatsPayload(List<Double> stats) implements CustomPacketPayloa
                 context.player().displayClientMessage(
                         Component.translatable("message.megatools.tool_stats_mismatch").withStyle(ChatFormatting.YELLOW), false);
         });
+    }
+
+    @Override
+    public void write(FriendlyByteBuf buf)
+    {
+        buf.writeCollection(stats, FriendlyByteBuf::writeDouble);
+    }
+
+    public static ToolStatsPayload read(FriendlyByteBuf buf)
+    {
+        return new ToolStatsPayload(buf.readList(FriendlyByteBuf::readDouble));
     }
 }

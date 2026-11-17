@@ -1,18 +1,13 @@
 package com.thevoos.megatools.recipe;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import com.google.gson.JsonObject;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
-import net.minecraft.world.item.crafting.ShapedRecipePattern;
 import net.minecraft.world.level.Level;
 
 /**
@@ -25,28 +20,27 @@ import net.minecraft.world.level.Level;
  */
 public class CarryOverShapedRecipe extends ShapedRecipe implements PreservesToolData
 {
-    // Kept here because ShapedRecipe's own fields aren't accessible outside its package.
-    private final ShapedRecipePattern carryPattern;
+    // Kept here because ShapedRecipe#getResultItem needs registry access.
     private final ItemStack carryResult;
 
-    public CarryOverShapedRecipe(String group, CraftingBookCategory category, ShapedRecipePattern pattern,
-                                 ItemStack result, boolean showNotification)
+    /** Copies a vanilla shaped recipe (parsed by vanilla's serializer) into a carry-over recipe. */
+    public CarryOverShapedRecipe(ShapedRecipe parsed)
     {
-        super(group, category, pattern, result, showNotification);
-        this.carryPattern = pattern;
-        this.carryResult = result;
+        super(parsed.getId(), parsed.getGroup(), parsed.category(), parsed.getWidth(), parsed.getHeight(),
+                parsed.getIngredients(), parsed.getResultItem(RegistryAccess.EMPTY), parsed.showNotification());
+        this.carryResult = parsed.getResultItem(RegistryAccess.EMPTY);
     }
 
     /** Vanilla shape match AND the tool's contents fit in the result (never deletes items). */
     @Override
-    public boolean matches(CraftingInput input, Level level)
+    public boolean matches(CraftingContainer input, Level level)
     {
         return super.matches(input, level) && ToolCarryOver.canCarryOver(input, carryResult);
     }
 
     /** Vanilla result, then the tool data is copied onto it. */
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries)
+    public ItemStack assemble(CraftingContainer input, RegistryAccess registries)
     {
         ItemStack result = super.assemble(input, registries);
         ToolCarryOver.apply(input, result);
@@ -59,21 +53,25 @@ public class CarryOverShapedRecipe extends ShapedRecipe implements PreservesTool
         return ModRecipes.SHAPED_CARRY_OVER.get();
     }
 
-    // ---- JSON format: identical to minecraft:crafting_shaped ----
-    public static final MapCodec<CarryOverShapedRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("group", "").forGetter(ShapedRecipe::getGroup),
-            CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC).forGetter(ShapedRecipe::category),
-            ShapedRecipePattern.MAP_CODEC.forGetter(r -> r.carryPattern),
-            ItemStack.STRICT_CODEC.fieldOf("result").forGetter(r -> r.carryResult),
-            Codec.BOOL.optionalFieldOf("show_notification", true).forGetter(ShapedRecipe::showNotification)
-    ).apply(instance, CarryOverShapedRecipe::new));
+    /** JSON and network format: identical to minecraft:crafting_shaped (vanilla's serializer does the work). */
+    public static class Serializer implements RecipeSerializer<CarryOverShapedRecipe>
+    {
+        @Override
+        public CarryOverShapedRecipe fromJson(ResourceLocation id, JsonObject json)
+        {
+            return new CarryOverShapedRecipe(RecipeSerializer.SHAPED_RECIPE.fromJson(id, json));
+        }
 
-    // ---- Network format (recipes are synced to clients) ----
-    public static final StreamCodec<RegistryFriendlyByteBuf, CarryOverShapedRecipe> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.STRING_UTF8, ShapedRecipe::getGroup,
-            CraftingBookCategory.STREAM_CODEC, ShapedRecipe::category,
-            ShapedRecipePattern.STREAM_CODEC, r -> r.carryPattern,
-            ItemStack.STREAM_CODEC, r -> r.carryResult,
-            ByteBufCodecs.BOOL, ShapedRecipe::showNotification,
-            CarryOverShapedRecipe::new);
+        @Override
+        public CarryOverShapedRecipe fromNetwork(ResourceLocation id, FriendlyByteBuf buf)
+        {
+            return new CarryOverShapedRecipe(RecipeSerializer.SHAPED_RECIPE.fromNetwork(id, buf));
+        }
+
+        @Override
+        public void toNetwork(FriendlyByteBuf buf, CarryOverShapedRecipe recipe)
+        {
+            RecipeSerializer.SHAPED_RECIPE.toNetwork(buf, recipe);
+        }
+    }
 }

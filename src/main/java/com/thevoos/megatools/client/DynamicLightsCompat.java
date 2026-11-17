@@ -5,7 +5,7 @@ import com.thevoos.megatools.tool.LightSources;
 import com.thevoos.megatools.tool.ToolLightManager;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;

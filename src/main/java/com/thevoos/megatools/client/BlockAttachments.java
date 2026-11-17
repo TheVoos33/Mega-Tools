@@ -11,7 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -104,7 +104,7 @@ public final class BlockAttachments
             // while the player moves, which made the result flicker.
             BlockPos pos = hit.getBlockPos();
             Vec3 eye = player.getEyePosition();
-            Vec3 end = eye.add(player.getViewVector(1.0F).scale(player.blockInteractionRange() + 1.0D));
+            Vec3 end = eye.add(player.getViewVector(1.0F).scale(player.getBlockReach() + 1.0D));
             BlockHitResult onBlock = level.getBlockState(pos).getShape(level, pos).clip(eye, end, pos);
             double blockDistance = onBlock == null ? Double.MAX_VALUE : eye.distanceTo(onBlock.getLocation());
 

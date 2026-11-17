@@ -3,7 +3,7 @@ package com.thevoos.megatools;
 /**
  * Names of the mod's key bindings (also their translation keys). Kept in common code so items can show
  * the CURRENT binding in tooltips with Component.keybind(...): the client resolves it every time the text
- * is drawn, including NeoForge modifiers ("Ctrl + R"), so rebinding in Controls updates every tooltip.
+ * is drawn, including Forge modifiers ("Ctrl + R"), so rebinding in Controls updates every tooltip.
  * The KeyMappings themselves live in the client-only ModKeyMappings.
  */
 public final class KeyNames

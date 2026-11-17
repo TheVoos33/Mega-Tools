@@ -8,13 +8,13 @@
   ],
   "key": {
     "M": {
-      "item": "minecraft:diamond"
+      "item": "minecraft:cobblestone"
     },
     "T": {
-      "item": "megatools:diamond_paxel"
+      "item": "megatools:stone_paxel"
     }
   },
   "result": {
-    "id": "megatools:diamond_paxel"
+    "item": "megatools:stone_paxel"
   }
 }

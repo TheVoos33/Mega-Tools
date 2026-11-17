@@ -2,9 +2,6 @@ package com.thevoos.megatools.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -26,10 +23,6 @@ public record SwapOrigin(ItemStack tool, int slot)
             Codec.INT.fieldOf("slot").forGetter(SwapOrigin::slot)
     ).apply(instance, SwapOrigin::new));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, SwapOrigin> STREAM_CODEC = StreamCodec.composite(
-            ItemStack.STREAM_CODEC, SwapOrigin::tool,
-            ByteBufCodecs.VAR_INT, SwapOrigin::slot,
-            SwapOrigin::new);
 
     // ItemStack has identity equality, so equals/hashCode are overridden to compare contents.
     // Component equality matters for stack merging and inventory syncing.
@@ -42,6 +35,6 @@ public record SwapOrigin(ItemStack tool, int slot)
     @Override
     public int hashCode()
     {
-        return 31 * ItemStack.hashItemAndComponents(tool) + slot;
+        return 31 * ModComponent.hashStack(tool) + slot;
     }
 }

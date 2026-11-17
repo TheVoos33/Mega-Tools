@@ -1,6 +1,5 @@
 package com.thevoos.megatools.block;
 
-import com.mojang.serialization.MapCodec;
 import com.thevoos.megatools.tool.ToolLightManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -41,7 +40,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ToolLightBlock extends Block implements SimpleWaterloggedBlock
 {
-    public static final MapCodec<ToolLightBlock> CODEC = simpleCodec(ToolLightBlock::new);
     public static final IntegerProperty LEVEL = BlockStateProperties.LEVEL;        // 0-15
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     private static final int CHECK_TICKS = 40; // 2 seconds
@@ -50,12 +48,6 @@ public class ToolLightBlock extends Block implements SimpleWaterloggedBlock
     {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(LEVEL, 14).setValue(WATERLOGGED, false));
-    }
-
-    @Override
-    public MapCodec<? extends Block> codec()
-    {
-        return CODEC;
     }
 
     @Override
@@ -88,7 +80,7 @@ public class ToolLightBlock extends Block implements SimpleWaterloggedBlock
 
     /** Any fluid may flow in: water sources waterlog it, anything else replaces it (see placeLiquid). */
     @Override
-    public boolean canPlaceLiquid(@Nullable Player player, BlockGetter level, BlockPos pos, BlockState state, Fluid fluid)
+    public boolean canPlaceLiquid(BlockGetter level, BlockPos pos, BlockState state, Fluid fluid)
     {
         return !state.getValue(WATERLOGGED);
     }

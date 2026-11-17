@@ -10,12 +10,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.util.TriState;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.level.BlockEvent;
+import com.thevoos.megatools.network.ModPackets;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -99,7 +99,7 @@ public final class MegaToolMining
         if (!(held.getItem() instanceof MultiToolItem multiTool))
             return speed;
         if (speed < 0.0F)
-            return speed; // another mod cancelled BreakSpeed (NeoForge then returns -1): the block stays protected
+            return speed; // another mod cancelled BreakSpeed (Forge then returns -1): the block stays protected
         // Broken (1 durability left) or block breaking switched off: no progress at all, on every tier.
         if (MultiToolItem.isBroken(held) || ToolData.hasFlag(held, ToolSettings.BREAK_OFF))
             return 0.0F;
@@ -154,7 +154,7 @@ public final class MegaToolMining
             clientFreshUntil = NEVER; // a click permits ONE immediate break
             MegaToolPoke.triggerLocal();
             if (delayed)
-                PacketDistributor.sendToServer(MegaToolBreakPayload.INSTANCE);
+                ModPackets.sendToServer(MegaToolBreakPayload.INSTANCE);
         }
         return permitted;
     }
@@ -222,11 +222,11 @@ public final class MegaToolMining
         PlayerInteractEvent.LeftClickBlock.Action action = event.getAction();
         if (action != PlayerInteractEvent.LeftClickBlock.Action.START && action != PlayerInteractEvent.LeftClickBlock.Action.CLIENT_HOLD)
             return;
-        if (event.getUseItem().isFalse() || !isZeroHardness(player, state, Optional.of(event.getPos())))
+        if (event.getUseItem() == Event.Result.DENY || !isZeroHardness(player, state, Optional.of(event.getPos())))
             return;
 
         if (!clientPermitsBreak(player, held))
-            event.setUseItem(TriState.FALSE);
+            event.setUseItem(Event.Result.DENY);
     }
 
     /** Server: a block is about to be broken. */
@@ -256,7 +256,7 @@ public final class MegaToolMining
     /** Tell everyone who can see this player to play the poke (third person). The player animates locally. */
     private static void broadcastPoke(Player player)
     {
-        PacketDistributor.sendToPlayersTrackingEntity(player, new MegaToolPokePayload(player.getId()));
+        ModPackets.sendToPlayersTrackingEntity(player, new MegaToolPokePayload(player.getId()));
     }
 
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event)
