@@ -55,7 +55,7 @@ megatools-storage-whitelist.json gives that tag to more items:
 
 | Key | Entry | Effect |
 |---|---|---|
-| tags | item tags, such as c:tools/wrench | Every item that has one of these tags also gets megatools:storable_item. |
+| tags | item tags, such as forge:tools/wrench | Every item that has one of these tags also gets megatools:storable_item. |
 | items | mod id, then item ids (or item tags starting with #) | These items get megatools:storable_item. A group is only used if that mod is installed. |
 
 A datapack can take any of these items out again: list them under "remove" in
@@ -114,7 +114,7 @@ Add to these with a datapack, with "replace" set to false. A "remove" list takes
 | megatools:mineable/paxel | block | Decide what paxels mine at tool speed. Contains the vanilla pickaxe, axe, shovel and hoe tags. |
 | megatools:mega_tool_unbreakable | block | Stop the Mega Tool from breaking a block at all. Empty by default. |
 
-Items in the tag c:tools/wrench can always be stored. The paxels and the Mega Tool are deliberately not
+Items in the tag forge:tools/wrench can always be stored. The paxels and the Mega Tool are deliberately not
 in the vanilla tool tags such as minecraft:pickaxes, because their enchantments must only come from
 [Enchantment Plates](enchantment_plates.md).
 

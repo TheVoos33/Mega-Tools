@@ -318,7 +318,7 @@ public final class DefaultSwapRules
                 "Default custom rules of Mega Tools: which stored tool is pre-selected for which block. Rules are "
               + "grouped by mod id; a group is only used if that mod is installed. Each rule has a 'tool' (item id of "
               + "the stored tool) and exactly one of 'block' (a block id, or the item id of a part such as a P2P "
-              + "tunnel), 'tag' (a block tag, like #c:chests) or 'mod' "
+              + "tunnel), 'tag' (a block tag, like #forge:chests) or 'mod' "
               + "(a mod id: every block of that mod). A rule is added to a paxel or Mega Tool by itself, once, when the "
               + "tool is put in its tool storage. After that it is a normal filter in the Custom Rules menu and can be "
               + "changed or removed there; a removed one does not come back on that tool. This file is yours: edit it "

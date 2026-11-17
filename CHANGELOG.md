@@ -7,7 +7,7 @@ First release of Mega Tools for Minecraft 1.20.1, on Forge 47.4 or newer. It has
 ### Differences from the 1.21.1 version
 - The torch slot holds up to **64** torches (256 on 1.21.1), because 1.20.1 can't sync more than 127 items in one slot.
 - There is no in-game config screen. Edit the files in the `config` folder and restart the game. The tool menu style is `menuStyle` in `megatools-common.toml`.
-- Tool storage also accepts the Forge wrench and shears tags (`forge:tools/wrench`, `forge:tools/wrenches`, `forge:wrenches`, `forge:shears`), so wrenches and shears from 1.20.1 mods can be stored.
+- Tool storage uses the Forge wrench and shears tags (`forge:tools/wrench`, `forge:tools/wrenches`, `forge:wrenches`, `forge:shears`) instead of the `c:` tags used on NeoForge.
 
 ### What's new in v1.1 (compared with v1.0 for 1.21.1)
 
@@ -28,7 +28,7 @@ First release of Mega Tools for Minecraft 1.20.1, on Forge 47.4 or newer. It has
 #### Changed
 - **Tool storage is tag based.** It accepts exactly the items that have the item tag `megatools:storable_item`. `megatools-storage-whitelist.json` no longer allows items directly: it adds that tag to the items it lists.
 - Datapacks have the last word over `megatools-storage-whitelist.json`: a `"remove"` list in a `megatools:storable_item` tag file takes out items the config file added.
-- `megatools-storage-whitelist.json` has a new `tags` list (default `c:tools/wrench`): every item with one of those tags also gets `megatools:storable_item`.
+- `megatools-storage-whitelist.json` has a new `tags` list (default `forge:tools/wrench`): every item with one of those tags also gets `megatools:storable_item`.
 - `attackDamage` in `megatools-startup.toml` can be set up to 10,000 (was 1,000). Above 2048, the game's attack damage limit is raised to match.
 - The tool menu and the Custom Rules menu are drawn from the game's own container texture, so resource packs that restyle the GUIs (dark themes) apply to them.
 - The tool menu is one row taller (the Break / Attack row).

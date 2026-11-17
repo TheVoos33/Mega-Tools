@@ -37,7 +37,7 @@ import java.util.Set;
  *
  * {
  *   "version": 2,
- *   "tags": ["c:tools/wrench"],                       // every item with one of these tags gets the tag
+ *   "tags": ["forge:tools/wrench"],                   // every item with one of these tags gets the tag
  *   "items": {
  *     "sfm": ["sfm:labelgun", "sfm:network_tool"],    // mod id -> items (or "#tags") that get the tag
  *     "constructionstick": ["constructionstick:iron_stick"]
@@ -236,7 +236,7 @@ public final class StorageWhitelist
     }
 
     /** Item tags whose items all get #megatools:storable_item. Written to the file on first launch. */
-    private static final List<String> DEFAULT_TAGS = List.of("c:tools/wrench");
+    private static final List<String> DEFAULT_TAGS = List.of("forge:tools/wrench");
 
     /** Tools without a suitable tag (checked against All the Mods 10). Written to the file on first launch. */
     private static final Map<String, List<String>> DEFAULT_ITEMS = new LinkedHashMap<>();

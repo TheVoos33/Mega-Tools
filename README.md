@@ -254,7 +254,7 @@ Open the [tool menu](#the-tool-menu) and click **Custom Rule** above the tool st
    | Option | Matches | Shown as |
    |---|---|---|
    | This block | only that block | plain slot |
-   | Tag | every block that has the chosen block tag, for example `#c:chests` | purple frame and **#** |
+   | Tag | every block that has the chosen block tag, for example `#forge:chests` | purple frame and **#** |
    | Whole mod | every block from the block's mod | blue frame and **@** |
 
    On a tag filter, **scroll** over the slot to pick which of the block's tags is used. The tooltip lists all of them and marks the chosen one.
@@ -383,7 +383,7 @@ Items get that tag in two ways:
 ```json
 {
   "version": 2,
-  "tags": ["c:tools/wrench", "yourmod:all_tools"],
+  "tags": ["forge:tools/wrench", "yourmod:all_tools"],
   "items": {
     "sfm": ["sfm:labelgun", "sfm:network_tool"],
     "constructionstick": ["constructionstick:iron_stick", "constructionstick:diamond_stick"],
@@ -399,7 +399,7 @@ A datapack has the last word: the file's entries go into the tag before the data
 
 Ids and tags that don't exist are skipped. Leave `version` as it is.
 
-The file is created with `c:tools/wrench`, vanilla's Flint and Steel and tools from many popular mods (Super Factory Manager, Construction Sticks, Building and Mining Gadgets, Functional Storage, Sophisticated Storage, PneumaticCraft, Framed Blocks, Mekanism, Industrial Foregoing, Just Dire Things, Logistics Network, Transfer Labels, Rechiseled, Chisel Reborn, Chipped and more). A file from Mega Tools 1.0 is updated once: the `tags` list and the new default tools are added, and your own entries are kept.
+The file is created with `forge:tools/wrench`, vanilla's Flint and Steel and tools from many popular mods (Super Factory Manager, Construction Sticks, Building and Mining Gadgets, Functional Storage, Sophisticated Storage, PneumaticCraft, Framed Blocks, Mekanism, Industrial Foregoing, Just Dire Things, Logistics Network, Transfer Labels, Rechiseled, Chisel Reborn, Chipped and more). A file from Mega Tools 1.0 is updated once: the `tags` list and the new default tools are added, and your own entries are kept.
 
 Because these are real tag entries, they show up wherever tags do (JEI/EMI, `/reload`, other mods), and on a server the server's file decides: tags are synced to every player.
 
@@ -457,7 +457,7 @@ Rules are grouped by mod id, and a group is only used if that mod is installed (
 | Key | Value | Matches |
 |---|---|---|
 | `block` | a block id, or the item id of a part (such as `ae2:me_p2p_tunnel`) | only that block or part |
-| `tag` | a block tag, such as `#c:chests` | every block with that tag |
+| `tag` | a block tag, such as `#forge:chests` | every block with that tag |
 | `mod` | a mod id | every block from that mod |
 
 The file is created with two sets of rules:
@@ -498,7 +498,7 @@ To take an item out of a tag again, list it under `"remove"`. This also works fo
 
 | Tag | Type | Use it to |
 |---|---|---|
-| `megatools:storable_item` | item | The only items allowed in tool storage. Already includes `c:tools/wrench`, `c:wrenches`, `forge:tools/wrench`, `forge:tools/wrenches`, `forge:wrenches`, `c:tools/shear` and `forge:shears` (shears and chainsaws), Immersive Engineering's screwdrivers and Railcraft's crowbars. |
+| `megatools:storable_item` | item | The only items allowed in tool storage. Already includes `forge:tools/wrench`, `forge:tools/wrenches`, `forge:wrenches` and `forge:shears` (shears and chainsaws), Immersive Engineering's screwdrivers and Railcraft's crowbars. |
 | `megatools:torches` | item | Allow other torches in the torch slot (by default the torch and soul torch). The light is always full brightness, and Place Torch places the item as a block. |
 | `megatools:mineable/paxel` | block | Decide what paxels mine at tool speed. Contains the vanilla pickaxe, axe, shovel and hoe `mineable` tags; add blocks that no tool tag covers. |
 | `megatools:mega_tool_unbreakable` | block | Stop the Mega Tool from breaking a block at all, in every game mode. Empty by default. |
