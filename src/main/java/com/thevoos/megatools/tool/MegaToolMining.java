@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.util.TriState;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -35,7 +36,7 @@ import java.util.function.BooleanSupplier;
  *  - Every NEW click breaks a block immediately.
  *  - Zero-hardness blocks (grass, flowers, torches...) follow the same delay. Their speed can't be 0
  *    (see finalDigSpeed), so on the client the delay is applied in onLeftClickBlock instead.
- *  - Blocks in the #megatools:mega_tool_unbreakable tag can never be broken with the Mega Tool.
+ *  - Blocks in the #megatools:not_mineable tag are mined like with an empty hand (no instant break).
  *
  * WHO DECIDES: the client. It knows about held vs. fresh clicks and is the side that shows the break
  * (sound, particles). When it decides a block breaks now, it sends MegaToolBreakPayload right before
@@ -106,8 +107,8 @@ public final class MegaToolMining
         if (!multiTool.getTier().isMega())
             return speed; // paxels mine at their normal speed
 
-        if (state.is(ModTags.MEGA_TOOL_UNBREAKABLE))
-            return 0.0F; // tagged blocks: no progress at all
+        if (state.is(ModTags.NOT_MINEABLE))
+            return speed; // not the right tool: mines like an empty hand, no instant break or hold delay
         if (player.getAbilities().instabuild)
             return speed; // creative already breaks instantly
 
@@ -210,19 +211,14 @@ public final class MegaToolMining
             return;
 
         BlockState state = event.getLevel().getBlockState(event.getPos());
-        if (state.is(ModTags.MEGA_TOOL_UNBREAKABLE))
-        {
-            event.setCanceled(true);
-            return;
-        }
-
         if (!event.getLevel().isClientSide() || player.getAbilities().instabuild
                 || MultiToolItem.isBroken(held) || ToolData.hasFlag(held, ToolSettings.BREAK_OFF))
             return; // broken / breaking switched off: DisabledToolHandler cancels the click
         PlayerInteractEvent.LeftClickBlock.Action action = event.getAction();
         if (action != PlayerInteractEvent.LeftClickBlock.Action.START && action != PlayerInteractEvent.LeftClickBlock.Action.CLIENT_HOLD)
             return;
-        if (event.getUseItem().isFalse() || !isZeroHardness(player, state, Optional.of(event.getPos())))
+        if (event.getUseItem().isFalse() || state.is(ModTags.NOT_MINEABLE)
+                || !isZeroHardness(player, state, Optional.of(event.getPos())))
             return;
 
         if (!clientPermitsBreak(player, held))
@@ -235,11 +231,6 @@ public final class MegaToolMining
         Player player = event.getPlayer();
         if (player == null || !isMegaTool(player.getMainHandItem()))
             return;
-        if (event.getState().is(ModTags.MEGA_TOOL_UNBREAKABLE))
-        {
-            event.setCanceled(true); // final server-side guarantee for the tag
-            return;
-        }
         SERVER_PERMIT_UNTIL.remove(player.getUUID()); // the granted break is used up
         broadcastPoke(player);
     }
@@ -262,5 +253,11 @@ public final class MegaToolMining
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event)
     {
         SERVER_PERMIT_UNTIL.remove(event.getEntity().getUUID());
+    }
+
+    /** Game time starts over in the next world: a permit left from this one must not carry over. */
+    public static void onServerStopped(ServerStoppedEvent event)
+    {
+        SERVER_PERMIT_UNTIL.clear();
     }
 }

@@ -56,6 +56,8 @@ import java.util.Optional;
  *                            that part of a block made of parts)
  *   "tag":   "#modid:tag"    every block with that block tag
  *   "mod":   "modid"         every block from that mod
+ * and optionally "blacklist": true, which makes it a blacklist filter (the tool is NOT pre-selected
+ * for those blocks, see SwapRules.Rule#blacklist).
  *
  * A default rule is COPIED onto a tool the first time the named tool is in that tool's storage (see
  * offer). From then on it is an ordinary rule of that tool: the player can change or remove it in the
@@ -165,7 +167,7 @@ public final class DefaultSwapRules
                     yield any;
                 }
             };
-            return shown == null ? key : new SwapRules.Rule(key.tool(), shown, key.mode(), key.tag());
+            return shown == null ? key : new SwapRules.Rule(key.tool(), shown, key.mode(), key.tag(), key.blacklist());
         });
     }
 
@@ -230,29 +232,44 @@ public final class DefaultSwapRules
         }
     }
 
-    /** One rule object, or null if it has no valid "tool" or not exactly one valid "block" / "tag" / "mod". */
+    /**
+     * One rule object, or null if it has no valid "tool", not exactly one valid "block" / "tag" / "mod", or a
+     * "blacklist" that isn't true or false.
+     */
     private static SwapRules.Rule readRule(JsonObject json)
     {
         ResourceLocation tool = id(json, "tool");
         int targets = (json.has("block") ? 1 : 0) + (json.has("tag") ? 1 : 0) + (json.has("mod") ? 1 : 0);
         if (tool == null || targets != 1)
             return null;
+        Boolean blacklist = bool(json, "blacklist");
+        if (blacklist == null)
+            return null;
 
         if (json.has("block"))
         {
             ResourceLocation block = id(json, "block");
-            return block == null ? null : new SwapRules.Rule(tool, block);
+            return block == null ? null : new SwapRules.Rule(tool, block, blacklist);
         }
         if (json.has("tag"))
         {
             // The target of a default tag rule is the tag itself: there is no block it was picked from.
             ResourceLocation tag = id(json, "tag");
-            return tag == null ? null : new SwapRules.Rule(tool, tag, SwapRules.Mode.TAG, Optional.of(tag));
+            return tag == null ? null : new SwapRules.Rule(tool, tag, SwapRules.Mode.TAG, Optional.of(tag), blacklist);
         }
         // Whole mod: only the namespace of the target matters (see SwapRules.Rule#matches).
         String mod = string(json, "mod");
         ResourceLocation target = mod == null ? null : ResourceLocation.tryBuild(mod, "any");
-        return target == null ? null : new SwapRules.Rule(tool, target, SwapRules.Mode.MOD, Optional.empty());
+        return target == null ? null : new SwapRules.Rule(tool, target, SwapRules.Mode.MOD, Optional.empty(), blacklist);
+    }
+
+    /** An optional true / false value: false if the key is missing, null if it is something else. */
+    private static Boolean bool(JsonObject json, String key)
+    {
+        JsonElement value = json.get(key);
+        if (value == null)
+            return false;
+        return value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean() ? value.getAsBoolean() : null;
     }
 
     private static String string(JsonObject json, String key)
@@ -319,7 +336,8 @@ public final class DefaultSwapRules
               + "grouped by mod id; a group is only used if that mod is installed. Each rule has a 'tool' (item id of "
               + "the stored tool) and exactly one of 'block' (a block id, or the item id of a part such as a P2P "
               + "tunnel), 'tag' (a block tag, like #c:chests) or 'mod' "
-              + "(a mod id: every block of that mod). A rule is added to a paxel or Mega Tool by itself, once, when the "
+              + "(a mod id: every block of that mod). Add \"blacklist\": true to a rule to make it a blacklist filter: "
+              + "the tool is then NOT pre-selected for those blocks. A rule is added to a paxel or Mega Tool by itself, once, when the "
               + "tool is put in its tool storage. After that it is a normal filter in the Custom Rules menu and can be "
               + "changed or removed there; a removed one does not come back on that tool. This file is yours: edit it "
               + "to set the defaults you like. Use F3+H in game to see ids. Read when you join a world.");

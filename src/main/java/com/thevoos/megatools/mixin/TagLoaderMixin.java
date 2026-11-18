@@ -39,10 +39,12 @@ public abstract class TagLoaderMixin
         if (!Registries.tagsDirPath(Registries.ITEM).equals(this.directory))
             return;
 
-        List<TagLoader.EntryWithSource> tag =
-                cir.getReturnValue().computeIfAbsent(ModTags.STORABLE_ITEM.location(), id -> new ArrayList<>());
+        Map<ResourceLocation, List<TagLoader.EntryWithSource>> tags = cir.getReturnValue();
+        List<TagEntry> entries = StorageWhitelist.withoutLoops(StorageWhitelist.loadTagEntries(),
+                id -> tags.getOrDefault(id, List.of()).stream().map(TagLoader.EntryWithSource::entry).toList());
+        List<TagLoader.EntryWithSource> tag = tags.computeIfAbsent(ModTags.STORABLE_ITEM.location(), id -> new ArrayList<>());
         List<TagLoader.EntryWithSource> fromConfig = new ArrayList<>();
-        for (TagEntry entry : StorageWhitelist.loadTagEntries())
+        for (TagEntry entry : entries)
             fromConfig.add(new TagLoader.EntryWithSource(entry, StorageWhitelist.FILE_NAME));
         tag.addAll(0, fromConfig);
     }

@@ -29,7 +29,7 @@ public class ModCreativeModeTab
                         // Ingredients
                         output.accept(ModItems.IRON_HEAD);
                         output.accept(ModItems.DIAMOND_HEAD);
-                        output.accept(ModItems.NETHERITE_HEAD);
+                        output.accept(ModItems.MEGA_TOOL_HEAD);
                         // Upgrade
                         output.accept(ModItems.ENCHANTMENT_PLATE);
                         output.accept(ModItems.SUPPORT_TOOL);

@@ -79,10 +79,34 @@ public final class DynamicLightsCompat
             case "equals" -> proxy == args[0];
             case "hashCode" -> System.identityHashCode(proxy);
             case "toString" -> "MegaToolsHeldLight";
-            default -> throw new UnsupportedOperationException(method.toString());
+            // Methods a newer version of the mod adds: their own default code if they have one, else a neutral
+            // value. Throwing here would crash the game while it draws a frame.
+            default -> method.isDefault() ? InvocationHandler.invokeDefault(proxy, method, args) : neutral(method.getReturnType());
         };
         Object playerLight = Proxy.newProxyInstance(handler.getClassLoader(), new Class<?>[]{handler}, logic);
         // Existing handlers for players are kept: the mods combine them and use the brightest.
         handlers.getMethod("registerDynamicLightHandler", EntityType.class, handler).invoke(null, EntityType.PLAYER, playerLight);
+    }
+
+    /** false / 0 / null for a method the handler doesn't know. */
+    private static Object neutral(Class<?> type)
+    {
+        if (type == boolean.class)
+            return false;
+        if (type == char.class)
+            return (char) 0;
+        if (type == byte.class)
+            return (byte) 0;
+        if (type == short.class)
+            return (short) 0;
+        if (type == int.class)
+            return 0;
+        if (type == long.class)
+            return 0L;
+        if (type == float.class)
+            return 0f;
+        if (type == double.class)
+            return 0d;
+        return null; // void and objects
     }
 }

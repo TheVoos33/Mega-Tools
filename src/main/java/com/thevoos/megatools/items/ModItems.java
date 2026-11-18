@@ -30,7 +30,7 @@ public class ModItems
             () -> new Item(new Item.Properties()));
     public static final DeferredItem<Item> DIAMOND_HEAD = ITEMS.register("diamond_head",
             () -> new Item(new Item.Properties()));
-    public static final DeferredItem<Item> NETHERITE_HEAD = ITEMS.register("netherite_head",
+    public static final DeferredItem<Item> MEGA_TOOL_HEAD = ITEMS.register("mega_tool_head",
             () -> new Item(new Item.Properties().fireResistant().rarity(Rarity.RARE)));
 
     // ---- Upgrade item ----

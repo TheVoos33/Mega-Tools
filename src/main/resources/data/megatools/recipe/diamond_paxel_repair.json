@@ -1,19 +1,35 @@
 {
-  "type": "megatools:tool_repair",
+  "type": "megatools:crafting_shapeless_carry_over",
   "category": "equipment",
-  "pattern": [
-    "MMM",
-    "MTM",
-    "MMM"
-  ],
-  "key": {
-    "M": {
+  "ingredients": [
+    {
       "item": "minecraft:diamond"
     },
-    "T": {
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
       "item": "megatools:diamond_paxel"
     }
-  },
+  ],
   "result": {
     "id": "megatools:diamond_paxel"
   }

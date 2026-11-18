@@ -28,6 +28,7 @@ import java.util.Optional;
  *
  * Carried over: ability toggles + active plate (tool_settings), wrench storage, enchantment plates,
  * Support Tool, torches, custom name. (Every tier has a torch slot, so the torches never block a recipe.) Durability is NOT carried over: the result is a fresh tool.
+ * (A recipe whose result is the same item as the tool is a repair instead, see CarryOverShapelessRecipe.)
  *
  * Nothing is ever deleted:
  *  - If the result can't hold everything (fewer storage slots than stored tools, or no plate slots
@@ -169,13 +170,13 @@ public final class ToolCarryOver
         CraftingRecipe value = recipe.get().value();
 
         if (swappedOut)
-            returnSwapOrigins(player, grid, value.getRemainingItems(input), event.getCrafting());
+            returnSwapOrigins(player, grid, remainingItems(value, input), event.getCrafting());
 
         // Carry-over and repair recipes already moved everything into the result.
         if (value instanceof PreservesToolData)
             return;
         // If the recipe hands the tool back (a "tool stays in the grid" recipe), nothing is lost.
-        if (value.getRemainingItems(input).stream().anyMatch(s -> s.getItem() instanceof MultiToolItem))
+        if (remainingItems(value, input).stream().anyMatch(s -> s.getItem() instanceof MultiToolItem))
             return;
 
         boolean refunded = false;
@@ -221,6 +222,23 @@ public final class ToolCarryOver
     // =====================================================================================
     //  Helpers
     // =====================================================================================
+
+    /** Repair recipes: the Mega Tools tool in the grid that is the same item as the result, or EMPTY. */
+    public static ItemStack findSameTool(List<ItemStack> grid, net.minecraft.world.item.Item resultItem)
+    {
+        if (!(resultItem instanceof MultiToolItem))
+            return ItemStack.EMPTY;
+        for (ItemStack stack : grid)
+            if (stack.is(resultItem))
+                return stack;
+        return ItemStack.EMPTY;
+    }
+
+    /** A recipe's remaining items (no side effects, also for the repair recipe: see ToolRepair). */
+    private static List<ItemStack> remainingItems(CraftingRecipe recipe, CraftingInput input)
+    {
+        return recipe.getRemainingItems(input); // no side effects: also the repair recipe's (see ToolRepair)
+    }
 
     private static ToolTier sourceTier(ItemStack tool)
     {
