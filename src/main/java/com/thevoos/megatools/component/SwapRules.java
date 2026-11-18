@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Custom tool swap rules of ONE Mega Tools tool (set in the Swap Rules GUI, see SwapRulesScreen).
@@ -25,6 +26,12 @@ import java.util.Set;
  *   target - item id of the block (or of a part, like an AE2 P2P tunnel) the player dragged into the filter slot
  *   mode   - ITEM: only that block, or that part of a block made of parts.  TAG: every block with one of its block tags (the rule's tag).
  *            MOD: every block from the target's mod
+ *   blacklist - false: a whitelist filter, "pre-select the tool for these blocks".  true: a blacklist
+ *            filter, "never pre-select the tool for these blocks" (also not through the automatic
+ *            same-mod matching). When both lists match a block, the more exact filter wins
+ *            (ITEM before TAG before MOD); at the same level the whitelist wins. See AutoSwapClient.
+ *
+ * Every stored tool has its own whitelist and its own blacklist, MAX_PER_TOOL filters each.
  *
  * Rules are stored on the tool stack, so every tool has its own. They are kept when the stored tool is
  * taken out (it is out of storage whenever it is swapped to); they simply do nothing until it is back.
@@ -32,15 +39,15 @@ import java.util.Set;
  * Items are saved as ids (not registry entries) on purpose: a rule for a mod that was removed must not
  * make the whole tool fail to load.
  *
- * Immutable: every change returns a new instance. The order of a tool's rules is the order of its
- * filter slots in the GUI.
+ * Immutable: every change returns a new instance. The order of a tool's whitelist (or blacklist) rules
+ * is the order of its filter slots in the GUI.
  */
 public record SwapRules(List<Rule> rules)
 {
-    /** Filter slots per stored tool in the GUI. */
+    /** Filter slots per stored tool and list (whitelist / blacklist) in the GUI. */
     public static final int MAX_PER_TOOL = 18;
     /** Upper bound for one tool stack (keeps the item small on disk and on the network). */
-    public static final int MAX_TOTAL = 512;
+    public static final int MAX_TOTAL = 1024;
 
     /** Upper bound for the list of default rules a tool already received (see APPLIED_CODEC). */
     public static final int MAX_APPLIED = 2048;
@@ -82,16 +89,29 @@ public record SwapRules(List<Rule> rules)
         static final Codec<Mode> CODEC = Codec.STRING.xmap(Mode::byName, mode -> mode.name);
     }
 
-    /**
-     * @param tag the block tag of a TAG rule (one of the target block's tags, picked in the GUI); empty otherwise
-     */
-    public record Rule(ResourceLocation tool, ResourceLocation target, Mode mode, Optional<ResourceLocation> tag)
+    /** Block tag keys of tag rules, so matching (on every rescan) doesn't create them again. */
+    private static final Map<ResourceLocation, TagKey<Block>> BLOCK_TAGS = new ConcurrentHashMap<>();
+
+    private static TagKey<Block> blockTag(ResourceLocation id)
     {
+        if (BLOCK_TAGS.size() > 512)
+            BLOCK_TAGS.clear(); // only the tags rules use are in it: this is never reached in normal play
+        return BLOCK_TAGS.computeIfAbsent(id, tagId -> TagKey.create(Registries.BLOCK, tagId));
+    }
+
+    /**
+     * @param tag       the block tag of a TAG rule (one of the target block's tags, picked in the GUI); empty otherwise
+     * @param blacklist true for a blacklist filter (never pre-select the tool), false for a whitelist filter
+     */
+    public record Rule(ResourceLocation tool, ResourceLocation target, Mode mode, Optional<ResourceLocation> tag, boolean blacklist)
+    {
+        /** "blacklist" is left out for whitelist rules, so rules saved before v1.2 load unchanged. */
         public static final Codec<Rule> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 ResourceLocation.CODEC.fieldOf("tool").forGetter(Rule::tool),
                 ResourceLocation.CODEC.fieldOf("target").forGetter(Rule::target),
                 Mode.CODEC.optionalFieldOf("mode", Mode.ITEM).forGetter(Rule::mode),
-                ResourceLocation.CODEC.optionalFieldOf("tag").forGetter(Rule::tag)
+                ResourceLocation.CODEC.optionalFieldOf("tag").forGetter(Rule::tag),
+                Codec.BOOL.optionalFieldOf("blacklist", false).forGetter(Rule::blacklist)
         ).apply(instance, Rule::new));
 
         /** Keeps mode and tag consistent: only a TAG rule has a tag, and a TAG rule without one is an ITEM rule. */
@@ -103,10 +123,28 @@ public record SwapRules(List<Rule> rules)
                 tag = Optional.empty();
         }
 
-        /** A new filter: only the target block. */
+        /** A whitelist filter. */
+        public Rule(ResourceLocation tool, ResourceLocation target, Mode mode, Optional<ResourceLocation> tag)
+        {
+            this(tool, target, mode, tag, false);
+        }
+
+        /** A new whitelist filter: only the target block. */
         public Rule(ResourceLocation tool, ResourceLocation target)
         {
             this(tool, target, Mode.ITEM, Optional.empty());
+        }
+
+        /** A new filter of either list: only the target block. */
+        public Rule(ResourceLocation tool, ResourceLocation target, boolean blacklist)
+        {
+            this(tool, target, Mode.ITEM, Optional.empty(), blacklist);
+        }
+
+        /** The same filter with another mode (and tag), in the same list. */
+        public Rule withMode(Mode mode, Optional<ResourceLocation> tag)
+        {
+            return new Rule(tool, target, mode, tag, blacklist);
         }
 
         /**
@@ -122,7 +160,7 @@ public record SwapRules(List<Rule> rules)
             return switch (mode)
             {
                 case ITEM -> target.equals(blockItemId) || target.equals(blockId) || target.equals(pickedId);
-                case TAG -> block.builtInRegistryHolder().is(TagKey.create(Registries.BLOCK, tag.orElseThrow()));
+                case TAG -> block.builtInRegistryHolder().is(blockTag(tag.orElseThrow()));
                 case MOD -> target.getNamespace().equals(blockId.getNamespace());
             };
         }
@@ -149,6 +187,7 @@ public record SwapRules(List<Rule> rules)
             buf.writeResourceLocation(rule.target());
             buf.writeVarInt(rule.mode().ordinal());
             buf.writeOptional(rule.tag(), FriendlyByteBuf::writeResourceLocation);
+            buf.writeBoolean(rule.blacklist());
         }
     }
 
@@ -160,7 +199,7 @@ public record SwapRules(List<Rule> rules)
         List<Rule> rules = new ArrayList<>(size);
         for (int i = 0; i < size; i++)
             rules.add(new Rule(buf.readResourceLocation(), buf.readResourceLocation(), Mode.byId(buf.readVarInt()),
-                    buf.readOptional(FriendlyByteBuf::readResourceLocation)));
+                    buf.readOptional(FriendlyByteBuf::readResourceLocation), buf.readBoolean()));
         return new SwapRules(rules);
     }
 
@@ -174,17 +213,17 @@ public record SwapRules(List<Rule> rules)
         return rules.isEmpty();
     }
 
-    /** The rules of one stored tool, in filter slot order. */
-    public List<Rule> forTool(ResourceLocation tool)
+    /** The whitelist ({@code blacklist} false) or blacklist rules of one stored tool, in filter slot order. */
+    public List<Rule> forTool(ResourceLocation tool, boolean blacklist)
     {
         List<Rule> result = new ArrayList<>();
         for (Rule rule : rules)
-            if (rule.tool().equals(tool))
+            if (rule.tool().equals(tool) && rule.blacklist() == blacklist)
                 result.add(rule);
         return result;
     }
 
-    /** Every tool that has at least one rule, in first-rule order. */
+    /** Every tool that has at least one rule (either list), in first-rule order. */
     public Set<ResourceLocation> tools()
     {
         Set<ResourceLocation> result = new LinkedHashSet<>();
@@ -194,63 +233,64 @@ public record SwapRules(List<Rule> rules)
     }
 
     /**
-     * Puts {@code target} into filter slot {@code index} of {@code tool}: replaces the filter that is there
-     * (a whole-mod filter stays one, anything else becomes "this block"), or adds a new one if the slot is past the last filter.
-     * Nothing changes if the tool already has a filter for that target, or has no room left.
+     * Puts {@code target} into filter slot {@code index} of {@code tool}'s whitelist or blacklist: replaces the
+     * filter that is there (a whole-mod filter stays one, anything else becomes "this block"), or adds a new
+     * one if the slot is past the last filter.
+     * Nothing changes if that list already has a filter for that target, or has no room left.
      */
-    public SwapRules withTarget(ResourceLocation tool, int index, ResourceLocation target)
+    public SwapRules withTarget(ResourceLocation tool, boolean blacklist, int index, ResourceLocation target)
     {
-        List<Rule> mine = forTool(tool);
+        List<Rule> mine = forTool(tool, blacklist);
         for (Rule rule : mine)
             if (rule.target().equals(target))
                 return this;
 
         List<Rule> changed = new ArrayList<>(rules);
         if (index >= 0 && index < mine.size())
-            changed.set(globalIndex(tool, index), mine.get(index).mode() == Mode.MOD
-                    ? new Rule(tool, target, Mode.MOD, Optional.empty())
-                    : new Rule(tool, target)); // a tag belongs to the old block
+            changed.set(globalIndex(tool, blacklist, index), mine.get(index).mode() == Mode.MOD
+                    ? new Rule(tool, target, Mode.MOD, Optional.empty(), blacklist)
+                    : new Rule(tool, target, blacklist)); // a tag belongs to the old block
         else if (mine.size() < MAX_PER_TOOL && rules.size() < MAX_TOTAL)
-            changed.add(new Rule(tool, target));
+            changed.add(new Rule(tool, target, blacklist));
         else
             return this;
         return new SwapRules(changed);
     }
 
     /**
-     * Switches filter {@code index} of {@code tool} to its next mode: this block -> one of its tags ->
-     * whole mod -> this block.
+     * Switches filter {@code index} of {@code tool}'s whitelist or blacklist to its next mode: this block ->
+     * one of its tags -> whole mod -> this block.
      *
      * @param blockTags the block tags of the filter's target (the caller looks them up); the tag mode
      *                  starts with the first one and is skipped if there are none
      */
-    public SwapRules cycleMode(ResourceLocation tool, int index, List<ResourceLocation> blockTags)
+    public SwapRules cycleMode(ResourceLocation tool, boolean blacklist, int index, List<ResourceLocation> blockTags)
     {
-        int global = globalIndex(tool, index);
+        int global = globalIndex(tool, blacklist, index);
         if (global < 0)
             return this;
         Rule old = rules.get(global);
         Rule next = switch (old.mode())
         {
             case ITEM -> blockTags.isEmpty()
-                    ? new Rule(old.tool(), old.target(), Mode.MOD, Optional.empty())
-                    : new Rule(old.tool(), old.target(), Mode.TAG, Optional.of(blockTags.get(0)));
-            case TAG -> new Rule(old.tool(), old.target(), Mode.MOD, Optional.empty());
-            case MOD -> new Rule(old.tool(), old.target());
+                    ? old.withMode(Mode.MOD, Optional.empty())
+                    : old.withMode(Mode.TAG, Optional.of(blockTags.get(0)));
+            case TAG -> old.withMode(Mode.MOD, Optional.empty());
+            case MOD -> old.withMode(Mode.ITEM, Optional.empty());
         };
         List<Rule> changed = new ArrayList<>(rules);
         changed.set(global, next);
         return new SwapRules(changed);
     }
 
-    /** Makes filter {@code index} of {@code tool} match every block with this block tag. */
-    public SwapRules withTag(ResourceLocation tool, int index, ResourceLocation tag)
+    /** Makes filter {@code index} of {@code tool}'s whitelist or blacklist match every block with this block tag. */
+    public SwapRules withTag(ResourceLocation tool, boolean blacklist, int index, ResourceLocation tag)
     {
-        int global = globalIndex(tool, index);
+        int global = globalIndex(tool, blacklist, index);
         if (global < 0)
             return this;
         Rule old = rules.get(global);
-        Rule next = new Rule(old.tool(), old.target(), Mode.TAG, Optional.of(tag));
+        Rule next = old.withMode(Mode.TAG, Optional.of(tag));
         if (next.equals(old))
             return this;
         List<Rule> changed = new ArrayList<>(rules);
@@ -258,10 +298,10 @@ public record SwapRules(List<Rule> rules)
         return new SwapRules(changed);
     }
 
-    /** Removes filter {@code index} of {@code tool}; the tool's later filters move up one slot. */
-    public SwapRules without(ResourceLocation tool, int index)
+    /** Removes filter {@code index} of {@code tool}'s whitelist or blacklist; the later filters of that list move up one slot. */
+    public SwapRules without(ResourceLocation tool, boolean blacklist, int index)
     {
-        int global = globalIndex(tool, index);
+        int global = globalIndex(tool, blacklist, index);
         if (global < 0)
             return this;
         List<Rule> changed = new ArrayList<>(rules);
@@ -270,8 +310,8 @@ public record SwapRules(List<Rule> rules)
     }
 
     /**
-     * These rules followed by {@code extra}, cleaned up: a rule of {@code extra} is left out if its tool
-     * already has a filter for that target or has no free filter slot.
+     * These rules followed by {@code extra}, cleaned up: a rule of {@code extra} is left out if its tool's
+     * list (whitelist or blacklist) already has a filter for that target or has no free filter slot.
      */
     public SwapRules withAll(SwapRules extra)
     {
@@ -283,35 +323,38 @@ public record SwapRules(List<Rule> rules)
     }
 
     /**
-     * A copy that respects every limit: no duplicate (tool, target) pairs, at most MAX_PER_TOOL per tool
-     * and MAX_TOTAL overall. The server runs this on everything a client sends.
+     * A copy that respects every limit: no duplicate (tool, target) pairs within a list, at most MAX_PER_TOOL
+     * per tool and list, and MAX_TOTAL overall. The server runs this on everything a client sends.
      */
     public SwapRules sanitized()
     {
         List<Rule> clean = new ArrayList<>();
         Set<Rule> seen = new HashSet<>();
-        Map<ResourceLocation, Integer> perTool = new HashMap<>();
+        Map<ListKey, Integer> perList = new HashMap<>();
         for (Rule rule : rules)
         {
             if (clean.size() >= MAX_TOTAL)
                 break;
-            if (!seen.add(new Rule(rule.tool(), rule.target())))
+            if (!seen.add(new Rule(rule.tool(), rule.target(), rule.blacklist())))
                 continue;
-            if (perTool.merge(rule.tool(), 1, Integer::sum) > MAX_PER_TOOL)
+            if (perList.merge(new ListKey(rule.tool(), rule.blacklist()), 1, Integer::sum) > MAX_PER_TOOL)
                 continue;
             clean.add(rule);
         }
         return clean.size() == rules.size() ? this : new SwapRules(clean);
     }
 
-    /** Position in {@link #rules} of the {@code index}-th rule of {@code tool}, or -1. */
-    private int globalIndex(ResourceLocation tool, int index)
+    /** One filter list: the whitelist or the blacklist of one stored tool. */
+    private record ListKey(ResourceLocation tool, boolean blacklist) {}
+
+    /** Position in {@link #rules} of the {@code index}-th whitelist or blacklist rule of {@code tool}, or -1. */
+    private int globalIndex(ResourceLocation tool, boolean blacklist, int index)
     {
         if (index < 0)
             return -1;
         int seen = 0;
         for (int i = 0; i < rules.size(); i++)
-            if (rules.get(i).tool().equals(tool) && seen++ == index)
+            if (rules.get(i).tool().equals(tool) && rules.get(i).blacklist() == blacklist && seen++ == index)
                 return i;
         return -1;
     }

@@ -23,6 +23,7 @@ public final class CommonEvents
         MinecraftForge.EVENT_BUS.addListener(MegaToolMining::onLeftClickBlock);
         MinecraftForge.EVENT_BUS.addListener(MegaToolMining::onAttackEntity);   // third-person poke for others
         MinecraftForge.EVENT_BUS.addListener(MegaToolMining::onLogout);
+        MinecraftForge.EVENT_BUS.addListener(MegaToolMining::onServerStopped);
 
         // Enchantment Plate + Enchanted Book in an anvil
         MinecraftForge.EVENT_BUS.addListener(PlateHelper::onAnvilUpdate);

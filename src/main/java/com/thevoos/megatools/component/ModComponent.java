@@ -1,5 +1,7 @@
 package com.thevoos.megatools.component;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.mojang.serialization.Codec;
 import com.thevoos.megatools.MegaTools;
 import net.minecraft.nbt.CompoundTag;
@@ -15,16 +17,25 @@ import java.util.Objects;
  * written with its codec into the stack's NBT, under {MegaTools: {<name>: ...}}. The methods mirror the
  * ItemStack component methods of 1.21 (get, getOrDefault, has, set, remove), with the stack passed in.
  *
- * Values are decoded on every read; they are small (a few ints, at most 27 stacks), and the stack's NBT is
- * synced to clients by vanilla like any other item data.
+ * The stack's NBT is synced to clients by vanilla like any other item data.
+ *
+ * Decoded values are cached per NBT tag OBJECT. Reads happen every tick and every frame (held light,
+ * auto-swap, mining speed, shader light), and decoding the storage means building up to 27 item stacks.
+ * set() always stores a new tag object, and copying or syncing a stack creates new tag objects too, so a
+ * cached value can't outlive the data it was read from. Like 1.21's data components, the values must never
+ * be modified: copy them first.
  */
 public final class ModComponent<T>
 {
     /** Root key of all Mega Tools data in an item's NBT. */
     public static final String ROOT = "MegaTools";
+    /** Cached for data that can't be read (Guava caches can't hold null). */
+    private static final Object UNREADABLE = new Object();
 
     private final String name;
     private final Codec<T> codec;
+    /** NBT tag (by identity: weakKeys() compares with ==) -> decoded value. Both sides use it: thread-safe. */
+    private final Cache<Tag, Object> decoded = CacheBuilder.newBuilder().weakKeys().maximumSize(512).build();
 
     public ModComponent(String name, Codec<T> codec)
     {
@@ -38,15 +49,25 @@ public final class ModComponent<T>
     }
 
     /** The value on this stack, or null if it has none (or it can't be read). */
+    @SuppressWarnings("unchecked")
     public @Nullable T get(ItemStack stack)
     {
         CompoundTag root = stack.getTagElement(ROOT);
-        if (root == null || !root.contains(name))
+        if (root == null)
             return null;
         Tag tag = root.get(name);
-        return codec.parse(NbtOps.INSTANCE, tag)
-                .resultOrPartial(error -> MegaTools.LOGGER.warn("Ignoring unreadable Mega Tools data '{}' on {}: {}", name, stack, error))
-                .orElse(null);
+        if (tag == null)
+            return null;
+        Object value = decoded.getIfPresent(tag);
+        if (value == null)
+        {
+            value = codec.parse(NbtOps.INSTANCE, tag)
+                    .resultOrPartial(error -> MegaTools.LOGGER.warn("Ignoring unreadable Mega Tools data '{}' on {}: {}", name, stack, error))
+                    .map(Object.class::cast)
+                    .orElse(UNREADABLE);
+            decoded.put(tag, value);
+        }
+        return value == UNREADABLE ? null : (T) value;
     }
 
     public T getOrDefault(ItemStack stack, T fallback)

@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "#megatools:mega_tool_unbreakable",
+      "required": false
+    }
+  ]
+}

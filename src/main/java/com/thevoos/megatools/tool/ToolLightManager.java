@@ -9,6 +9,8 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.network.protocol.game.ClientboundLightUpdatePacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.util.Mth;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
@@ -534,13 +536,25 @@ public final class ToolLightManager
             for (int x = minX; x <= maxX; x++)
                 for (int z = minZ; z <= maxZ; z++)
                 {
-                    if (!world.getChunkSource().chunkMap.getPlayers(new ChunkPos(x, z), false).contains(player))
+                    if (!isSentTo(world, player, x, z))
                         continue;
                     Resync resync = pending.computeIfAbsent(ChunkPos.asLong(x, z), c -> new Resync(world.dimension()));
                     resync.sections.set(minIndex, maxIndex + 1);
                     resync.due = now + RESYNC_DELAY; // later changes push it back, so the last one is included
                 }
         }
+    }
+
+    /**
+     * True if the server sends this chunk to the player (who is in this level): the check ChunkMap#getPlayers
+     * makes, for one player. getPlayers builds a list of every player in the level on each call, which this
+     * code would do for every chunk around every light change.
+     */
+    private static boolean isSentTo(ServerLevel world, ServerPlayer player, int x, int z)
+    {
+        SectionPos section = player.getLastSectionPos();
+        int viewDistance = Mth.clamp(world.getServer().getPlayerList().getViewDistance(), 2, 32); // as ChunkMap#setViewDistance
+        return ChunkMap.isChunkInRange(x, z, section.x(), section.z(), viewDistance);
     }
 
     private static boolean anyRecent(Long2LongOpenHashMap recent, int minX, int maxX, int minZ, int maxZ, long now)
@@ -588,7 +602,7 @@ public final class ToolLightManager
                 if (world == null || player.serverLevel() != world)
                     continue;
                 // The light engine catches up every tick, and resyncs wait RESYNC_DELAY ticks, so the light is ready.
-                if (world.getChunkSource().chunkMap.getPlayers(pos, false).contains(player))
+                if (isSentTo(world, player, pos.x, pos.z))
                     player.connection.send(new ClientboundLightUpdatePacket(pos, world.getLightEngine(), new BitSet(), resync.sections));
             }
             if (entry.getValue().isEmpty())

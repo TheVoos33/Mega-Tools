@@ -226,6 +226,8 @@ public class MultiToolItem extends Item
     @Override
     public float getDestroySpeed(ItemStack stack, BlockState state)
     {
+        if (tier.isMega() && state.is(ModTags.NOT_MINEABLE))
+            return 1.0F; // not the right tool: hand speed
         if (state.is(Blocks.COBWEB))
             return 15.0F;
         if (tier.supportTools() && ToolData.supportAbility(stack, ToolSettings.SHEAR))
@@ -249,7 +251,9 @@ public class MultiToolItem extends Item
     {
         if (isBroken(stack))
             return false; // broken: no tool drops, like an empty hand
-        if (tier.isMega() || state.is(Blocks.COBWEB))
+        if (tier.isMega())
+            return !state.is(ModTags.NOT_MINEABLE);
+        if (state.is(Blocks.COBWEB))
             return true;
         return state.is(ModTags.MINEABLE_WITH_PAXEL) && TierSortingRegistry.isCorrectTierForDrops(tier.harvestTier(), state);
     }
@@ -301,7 +305,7 @@ public class MultiToolItem extends Item
     }
 
     // =====================================================================================
-    //  Right click on a block: strip -> path/till -> brush -> trim -> TNT -> torch -> ignite
+    //  Right click on a block: brush -> TNT -> torch -> strip -> path/till -> trim -> ignite
     // =====================================================================================
 
     @Override
@@ -319,14 +323,39 @@ public class MultiToolItem extends Item
         Level level = context.getLevel();
         BlockPos pos = context.getClickedPos();
 
-        // 1. Axe: strip logs, scrape/un-wax copper.
+        boolean support = ToolData.hasSupportTool(stack);
+
+        // 1. Brush: start "using" the item; brushing happens in onUseTick. Only on brushable blocks.
+        if (support && settings.has(ToolSettings.BRUSH) && player != null
+                && level.getBlockEntity(pos) instanceof BrushableBlockEntity)
+        {
+            player.startUsingItem(context.getHand());
+            return InteractionResult.CONSUME;
+        }
+
+        // 2. Flint and steel on TNT: vanilla TNT only accepts the real flint and steel item.
+        if (support && settings.has(ToolSettings.IGNITE))
+        {
+            InteractionResult tnt = tryIgniteTnt(context, stack);
+            if (tnt.consumesAction()) return tnt;
+        }
+
+        // 3. Place Torch: put one torch from the torch slot on the clicked face. Comes before strip,
+        //    path and till, which would otherwise always win on logs, grass and dirt.
+        if (settings.has(ToolSettings.PLACE_TORCH))
+        {
+            InteractionResult torch = tryPlaceTorch(context, stack);
+            if (torch.consumesAction()) return torch;
+        }
+
+        // 4. Axe: strip logs, scrape/un-wax copper.
         if (settings.has(ToolSettings.STRIP))
         {
             InteractionResult result = Items.IRON_AXE.useOn(context);
             if (result.consumesAction()) return result;
         }
 
-        // 2. Shovel path vs hoe till: both work on grass/dirt, so sneaking picks the hoe first.
+        // 5. Shovel path vs hoe till: both work on grass/dirt, so sneaking picks the hoe first.
         boolean sneaking = player != null && player.isSecondaryUseActive();
         Item first = sneaking ? Items.IRON_HOE : Items.IRON_SHOVEL;
         Item second = sneaking ? Items.IRON_SHOVEL : Items.IRON_HOE;
@@ -335,35 +364,11 @@ public class MultiToolItem extends Item
         result = tryDigAction(second, settings, context);
         if (result.consumesAction()) return result;
 
-        boolean support = ToolData.hasSupportTool(stack);
-
-        // 3. Brush: start "using" the item; brushing happens in onUseTick.
-        if (support && settings.has(ToolSettings.BRUSH) && player != null
-                && level.getBlockEntity(pos) instanceof BrushableBlockEntity)
-        {
-            player.startUsingItem(context.getHand());
-            return InteractionResult.CONSUME;
-        }
-
-        // 4. Shears: trim growing plants (cave vines, kelp, weeping/twisting vines) so they stop growing.
+        // 6. Shears: trim growing plants (cave vines, kelp, weeping/twisting vines) so they stop growing.
         if (support && settings.has(ToolSettings.SHEAR))
         {
             InteractionResult trim = Items.SHEARS.useOn(context);
             if (trim.consumesAction()) return trim;
-        }
-
-        // 5. Flint and steel on TNT: vanilla TNT only accepts the real flint and steel item.
-        if (support && settings.has(ToolSettings.IGNITE))
-        {
-            InteractionResult tnt = tryIgniteTnt(context, stack);
-            if (tnt.consumesAction()) return tnt;
-        }
-
-        // 6. Place Torch: put one torch from the torch slot on the clicked face.
-        if (settings.has(ToolSettings.PLACE_TORCH))
-        {
-            InteractionResult torch = tryPlaceTorch(context, stack);
-            if (torch.consumesAction()) return torch;
         }
 
         // 7. Flint and steel: light campfires/candles or place fire.

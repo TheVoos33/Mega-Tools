@@ -19,13 +19,17 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Storage whitelist: gives the item tag #megatools:storable_item to items that have no suitable tag
@@ -128,6 +132,50 @@ public final class StorageWhitelist
         tagIds.forEach(id -> entries.add(TagEntry.optionalTag(id)));
         itemIds.forEach(id -> entries.add(TagEntry.optionalElement(id)));
         return entries;
+    }
+
+    /**
+     * Drops the file's tags that contain #megatools:storable_item themselves, directly or through other tags
+     * (a datapack tag that lists "#megatools:storable_item"). That tag and #megatools:storable_item would
+     * contain each other, and Minecraft then throws out BOTH: no item could be stored at all.
+     *
+     * @param entriesOf a tag's entries from the datapacks (empty for an unknown tag), before tags are built
+     */
+    public static List<TagEntry> withoutLoops(List<TagEntry> entries, Function<ResourceLocation, List<TagEntry>> entriesOf)
+    {
+        List<TagEntry> kept = new ArrayList<>(entries.size());
+        for (TagEntry entry : entries)
+        {
+            Deque<ResourceLocation> todo = new ArrayDeque<>();
+            entry.visitRequiredDependencies(todo::push);
+            entry.visitOptionalDependencies(todo::push);
+            if (todo.isEmpty() || !reachesStorable(todo, entriesOf))
+                kept.add(entry);
+            else
+                MegaTools.LOGGER.warn("[{}] ignoring '{}': it contains #{} itself, so each tag would contain the other",
+                        FILE_NAME, entry, ModTags.STORABLE_ITEM.location());
+        }
+        return kept;
+    }
+
+    /** True if one of the tags in {@code todo}, or a tag they contain (at any depth), is #megatools:storable_item. */
+    private static boolean reachesStorable(Deque<ResourceLocation> todo, Function<ResourceLocation, List<TagEntry>> entriesOf)
+    {
+        Set<ResourceLocation> seen = new HashSet<>();
+        while (!todo.isEmpty())
+        {
+            ResourceLocation tag = todo.pop();
+            if (tag.equals(ModTags.STORABLE_ITEM.location()))
+                return true;
+            if (!seen.add(tag))
+                continue; // a loop among other tags: not ours to report, Minecraft logs it
+            for (TagEntry inner : entriesOf.apply(tag))
+            {
+                inner.visitRequiredDependencies(todo::push);
+                inner.visitOptionalDependencies(todo::push);
+            }
+        }
+        return false;
     }
 
     /** One entry of the file: an item id, or a tag ("#id", or a plain id in the "tags" list). */

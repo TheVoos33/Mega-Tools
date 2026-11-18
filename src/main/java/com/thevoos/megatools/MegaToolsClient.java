@@ -2,6 +2,7 @@ package com.thevoos.megatools;
 
 import com.thevoos.megatools.client.ClientEvents;
 import com.thevoos.megatools.client.DynamicLightsCompat;
+import com.thevoos.megatools.client.FlatTextures;
 import com.thevoos.megatools.client.MegaToolArmPose;
 import com.thevoos.megatools.client.ModKeyMappings;
 import com.thevoos.megatools.client.ToolHudOverlay;
@@ -48,6 +49,8 @@ public final class MegaToolsClient
         modEventBus.addListener(ModKeyMappings::onRegisterKeyMappings);                 // Ctrl+R / Shift+R / R
         modEventBus.addListener(ClientEvents::onClientSetup);                           // ToolMenu -> ToolScreen
         modEventBus.addListener(ToolHudOverlay::onRegisterGuiOverlays);                 // auto-swap icon near hotbar
+        modEventBus.addListener(FlatTextures::onAddPackFinders);                        // built-in flat textures pack
+        modEventBus.addListener(FlatTextures::onRegisterReloadListeners);               // poke animation on/off
 
         // ---- Game bus: per-tick / per-input client logic -------------------------------------
         MinecraftForge.EVENT_BUS.addListener(ClientEvents::onClientTickPre);   // marks "inside the game tick"

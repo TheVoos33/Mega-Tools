@@ -87,6 +87,9 @@ public final class MegaToolClientExtensions
                 // Paxels share this item class but keep vanilla's hand rendering.
                 if (!MegaToolMining.isMegaTool(itemInHand))
                     return false;
+                // A resource pack switched the poke animation off (see FlatTextures): vanilla animations.
+                if (!FlatTextures.pokeAnimation())
+                    return false;
                 // While brushing, keep vanilla's brush animation.
                 if (player.isUsingItem() && player.getUseItem() == itemInHand)
                     return false;
@@ -127,6 +130,8 @@ public final class MegaToolClientExtensions
             {
                 if (!MegaToolMining.isMegaTool(itemStack))
                     return null; // paxels: vanilla pose
+                if (!FlatTextures.pokeAnimation())
+                    return null; // poke animation switched off by a resource pack: vanilla pose
                 if (entity.isUsingItem() && entity.getUseItem() == itemStack)
                     return null; // brushing: vanilla brush pose
                 return MegaToolArmPose.poke();

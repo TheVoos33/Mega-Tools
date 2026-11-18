@@ -7,6 +7,8 @@ import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.tool.ToolData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -16,13 +18,17 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import com.thevoos.megatools.component.ItemContainerContents;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.HitResult;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Tool auto-swap pre-selection (client side).
@@ -40,6 +46,10 @@ import java.util.Objects;
  *     part is whatever item "pick block" gives for that spot (see pickedItem).
  *     The default rules of config/megatools-default-rules.json are among them: they are copied onto
  *     the tool when it is first held with the named tool in storage (see DefaultSwapRules#offer).
+ *     Blacklist rules work the other way round: a stored tool whose blacklist matches the block is not
+ *     pre-selected at all, neither by a whitelist rule nor by step 2. Only a whitelist rule that is MORE
+ *     EXACT wins over it (or one at the same level: exact block / tag / whole mod). So "blacklist: whole
+ *     mod AE2" + "whitelist: P2P tunnel" pre-selects the Memory Card for P2P tunnels and for no other AE2 block.
  *  2. Every other stored tool, in storage order, whose mod id (registry namespace) equals the block's
  *     mod id, or that config/megatools-tool-aliases.json maps to the block's mod id (see ToolAliases).
  *     Vanilla (minecraft:) blocks are skipped here: the paxel itself is the tool for those.
@@ -55,6 +65,8 @@ public final class AutoSwapClient
     private static final List<Integer> candidateSlots = new ArrayList<>();
     private static final List<ItemStack> candidates = new ArrayList<>();
     private static int selected = 0;
+    /** Stored tools (item ids) a blacklist rule keeps from being pre-selected for the current block. */
+    private static final Set<ResourceLocation> blocked = new HashSet<>();
 
     // ---- change detection: what the current result was computed for ----
     private static Block lastBlock = null;              // null = not looking at a block
@@ -64,6 +76,18 @@ public final class AutoSwapClient
     private static SwapRules lastRules = SwapRules.EMPTY;
     private static List<String> lastAttached = List.of(); // mod ids attached to the targeted block
     private static Item lastPicked = Items.AIR;           // what "pick block" gives for the targeted spot
+
+    // ---- what the crosshair was on when attachments and the picked part were last looked up ----
+    /** Ticks after which they are looked up again anyway (a label or node added to the block in place). */
+    private static final int LOOK_REFRESH = 10;
+    private static BlockPos lookPos = null;               // null = nothing looked up
+    private static Direction lookFace = null;
+    private static int lookCell = -1;                     // 1/16 cell of the block the crosshair is in
+    private static BlockState lookState = null;
+    private static boolean lookWantsPick = false;
+    private static int lookAge = 0;
+    private static List<String> lookAttached = List.of();
+    private static Item lookPicked = Items.AIR;
 
     private AutoSwapClient() {}
 
@@ -84,8 +108,12 @@ public final class AutoSwapClient
         Block block = hit == null ? null : mc.level.getBlockState(hit.getBlockPos()).getBlock();
         // Only tools with tool storage can swap, so only they pay for a closer look at the target.
         boolean canSwap = hit != null && held.getItem() instanceof MultiToolItem multiTool && multiTool.getTier().hasAutoSwap();
-        List<String> attached = canSwap ? BlockAttachments.modsAt(mc.level, mc.player, hit) : List.of();
-        Item picked = canSwap && !rules.isEmpty() ? pickedItem(mc, hit) : Items.AIR; // only rules look at it
+        if (canSwap)
+            lookAtTarget(mc, hit, !rules.isEmpty()); // only rules look at the picked part
+        else
+            forgetLook();
+        List<String> attached = canSwap ? lookAttached : List.of();
+        Item picked = canSwap ? lookPicked : Items.AIR;
 
         boolean changed = block != lastBlock
                 || hotbarSlot != lastHotbarSlot
@@ -114,6 +142,47 @@ public final class AutoSwapClient
         if (!(mc.screen instanceof SwapRulesScreen))
             DefaultSwapRules.offer(held, storage);
         rescan(held, block, attached, picked);
+    }
+
+    /**
+     * Looks up the attachments (reflection into other mods) and the picked part (another mod's code) of the
+     * target, but only when the crosshair moved to another 1/16 of the block, another face or block state,
+     * or LOOK_REFRESH ticks passed. Standing still and looking at a block then costs nothing.
+     */
+    private static void lookAtTarget(Minecraft mc, BlockHitResult hit, boolean wantsPick)
+    {
+        BlockPos pos = hit.getBlockPos();
+        BlockState state = mc.level.getBlockState(pos);
+        int cell = cell(hit.getLocation(), pos);
+        if (pos.equals(lookPos) && hit.getDirection() == lookFace && cell == lookCell && state == lookState
+                && wantsPick == lookWantsPick && ++lookAge < LOOK_REFRESH)
+            return;
+        lookPos = pos.immutable();
+        lookFace = hit.getDirection();
+        lookCell = cell;
+        lookState = state;
+        lookWantsPick = wantsPick;
+        lookAge = 0;
+        lookAttached = BlockAttachments.modsAt(mc.level, mc.player, hit);
+        lookPicked = wantsPick ? pickedItem(mc, hit) : Items.AIR;
+    }
+
+    private static void forgetLook()
+    {
+        lookPos = null;
+        lookFace = null;
+        lookState = null;
+        lookAttached = List.of();
+        lookPicked = Items.AIR;
+    }
+
+    /** Which 1/16 x 1/16 x 1/16 cell of the block at {@code pos} the point is in (0 to 4912). */
+    private static int cell(Vec3 point, BlockPos pos)
+    {
+        int x = Mth.clamp(Mth.floor((point.x - pos.getX()) * 16), 0, 16);
+        int y = Mth.clamp(Mth.floor((point.y - pos.getY()) * 16), 0, 16);
+        int z = Mth.clamp(Mth.floor((point.z - pos.getZ()) * 16), 0, 16);
+        return (x * 17 + y) * 17 + z;
     }
 
     /** The block the player looks at (with the exact spot), or null. */
@@ -146,6 +215,7 @@ public final class AutoSwapClient
     {
         candidateSlots.clear();
         candidates.clear();
+        blocked.clear();
         selected = 0;
 
         if (block == null || !(held.getItem() instanceof MultiToolItem multiTool) || !multiTool.getTier().hasAutoSwap())
@@ -155,7 +225,7 @@ public final class AutoSwapClient
         String blockMod = blockId.getNamespace();
         NonNullList<ItemStack> storage = ToolData.getStorage(held, multiTool.getTier().storageSlots());
 
-        // ---- 1. This tool's custom rules (default rules are copied into them) ----
+        // ---- 1. This tool's custom rules (default rules are copied into them; blacklists fill `blocked`) ----
         addRuleMatches(ToolData.getSwapRules(held), storage, block, blockId, BuiltInRegistries.ITEM.getKey(picked));
 
         // ---- 2. Automatic matches (same mod / aliases), after the custom ones ----
@@ -167,7 +237,7 @@ public final class AutoSwapClient
             addModMatches(storage, blockMod);
     }
 
-    /** Adds every stored tool, in storage order, that comes from this mod or is aliased to it. */
+    /** Adds every stored tool, in storage order, that comes from this mod or is aliased to it (and isn't blacklisted here). */
     private static void addModMatches(NonNullList<ItemStack> storage, String mod)
     {
         for (int i = 0; i < storage.size(); i++)
@@ -176,12 +246,20 @@ public final class AutoSwapClient
             if (stored.isEmpty() || candidateSlots.contains(i))
                 continue;
             ResourceLocation toolId = BuiltInRegistries.ITEM.getKey(stored.getItem());
+            if (blocked.contains(toolId))
+                continue;
             if (mod.equals(toolId.getNamespace()) || ToolAliases.matches(toolId, mod))
                 addCandidate(i, stored);
         }
     }
 
-    /** Stored tools these rules name for the block: exact block first, then tag rules, then whole-mod rules. */
+    /**
+     * Stored tools these rules name for the block: exact block first, then tag rules, then whole-mod rules.
+     *
+     * Blacklist rules go through the same levels. At each level the whitelist rules come first, then the
+     * blacklist rules put their tool into {@code blocked}: a tool decided at an earlier (more exact) level
+     * stays decided, and at the same level the whitelist wins.
+     */
     private static void addRuleMatches(SwapRules rules, NonNullList<ItemStack> storage, Block block,
                                        ResourceLocation blockId, ResourceLocation pickedId)
     {
@@ -189,9 +267,15 @@ public final class AutoSwapClient
             return;
         ResourceLocation blockItemId = BuiltInRegistries.ITEM.getKey(block.asItem());
         for (SwapRules.Mode mode : SwapRules.Mode.values())
+        {
             for (SwapRules.Rule rule : rules.rules())
-                if (rule.mode() == mode && rule.matches(block, blockId, blockItemId, pickedId))
+                if (!rule.blacklist() && rule.mode() == mode && !blocked.contains(rule.tool())
+                        && rule.matches(block, blockId, blockItemId, pickedId))
                     addStoredTool(storage, rule.tool());
+            for (SwapRules.Rule rule : rules.rules())
+                if (rule.blacklist() && rule.mode() == mode && rule.matches(block, blockId, blockItemId, pickedId))
+                    blocked.add(rule.tool()); // no effect on a tool that already is a candidate
+        }
     }
 
     /** Adds every stored tool with this item id (normally one) that isn't a candidate yet. */
@@ -251,6 +335,7 @@ public final class AutoSwapClient
     {
         candidateSlots.clear();
         candidates.clear();
+        blocked.clear();
         selected = 0;
         lastBlock = null;
         lastHotbarSlot = -1;
@@ -259,5 +344,6 @@ public final class AutoSwapClient
         lastRules = SwapRules.EMPTY;
         lastAttached = List.of();
         lastPicked = Items.AIR;
+        forgetLook();
     }
 }

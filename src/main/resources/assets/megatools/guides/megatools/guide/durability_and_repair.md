@@ -8,16 +8,11 @@ navigation:
 
 # Durability and repair
 
-Paxels **never break**. At 1 durability a paxel stops working: no mining, fighting or abilities until it
-is repaired. Its menu, storage and plates still work, so nothing is ever lost.
+Paxels never break. At 1 durability they stop working until repaired, and nothing stored is lost.
+8 resources of the tier will fully repair a tool, less resources are consumed with a tool that is not fully broken.
 
-Surround a damaged paxel with its material to **fully repair** it. It keeps its name, storage, plates and
-everything else. Repairing in an anvil with the same materials works too, as does Mending from a plate.
+![Repairing a broken Stone Paxel with one cobblestone](recipes/repair_stone_paxel_one.png) ![Repairing a broken Stone Paxel with 8 cobblestone](recipes/repair_stone_paxel_full.png)
 
-![Repairing a Stone Paxel](recipes/repair_stone_paxel.png)
+![Repairing a broken Iron Paxel with one iron ingot](recipes/repair_iron_paxel_one.png) ![Repairing a broken Iron Paxel with 8 iron ingots](recipes/repair_iron_paxel_full.png)
 
-![Repairing an Iron Paxel](recipes/repair_iron_paxel.png)
-
-![Repairing a Diamond Paxel](recipes/repair_diamond_paxel.png)
-
-If a crafting recipe ever uses up one of these tools, everything stored in it is given back to you.
+![Repairing a broken Diamond Paxel with one diamond](recipes/repair_diamond_paxel_one.png) ![Repairing a broken Diamond Paxel with 8 diamonds](recipes/repair_diamond_paxel_full.png)

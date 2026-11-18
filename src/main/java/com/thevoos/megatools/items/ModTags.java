@@ -14,12 +14,14 @@ public final class ModTags
             TagKey.create(Registries.BLOCK, MegaTools.id("mineable/paxel"));
 
     /**
-     * Blocks the Mega Tool can never break (any game mode).
-     * JSON: data/megatools/tags/blocks/mega_tool_unbreakable.json. Other mods and datapacks can add
-     * to it by shipping their own file at that same path with "replace": false.
+     * Blocks the Mega Tool is NOT the right tool for. Everything else counts as mined with the right tool.
+     * On these blocks the Mega Tool works like an empty hand: normal hand speed (no instant mining) and
+     * only the drops a hand gets. Empty by default; it includes the old #megatools:mega_tool_unbreakable tag
+     * (removed in v1.2) as an optional entry, so datapacks that still fill that tag keep working.
+     * JSON: data/megatools/tags/blocks/not_mineable.json, "replace": false to add blocks.
      */
-    public static final TagKey<Block> MEGA_TOOL_UNBREAKABLE =
-            TagKey.create(Registries.BLOCK, MegaTools.id("mega_tool_unbreakable"));
+    public static final TagKey<Block> NOT_MINEABLE =
+            TagKey.create(Registries.BLOCK, MegaTools.id("not_mineable"));
 
     /**
      * The only thing tool storage checks: an item is accepted if and only if it has this tag.
