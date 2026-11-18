@@ -18,7 +18,10 @@ navigation:
 
 Settings are under Mods > Mega Tools > Config.
 
-## Flat textures
+## 3D models or flat textures
 
-Enable **Mega Tools Flat Textures** under Options > Resource Packs for flat, vanilla-style tool textures.
-The Mega Tool then uses the vanilla tool animations, and the pictures in this guide show the flat textures.
+By default, the tools and heads use 3D models. To use flat 2D textures instead, enable
+**Mega Tools Flat Textures** under Options > Resource Packs. The Mega Tool then uses the vanilla tool
+animations, and the pictures in this guide show the flat textures.
+
+![The 3D models (left) and the flat 2D textures (right)](models_3d_2d.png)
