@@ -14,7 +14,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * Recipe serializers for the carry-over and repair recipe types. They reuse vanilla's CRAFTING recipe type,
+ * Recipe serializers for the carry-over recipe types. They reuse vanilla's CRAFTING recipe type,
  * so they work in crafting tables, the 2x2 inventory grid and the Crafter.
  */
 public final class ModRecipes
@@ -31,10 +31,6 @@ public final class ModRecipes
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ShapelessRecipe>> SHAPELESS_CARRY_OVER =
             SERIALIZERS.register("crafting_shapeless_carry_over",
                     () -> serializer(CarryOverShapelessRecipe.CODEC, CarryOverShapelessRecipe.STREAM_CODEC));
-
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ShapedRecipe>> TOOL_REPAIR =
-            SERIALIZERS.register("tool_repair",
-                    () -> serializer(ToolRepairRecipe.CODEC, ToolRepairRecipe.STREAM_CODEC));
 
     /** A serializer for subclass S, typed as its vanilla base class B (see above). */
     @SuppressWarnings({"unchecked", "deprecation"})

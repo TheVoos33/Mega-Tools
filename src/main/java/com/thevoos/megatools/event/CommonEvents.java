@@ -23,6 +23,7 @@ public final class CommonEvents
         NeoForge.EVENT_BUS.addListener(MegaToolMining::onLeftClickBlock);
         NeoForge.EVENT_BUS.addListener(MegaToolMining::onAttackEntity);   // third-person poke for others
         NeoForge.EVENT_BUS.addListener(MegaToolMining::onLogout);
+        NeoForge.EVENT_BUS.addListener(MegaToolMining::onServerStopped);
 
         // Enchantment Plate + Enchanted Book in an anvil
         NeoForge.EVENT_BUS.addListener(PlateHelper::onAnvilUpdate);

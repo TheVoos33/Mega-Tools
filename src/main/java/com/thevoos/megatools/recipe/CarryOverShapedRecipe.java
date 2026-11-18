@@ -26,22 +26,31 @@ public class CarryOverShapedRecipe extends ShapedRecipe implements PreservesTool
 {
     // Kept here because ShapedRecipe's own result field isn't accessible.
     private final ItemStackTemplate carryResult;
-    /** The result as a stack, for the "does everything fit" check in matches() (never handed out). */
-    private final ItemStack resultForChecks;
+    /**
+     * The result as a stack, for the checks in matches() (never handed out). Created on first use: recipes are
+     * read before item components are bound, so creating it in the constructor crashes the game at startup.
+     */
+    private ItemStack resultForChecks;
 
     public CarryOverShapedRecipe(Recipe.CommonInfo commonInfo, CraftingRecipe.CraftingBookInfo bookInfo,
                                  ShapedRecipePattern pattern, ItemStackTemplate result)
     {
         super(commonInfo, bookInfo, pattern, result);
         this.carryResult = result;
-        this.resultForChecks = result.create();
     }
 
     /** Vanilla shape match AND the tool's contents fit in the result (never deletes items). */
+    private ItemStack resultForChecks()
+    {
+        if (resultForChecks == null)
+            resultForChecks = carryResult.create();
+        return resultForChecks;
+    }
+
     @Override
     public boolean matches(CraftingInput input, Level level)
     {
-        return super.matches(input, level) && ToolCarryOver.canCarryOver(input, resultForChecks);
+        return super.matches(input, level) && ToolCarryOver.canCarryOver(input, resultForChecks());
     }
 
     /** Vanilla result, then the tool data is copied onto it. */

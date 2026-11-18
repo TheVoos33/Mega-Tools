@@ -1,15 +1,17 @@
 {
-  "type": "megatools:tool_repair",
+  "type": "megatools:crafting_shapeless_carry_over",
   "category": "equipment",
-  "pattern": [
-    "MMM",
-    "MTM",
-    "MMM"
+  "ingredients": [
+    "minecraft:iron_ingot",
+    "minecraft:iron_ingot",
+    "minecraft:iron_ingot",
+    "minecraft:iron_ingot",
+    "minecraft:iron_ingot",
+    "minecraft:iron_ingot",
+    "minecraft:iron_ingot",
+    "minecraft:iron_ingot",
+    "megatools:iron_paxel"
   ],
-  "key": {
-    "M": "minecraft:iron_ingot",
-    "T": "megatools:iron_paxel"
-  },
   "result": {
     "id": "megatools:iron_paxel"
   }

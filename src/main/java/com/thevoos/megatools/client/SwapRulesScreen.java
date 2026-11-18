@@ -58,6 +58,10 @@ import java.util.Set;
  *               EMI use for tag and mod search, so colour is not the only cue.
  *      scroll : on a tag filter, pick another of the block's tags (the tooltip lists them).
  *      right-click : remove.
+ *  - Whitelist / Blacklist (button above the top right corner of the filter slots): which of the
+ *    selected tool's two filter lists the slots show and edit. Whitelist filters pre-select the tool;
+ *    blacklist filters keep it from being pre-selected for their blocks (red slots), unless a more exact
+ *    whitelist filter matches too (see AutoSwapClient). Both lists have 18 slots and the same three modes.
  *    Default rules (config/megatools-default-rules.json, see DefaultSwapRules) are copied onto the tool
  *    and show up here as ordinary filters: they can be changed and removed like any other.
  *  - Copy / Paste (title bar): Copy remembers ALL of this tool's rules, Paste replaces the rules of
@@ -80,6 +84,8 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
     private static final int TAG_LINES = 9;
     private static final int HOVER = 0x80FFFFFF;
     private static final int DROP_TARGET = 0x8822BB33;
+    /** Behind every filter slot while the blacklist is shown. */
+    private static final int BLACKLIST_TINT = 0x50FF2020;
     private static final int STATUS_TICKS = 40;
 
     /** Copied rules. Static: it has to outlive this screen to reach another tool's GUI. */
@@ -95,16 +101,20 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
     private final Map<Identifier, ItemStack> icons = new HashMap<>();
     private final Map<Identifier, List<Identifier>> blockTags = new HashMap<>();
     private Identifier selectedTool;
+    /** Which list of the selected tool the filter slots show: false = whitelist, true = blacklist. */
+    private boolean blacklist;
     /** What the screen shows: the synced rules plus any change the server hasn't confirmed yet. */
     private SwapRules rules = SwapRules.EMPTY;
     private SwapRules lastSynced;
     // ---- Per-frame lookups, rebuilt only when the rules or the selection change ----
     private SwapRules cachedRules;
     private Identifier cachedTool;
+    private boolean cachedBlacklist;
     private List<SwapRules.Rule> selectedRules = List.of();
-    /** Filters per stored tool (the small number in its cell). */
+    /** Filters per stored tool in the shown list (the small number in its cell). */
     private final Map<Identifier, Integer> filterCounts = new HashMap<>();
     private Button pasteButton;
+    private Button listButton;
     private Component status;
     private int statusTicks;
 
@@ -142,8 +152,32 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
                 .tooltip(Tooltip.create(Component.translatable("gui.megatools.swap_rules.copy.desc")))
                 .build());
 
+        // Whitelist / Blacklist: right end of the filter label row, as wide as the longer of the two words
+        int listW = Math.max(font.width(Component.translatable("gui.megatools.swap_rules.whitelist")),
+                font.width(Component.translatable("gui.megatools.swap_rules.blacklist"))) + 8;
+        int gridRight = leftPos + SwapRulesMenu.LEFT - 1 + SwapRulesMenu.COLUMNS * 18;
+        listButton = addRenderableWidget(Button.builder(Component.empty(), b -> toggleList())
+                .bounds(gridRight - listW, topPos + menu.filterLabelY() - 2, listW, 12)
+                .build());
+
         refreshPasteButton();
+        refreshListButton();
         refresh();
+    }
+
+    private void toggleList()
+    {
+        blacklist = !blacklist;
+        refreshListButton();
+    }
+
+    private void refreshListButton()
+    {
+        listButton.setMessage(blacklist
+                ? Component.translatable("gui.megatools.swap_rules.blacklist").withStyle(ChatFormatting.RED)
+                : Component.translatable("gui.megatools.swap_rules.whitelist"));
+        listButton.setTooltip(Tooltip.create(Component.translatable(blacklist
+                ? "gui.megatools.swap_rules.blacklist.desc" : "gui.megatools.swap_rules.whitelist.desc")));
     }
 
     private void refreshPasteButton()
@@ -219,6 +253,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
 
         if (selectedEntry() == null)
             selectedTool = entries.isEmpty() ? null : entries.getFirst().id();
+        listButton.visible = selectedTool != null;
     }
 
     private Entry selectedEntry()
@@ -274,19 +309,26 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
      */
     private void updateCache()
     {
-        boolean rulesChanged = rules != cachedRules;
-        if (!rulesChanged && Objects.equals(selectedTool, cachedTool))
+        boolean countsChanged = rules != cachedRules || blacklist != cachedBlacklist;
+        if (!countsChanged && Objects.equals(selectedTool, cachedTool))
             return;
-        if (rulesChanged)
+        if (countsChanged)
             filterCounts.clear();
         cachedRules = rules;
+        cachedBlacklist = blacklist;
         cachedTool = selectedTool;
-        selectedRules = selectedTool == null ? List.of() : rules.forTool(selectedTool);
+        selectedRules = selectedTool == null ? List.of() : shownRules();
+    }
+
+    /** The shown list (whitelist or blacklist) of the selected tool. Not cached: use selectedRules while drawing. */
+    private List<SwapRules.Rule> shownRules()
+    {
+        return rules.forTool(selectedTool, blacklist);
     }
 
     private int filterCount(Identifier tool)
     {
-        return filterCounts.computeIfAbsent(tool, id -> rules.forTool(id).size());
+        return filterCounts.computeIfAbsent(tool, id -> rules.forTool(id, blacklist).size());
     }
 
     private static boolean exists(Identifier id)
@@ -320,14 +362,14 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
         return areas;
     }
 
-    /** Puts the item into filter slot {@code index} of the selected tool (replace, or add if the slot is free). */
+    /** Puts the item into filter slot {@code index} of the selected tool's shown list (replace, or add if the slot is free). */
     public void setFilter(int index, ItemStack stack)
     {
         if (selectedTool != null && !stack.isEmpty())
-            apply(rules.withTarget(selectedTool, index, BuiltInRegistries.ITEM.getKey(stack.getItem())));
+            apply(rules.withTarget(selectedTool, blacklist, index, BuiltInRegistries.ITEM.getKey(stack.getItem())));
     }
 
-    /** Adds the item as a new filter of the selected tool. */
+    /** Adds the item as a new filter of the selected tool's shown list. */
     public void addFilter(ItemStack stack)
     {
         setFilter(SwapRulesMenu.FILTER_SLOTS, stack);
@@ -406,12 +448,13 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
             if (selectedTool == null || (button != 0 && button != 1))
                 return true;
             ItemStack carried = menu.getCarried();
+            List<SwapRules.Rule> mine = shownRules();
             if (!carried.isEmpty())
                 setFilter(filter, carried);                               // stays on the cursor: nothing is used up
-            else if (filter < rules.forTool(selectedTool).size())
+            else if (filter < mine.size())
                 apply(button == 0
-                        ? rules.cycleMode(selectedTool, filter, blockTags(rules.forTool(selectedTool).get(filter).target()))
-                        : rules.without(selectedTool, filter));
+                        ? rules.cycleMode(selectedTool, blacklist, filter, blockTags(mine.get(filter).target()))
+                        : rules.without(selectedTool, blacklist, filter));
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -424,7 +467,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
         int filter = filterAt(mouseX, mouseY);
         if (filter >= 0 && selectedTool != null && scrollY != 0)
         {
-            List<SwapRules.Rule> mine = rules.forTool(selectedTool);
+            List<SwapRules.Rule> mine = shownRules();
             if (filter < mine.size() && mine.get(filter).mode() == SwapRules.Mode.TAG)
             {
                 SwapRules.Rule rule = mine.get(filter);
@@ -434,7 +477,7 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
                     // Wheel up = previous, wheel down = next. An unknown tag (-1) starts at the first one.
                     int current = tags.indexOf(rule.tag().orElse(null));
                     int next = current < 0 ? 0 : Math.floorMod(current + (scrollY > 0 ? -1 : 1), tags.size());
-                    apply(rules.withTag(selectedTool, filter, tags.get(next)));
+                    apply(rules.withTag(selectedTool, blacklist, filter, tags.get(next)));
                 }
                 return true;
             }
@@ -483,7 +526,9 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
         lines.add(entry.stored() ? entry.icon().getHoverName() : itemName(entry.id()));
         if (!entry.stored())
             lines.add(Component.translatable("gui.megatools.swap_rules.not_stored").withStyle(ChatFormatting.RED));
-        lines.add(Component.translatable("gui.megatools.swap_rules.filter_count", rules.forTool(entry.id()).size())
+        lines.add(Component.translatable("gui.megatools.swap_rules.filter_count", rules.forTool(entry.id(), false).size())
+                .withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("gui.megatools.swap_rules.blacklist_count", rules.forTool(entry.id(), true).size())
                 .withStyle(ChatFormatting.GRAY));
     }
 
@@ -500,6 +545,8 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
         SwapRules.Rule rule = mine.get(index);
         List<Identifier> tags = blockTags(rule.target());
         lines.add(itemName(rule.target()));
+        if (rule.blacklist())
+            lines.add(Component.translatable("gui.megatools.swap_rules.blacklisted").withStyle(ChatFormatting.RED));
         switch (rule.mode())
         {
             case ITEM ->
@@ -594,6 +641,8 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
             int fx = filterX(i);
             int fy = filterY(i);
             ToolScreen.drawSlot(graphics, fx - 1, fy - 1);
+            if (blacklist)
+                graphics.fill(fx, fy, fx + 16, fy + 16, BLACKLIST_TINT);
             if (i < mine.size())
             {
                 SwapRules.Rule rule = mine.get(i);
@@ -630,8 +679,9 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
         else
         {
             Component name = selected.stored() ? selected.icon().getHoverName() : itemName(selected.id());
-            String label = Component.translatable("gui.megatools.swap_rules.filters_for", name).getString();
-            int room = imageWidth - 2 * SwapRulesMenu.LEFT;
+            String label = Component.translatable(blacklist
+                    ? "gui.megatools.swap_rules.blacklist_for" : "gui.megatools.swap_rules.filters_for", name).getString();
+            int room = listButton.getX() - leftPos - SwapRulesMenu.LEFT - 4;
             if (font.width(label) > room)
                 label = font.plainSubstrByWidth(label, room - font.width("...")) + "...";
             graphics.text(font, label, SwapRulesMenu.LEFT, menu.filterLabelY(), LABEL_COLOR, false);

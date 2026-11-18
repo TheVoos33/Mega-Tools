@@ -20,9 +20,8 @@ item_ids:
   <ItemImage id="megatools:diamond_paxel" scale="2" />
 </Row>
 
-A paxel mines everything a pickaxe, axe, shovel and hoe can mine, and cuts cobwebs like a sword. It mines
-20% faster than a vanilla pickaxe of the same material. Blocks that need a better tier still drop nothing.
-In a fight it hits like a sword, including sweeping attacks.
+* Mines everything a pickaxe, axe, shovel and hoe can, 20% faster than a pickaxe of the same material.
+* Cuts cobwebs and fights like a sword, with sweeping attacks.
 
 | | Stone | Iron | Diamond |
 |---|---|---|---|
@@ -33,36 +32,23 @@ In a fight it hits like a sword, including sweeping attacks.
 
 ## Right-click abilities
 
-Each one can be switched on or off in the [tool menu](tool_menu.md).
+Each one is switched on or off in the [tool menu](tool_menu.md).
 
-* **Strip**: strips logs and wood, scrapes and removes wax from copper.
-* **Path**: turns grass and dirt into paths, puts out campfires.
-* **Till**: turns grass and dirt into farmland. Sneak while right-clicking to till instead of making a path.
-* **Place Torch**: places a torch from the torch slot. Off by default.
+* **Place Torch**: places a torch from the torch slot. Off by default. When on, it comes before Strip,
+  Path and Till.
+* **Strip**: strips logs and wood, scrapes copper.
+* **Path**: grass and dirt to paths. **Till**: grass and dirt to farmland (sneak to till first).
 * **Shear, Brush, Ignite**: need a [Support Tool](support_tool.md).
-
-If more than one ability fits a block, the first one in this list is used.
 
 ## Break and Attack
 
-Every paxel and the Mega Tool has two more buttons in the [tool menu](tool_menu.md), both on by default:
-
-* **Break**: switch it off and the tool breaks no blocks at all, in any game mode. In survival,
-  left-click actions on blocks (such as taking items out of drawers) still work.
-* **Attack**: switch it off and the tool does not hit mobs or players, so it does no damage. Things
-  you hit to pick up or remove (item frames, paintings, boats, minecarts, armor stands) can still be hit.
-
-Right-click abilities, tool storage and auto-swap keep working either way.
+* **Break** off: the tool breaks no blocks.
+* **Attack** off: the tool doesn't hurt mobs or players.
 
 ## Crafting
-
-The heads and the stone paxel are shapeless: any arrangement works. Each head is shown next to the
-paxel it makes.
 
 ![Stone Paxel](recipes/stone_paxel.png)
 
 ![Iron Head and Iron Paxel](recipes/tier_iron.png)
 
 ![Diamond Head and Diamond Paxel](recipes/tier_diamond.png)
-
-The Netherite Head and the Mega Tool are on the [Mega Tool](mega_tool.md) page.

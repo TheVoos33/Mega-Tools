@@ -29,7 +29,7 @@ public class ModItems
     // ---- Crafting ingredients ----
     public static final DeferredItem<Item> IRON_HEAD = ITEMS.registerSimpleItem("iron_head");
     public static final DeferredItem<Item> DIAMOND_HEAD = ITEMS.registerSimpleItem("diamond_head");
-    public static final DeferredItem<Item> NETHERITE_HEAD = ITEMS.registerSimpleItem("netherite_head",
+    public static final DeferredItem<Item> MEGA_TOOL_HEAD = ITEMS.registerSimpleItem("mega_tool_head",
             properties -> properties.fireResistant().rarity(Rarity.RARE));
 
     // ---- Upgrade item ----

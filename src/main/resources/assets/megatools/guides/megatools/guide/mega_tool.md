@@ -6,23 +6,20 @@ navigation:
   position: 20
 item_ids:
 - megatools:mega_tool
-- megatools:netherite_head
+- megatools:mega_tool_head
 ---
 
 # The Mega Tool
 
 <ItemImage id="megatools:mega_tool" scale="3" />
 
-* **Instant mining**: breaks every block in one hit, and every block drops as if mined with the right
-  tool. Unbreakable blocks such as bedrock stay unbreakable.
-* **Delayed Break**: while you hold left click, the Mega Tool pauses briefly between blocks so you
-  don't dig further than you meant to. Every new click still breaks a block immediately. Switch it off in
-  the [tool menu](tool_menu.md) to break as fast as you can aim.
-* **Never wears out**, and it doesn't burn in fire or lava.
-* Attack damage 22, attack speed 3.0 and 27 slots of [tool storage](tool_storage.md).
+* Breaks every block in one hit and is the right tool for every block, so everything drops.
+* **Delayed Break**: a short pause between blocks while you hold left click. A new click always breaks
+  at once. Switch it off in the [tool menu](tool_menu.md).
+* Never wears out and doesn't burn.
+* Attack damage 22, attack speed 3.0, 27 slots of [tool storage](tool_storage.md).
+* Has every paxel ability.
 
 ## Crafting
 
-The Netherite Head is shapeless: any arrangement works.
-
-![Netherite Head and Mega Tool](recipes/tier_mega.png)
+![Mega Tool Head and Mega Tool](recipes/tier_mega.png)

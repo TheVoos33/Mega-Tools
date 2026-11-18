@@ -1,5 +1,37 @@
 # Changelog
 
+## v1.2 (in development)
+
+### Added
+- **Blacklist filters in Custom Rules.** A **Whitelist / Blacklist** button above the filter slots switches between two lists per stored tool, 18 filters each.
+  - Blacklist filters (this block, a tag or the whole mod, like whitelist filters) keep that tool from being pre-selected for their blocks, also when it would be pre-selected for being from the block's mod. The slots are red while the blacklist is shown.
+  - A more exact whitelist filter still wins (this block before tag before whole mod; at the same level the whitelist wins). Example: a blacklist filter for all of Applied Energistics 2 plus whitelist filters for the P2P tunnels pre-selects the Memory Card for P2P tunnels and for no other AE2 block.
+  - In `megatools-default-rules.json`, `"blacklist": true` makes a default rule a blacklist filter.
+- **Flat textures resource pack.** A built-in resource pack, off by default. Enable **Mega Tools Flat Textures** under Options > Resource Packs to replace the 3D models of the paxels, the Mega Tool and the heads with flat 16×16 textures in the vanilla style. While it is on, the Mega Tool uses the vanilla tool animations instead of its poke animation, and the pictures in the in-game guide show the flat textures.
+- Resource packs can switch the Mega Tool's poke animation off with `assets/megatools/mega_tool_animation.json` containing `{"poke": false}`.
+- Block tag `megatools:not_mineable`. The Mega Tool is the right tool for every block except the blocks in this tag, which it mines like an empty hand (hand speed, only the drops a hand gets). Empty by default.
+- The guide's Torches and light page explains the difference between the light blocks and the light from shader packs and dynamic lights mods, and how to switch the light blocks off with `heldLight`.
+
+### Changed
+- Place Torch now comes before Strip, Path and Till, so with Place Torch on, right-clicking logs, grass or dirt places a torch.
+- The messages shown when a tool's Break or Attack is switched off now read "Breaking is off" and "Attacking is off".
+- The in-game guide is much shorter: each page states the features briefly.
+  - The tool menu page shows the Classic and Compact menus side by side, with the same number on the same part in both.
+  - The Custom Rules picture shows the Whitelist / Blacklist button and the red blacklist slots.
+- The Netherite Head is now the **Mega Tool Head**, with the item ID `megatools:mega_tool_head` and a new flat texture. Netherite Heads in existing worlds are lost: craft them again, or finish them into a Mega Tool before updating.
+- Paxel repair recipes are now shapeless, and each cobblestone, iron ingot or diamond repairs 1/8 of the paxel. A craft takes one from every slot that has some: 8 around the paxel repair it fully, 2 slots repair 1/4, and a stack in one slot repairs 1/8 per craft, so a paxel can be repaired in the 2x2 inventory grid. Material the paxel doesn't need stays in the grid. The repaired paxel still keeps everything on it.
+
+### Fixed
+- Recipes of the types `megatools:crafting_shaped_carry_over` and `megatools:crafting_shapeless_carry_over` crashed the game at startup.
+- A newer version of a dynamic lights mod (Sodium Dynamic Lights, LambDynamicLights, RyoamicLights) can no longer crash the game through the held-light hook.
+- A tag in `megatools-storage-whitelist.json` that itself contains `#megatools:storable_item` is skipped with a warning. Before, Minecraft threw out both tags and no item could be stored.
+- Less work every tick while you look at a block with an auto-swap tool.
+- With PickleTweaks installed, its crafting grid repair no longer repairs Mega Tools tools (it fully repaired a paxel with 2 ingots). They always use Mega Tools' own repair recipe.
+
+### Removed
+- Recipe type `megatools:tool_repair`. A `megatools:crafting_shapeless_carry_over` recipe whose result is the same item as the tool in the grid now repairs that tool; the default repair recipes use it. Datapacks with `megatools:tool_repair` recipes need to switch to it.
+- Block tag `megatools:mega_tool_unbreakable`. Use `megatools:not_mineable` instead; blocks that a datapack still puts in the old tag are treated as `not_mineable` (mined like with an empty hand).
+
 ## v1.1 for Minecraft 26.1.2 (NeoForge)
 
 First release of Mega Tools for Minecraft 26.1.2, on NeoForge 26.1.2.126 or newer. It has the same features as Mega Tools v1.1 for 1.21.1. Clients and servers must both run v1.1.

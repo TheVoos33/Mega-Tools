@@ -20,6 +20,10 @@ enumExtensions="META-INF/enumextensions.json"
 [[mixins]]
 config="${mod_id}.mixins.json"
 
+# Optional compat with other mods (PickleTweaks grid repair): does nothing without them
+[[mixins]]
+config="${mod_id}.compat.mixins.json"
+
 [[dependencies.${mod_id}]]
     modId="neoforge"
     type="required"

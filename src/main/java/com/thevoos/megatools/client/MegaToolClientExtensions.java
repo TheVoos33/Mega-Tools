@@ -85,6 +85,9 @@ public final class MegaToolClientExtensions
                                                    ItemStack itemInHand, float partialTick,
                                                    float equipProcess, float swingProcess)
             {
+                // A resource pack switched the poke animation off (see FlatTextures): vanilla animations.
+                if (!FlatTextures.pokeAnimation())
+                    return false;
                 // While brushing, keep vanilla's brush animation.
                 if (player.isUsingItem() && player.getUseItem() == itemInHand)
                     return false;
@@ -123,6 +126,8 @@ public final class MegaToolClientExtensions
             @Override
             public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack itemStack)
             {
+                if (!FlatTextures.pokeAnimation())
+                    return null; // poke animation switched off by a resource pack: vanilla pose
                 if (entity.isUsingItem() && entity.getUseItem() == itemStack)
                     return null; // brushing: vanilla brush pose
                 return MegaToolArmPose.poke();

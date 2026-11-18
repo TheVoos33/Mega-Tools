@@ -27,8 +27,8 @@ import net.minecraft.world.item.ItemStack;
  *   y=4    [<] Custom Rules .......................... [Copy] [Paste]   (title bar, drawn by the screen)
  *   y=20   Stored tools
  *   y=30   [ one cell per stored tool, 9 per row: 1 row iron, 2 rows diamond, 3 rows mega ]
- *          Blocks for <selected tool>
- *          [ 2 x 9 filter slots ]
+ *          Blocks for <selected tool> ................................ [Whitelist]   (toggles to Blacklist)
+ *          [ 2 x 9 filter slots of the shown list ]
  *          Inventory
  *          [ player inventory 3x9 ]
  *          [ hotbar 1x9 ]   (the held tool's slot is locked)
@@ -73,7 +73,7 @@ public class SwapRulesMenu extends AbstractContainerMenu
         // ---- Vertical layout ----
         selectorRows = Math.max(1, (tier.storageSlots() + COLUMNS - 1) / COLUMNS);
         filterLabelY = SELECTOR_Y + selectorRows * 18 + 4;
-        filterY = filterLabelY + 10;
+        filterY = filterLabelY + 13; // room for the 12px Whitelist / Blacklist button on the label row
         invLabelY = filterY + FILTER_ROWS * 18 + 4;
         int invY = invLabelY + 10;
         int hotbarY = invY + 3 * 18 + 4;

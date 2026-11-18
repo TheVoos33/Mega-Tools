@@ -10,13 +10,17 @@ navigation:
 
 <ItemImage id="minecraft:torch" scale="2" />
 
-Put **torches** or **soul torches** in the torch slot of the [tool menu](tool_menu.md) (up to 256).
+Put torches or soul torches in the torch slot (up to 256).
 
-* **Light**: while you hold the tool in either hand, the area around you is lit like a torch at full
-  brightness. The light follows you, and other players see it too. Use the small button under the torch slot to switch it off.
-* **Place Torch**: switch it on in the menu, then right-click a block to place a torch from the slot.
-* **Shaders**: with an Iris shader pack that supports handheld light, the tool glows like a held torch
-  and the shader lights your surroundings smoothly. Other players then don't see your light.
-* **Dynamic lights mods**: with Sodium Dynamic Lights, LambDynamicLights or RyoamicLights installed,
-  that mod lights the held tool and Mega Tools places no light for you. The light then follows that
-  mod's own settings, and other players only see it if they have such a mod too.
+* **Light**: the area around you is lit while you hold the tool.
+* **Place Torch**: right-click a block to place a torch from the slot.
+
+## Light blocks or shader light
+
+* **Light blocks** (default): an invisible light block follows you. It is real light, so every player sees it and mobs don't spawn near you.
+* **Shader light**: with an Iris shader pack or a dynamic lights mod (Sodium Dynamic Lights, LambDynamicLights, RyoamicLights), that mod lights the tool instead and no light blocks are placed for you. The light is smoother, but only drawn on your screen and doesn't stop mob spawning.
+
+Switch the light blocks off with **Held tool light** under Mods > Mega Tools > Config, or `heldLight = false` in `config/megatools-common.toml`. Shaders and dynamic lights mods still light the held tool, since they don't need light blocks.
+
+A light block only replaces air or still water and is removed when you move on. While it is there, the spot
+isn't air, so something that needs free space there (a growing sapling, some machines) waits until you have moved away.

@@ -1,15 +1,17 @@
 {
-  "type": "megatools:tool_repair",
+  "type": "megatools:crafting_shapeless_carry_over",
   "category": "equipment",
-  "pattern": [
-    "MMM",
-    "MTM",
-    "MMM"
+  "ingredients": [
+    "minecraft:cobblestone",
+    "minecraft:cobblestone",
+    "minecraft:cobblestone",
+    "minecraft:cobblestone",
+    "minecraft:cobblestone",
+    "minecraft:cobblestone",
+    "minecraft:cobblestone",
+    "minecraft:cobblestone",
+    "megatools:stone_paxel"
   ],
-  "key": {
-    "M": "minecraft:cobblestone",
-    "T": "megatools:stone_paxel"
-  },
   "result": {
     "id": "megatools:stone_paxel"
   }

@@ -3,6 +3,7 @@ package com.thevoos.megatools.recipe;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -22,6 +23,11 @@ import java.util.List;
  * A normal shapeless recipe (same JSON as minecraft:crafting_shapeless) that carries a Mega Tools
  * tool's settings, storage, plates and name over to the result. JSON type:
  * "megatools:crafting_shapeless_carry_over".
+ *
+ * Repair: when the result is the same item as the Mega Tools tool in the grid, the recipe repairs it
+ * instead. Each material repairs 1/8 of the tool (see ToolRepair), the tool itself comes out with
+ * everything on it unchanged, and the recipe only matches a damaged tool. The default paxel repair
+ * recipes (8 materials + the paxel) work this way.
  */
 public class CarryOverShapelessRecipe extends ShapelessRecipe implements PreservesToolData
 {
@@ -30,8 +36,11 @@ public class CarryOverShapelessRecipe extends ShapelessRecipe implements Preserv
     // Kept here because ShapelessRecipe's own fields aren't accessible.
     private final ItemStackTemplate carryResult;
     private final List<Ingredient> carryIngredients;
-    /** The result as a stack, for the "does everything fit" check in matches() (never handed out). */
-    private final ItemStack resultForChecks;
+    /**
+     * The result as a stack, for the checks in matches() (never handed out). Created on first use: recipes are
+     * read before item components are bound, so creating it in the constructor crashes the game at startup.
+     */
+    private ItemStack resultForChecks;
 
     public CarryOverShapelessRecipe(Recipe.CommonInfo commonInfo, CraftingRecipe.CraftingBookInfo bookInfo,
                                     ItemStackTemplate result, List<Ingredient> ingredients)
@@ -39,21 +48,51 @@ public class CarryOverShapelessRecipe extends ShapelessRecipe implements Preserv
         super(commonInfo, bookInfo, result, ingredients);
         this.carryResult = result;
         this.carryIngredients = ingredients;
-        this.resultForChecks = result.create();
+    }
+
+    private ItemStack resultForChecks()
+    {
+        if (resultForChecks == null)
+            resultForChecks = carryResult.create();
+        return resultForChecks;
     }
 
     @Override
     public boolean matches(CraftingInput input, Level level)
     {
-        return super.matches(input, level) && ToolCarryOver.canCarryOver(input, resultForChecks);
+        // Repair: the result is the same item as the tool in the grid. Only a damaged tool matches, so
+        // materials are never used up on a tool at full durability. Any number of material slots works:
+        // each material repairs part of the tool (see ToolRepair).
+        ItemStack repairing = ToolCarryOver.findSameTool(input.items(), resultForChecks().getItem());
+        if (!repairing.isEmpty())
+            return ToolRepair.layout(input.items(), carryIngredients, resultForChecks().getItem()) != null;
+        if (!super.matches(input, level))
+            return false;
+        return ToolCarryOver.canCarryOver(input, resultForChecks());
     }
 
     @Override
     public ItemStack assemble(CraftingInput input)
     {
+        // Repair: hand back the tool itself with the materials' durability added, so everything on it
+        // stays (storage, plates, torches, toggles, name, enchantments and other mods' data).
+        ToolRepair.Layout repair = ToolRepair.layout(input.items(), carryIngredients, resultForChecks().getItem());
+        if (repair != null)
+            return repair.repaired();
         ItemStack result = super.assemble(input);
         ToolCarryOver.apply(input, result);
         return result;
+    }
+
+    /** Repair: slots whose material the tool doesn't need any more get their item back (see ToolRepair). */
+    @Override
+    public NonNullList<ItemStack> getRemainingItems(CraftingInput input)
+    {
+        NonNullList<ItemStack> remaining = super.getRemainingItems(input);
+        ToolRepair.Layout repair = ToolRepair.layout(input.items(), carryIngredients, resultForChecks().getItem());
+        if (repair != null)
+            repair.returnUnused(input.items(), remaining);
+        return remaining;
     }
 
     @Override
