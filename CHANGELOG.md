@@ -1,6 +1,8 @@
 # Changelog
 
-## v1.2 (in development)
+## v1.2
+
+Clients and servers must both run v1.2.
 
 ### Added
 - **Blacklist filters in Custom Rules.** A **Whitelist / Blacklist** button above the filter slots switches between two lists per stored tool, 18 filters each.
@@ -18,6 +20,8 @@
 - The in-game guide is much shorter: each page states the features briefly.
   - The tool menu page shows the Classic and Compact menus side by side, with the same number on the same part in both.
   - The Custom Rules picture shows the Whitelist / Blacklist button and the red blacklist slots.
+  - The settings page shows the 3D models next to the flat textures of the Mega Tools Flat Textures pack.
+- The README follows the order of the in-game guide, with new pictures for repair, the tool menus and the flat textures.
 - The Netherite Head is now the **Mega Tool Head**, with the item ID `megatools:mega_tool_head` and a new flat texture. Netherite Heads in existing worlds are lost: craft them again, or finish them into a Mega Tool before updating.
 - Paxel repair recipes are now shapeless, and each cobblestone, iron ingot or diamond repairs 1/8 of the paxel. A craft takes one from every slot that has some: 8 around the paxel repair it fully, 2 slots repair 1/4, and a stack in one slot repairs 1/8 per craft, so a paxel can be repaired in the 2x2 inventory grid. Material the paxel doesn't need stays in the grid. The repaired paxel still keeps everything on it.
 
