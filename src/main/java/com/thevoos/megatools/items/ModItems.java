@@ -4,6 +4,12 @@ import com.thevoos.megatools.MegaTools;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModList;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -22,16 +28,28 @@ public class ModItems
             () -> new MultiToolItem(ToolTier.IRON, new Item.Properties()));
     public static final DeferredItem<MultiToolItem> DIAMOND_PAXEL = ITEMS.register("diamond_paxel",
             () -> new MultiToolItem(ToolTier.DIAMOND, new Item.Properties()));
+    public static final DeferredItem<MultiToolItem> NETHERITE_PAXEL = ITEMS.register("netherite_paxel",
+            () -> new MultiToolItem(ToolTier.NETHERITE, new Item.Properties()));
     public static final DeferredItem<MultiToolItem> MEGA_TOOL = ITEMS.register("mega_tool",
             () -> new MultiToolItem(ToolTier.MEGA, new Item.Properties()));
+
+    // ---- Mega Tool upgrades: only registered when the Allthemodium mod is installed, otherwise these
+    //      items don't exist at all (null here). Made in a smithing table, see data/megatools/recipe/. ----
+    public static final boolean ALLTHEMODIUM = ModList.get().isLoaded("allthemodium");
+    @Nullable public static final DeferredItem<MultiToolItem> MEGA_TOOL_ALLTHEMODIUM = registerIfAllthemodium("mega_tool_allthemodium", ToolTier.MEGA_ALLTHEMODIUM);
+    @Nullable public static final DeferredItem<MultiToolItem> MEGA_TOOL_VIBRANIUM = registerIfAllthemodium("mega_tool_vibranium", ToolTier.MEGA_VIBRANIUM);
+    @Nullable public static final DeferredItem<MultiToolItem> MEGA_TOOL_UNOBTAINIUM = registerIfAllthemodium("mega_tool_unobtainium", ToolTier.MEGA_UNOBTAINIUM);
 
     // ---- Crafting ingredients ----
     public static final DeferredItem<Item> IRON_HEAD = ITEMS.register("iron_head",
             () -> new Item(new Item.Properties()));
     public static final DeferredItem<Item> DIAMOND_HEAD = ITEMS.register("diamond_head",
             () -> new Item(new Item.Properties()));
-    public static final DeferredItem<Item> MEGA_TOOL_HEAD = ITEMS.register("mega_tool_head",
-            () -> new Item(new Item.Properties().fireResistant().rarity(Rarity.RARE)));
+    public static final DeferredItem<Item> NETHERITE_HEAD = ITEMS.register("netherite_head",
+            () -> new Item(new Item.Properties().fireResistant()));
+    /** Nether star, dragon head, sculk shrieker and dragon's breath; upgrades the Netherite Paxel to the Mega Tool in a smithing table. */
+    public static final DeferredItem<Item> MEGA_TOOL_CORE = ITEMS.register("mega_tool_core",
+            () -> new Item(new Item.Properties().fireResistant().rarity(Rarity.EPIC)));
 
     // ---- Upgrade item ----
     public static final DeferredItem<EnchantmentPlateItem> ENCHANTMENT_PLATE = ITEMS.register("enchantment_plate",
@@ -40,6 +58,23 @@ public class ModItems
     /** Shears + brush + flint and steel; adds those abilities to a tool when placed in its Support Tool slot. */
     public static final DeferredItem<SupportToolItem> SUPPORT_TOOL = ITEMS.register("support_tool",
             () -> new SupportToolItem(new Item.Properties()));
+
+    @Nullable
+    private static DeferredItem<MultiToolItem> registerIfAllthemodium(String name, ToolTier tier)
+    {
+        return ALLTHEMODIUM ? ITEMS.register(name, () -> new MultiToolItem(tier, new Item.Properties())) : null;
+    }
+
+    /** Every Mega Tool item that exists in this game: the Mega Tool, plus its upgrades with Allthemodium. */
+    public static List<Item> megaTools()
+    {
+        List<Item> items = new ArrayList<>();
+        items.add(MEGA_TOOL.get());
+        for (DeferredItem<MultiToolItem> upgrade : Arrays.asList(MEGA_TOOL_ALLTHEMODIUM, MEGA_TOOL_VIBRANIUM, MEGA_TOOL_UNOBTAINIUM))
+            if (upgrade != null)
+                items.add(upgrade.get());
+        return items;
+    }
 
     public static void register(IEventBus eventBus)
     {

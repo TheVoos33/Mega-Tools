@@ -7,6 +7,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.function.Supplier;
 
@@ -19,13 +20,19 @@ import java.util.function.Supplier;
  *     STONE   : 5 stone tools  x 131                                              =  655
  *     IRON    : 5 iron tools   x 250 (1250) + brush 64 + flint&steel 64 + shears 238  = 1616
  *     DIAMOND : 5 diamond tools x 1561 (7805) + brush 64 + flint&steel 64 + shears 238 = 8171
- *     MEGA    : 0 = unbreakable
+ *     NETHERITE: 5 netherite tools x 2031                                         = 10155
+ *     MEGA    : 0 = unbreakable (every Mega Tool tier)
  *   (The shears/brush/flint and steel abilities come from a Support Tool in the tool's Support Tool
  *   slot, on every tier; the iron/diamond default durability still includes those tools.)
- *   Mining speed = vanilla tier speed (stone 4.0, iron 6.0, diamond 8.0) x miningSpeedMultiplier (1.2).
- *   Attack damage = the TOTAL shown in the tooltip (10 / 14 / 18 / 22).
- *   Attack speed = attacks per second shown in the tooltip (1.6 / 2.0 / 2.5 / 3.0).
- * The Mega Tool always mines instantly (MegaToolMining), so its base speed here hardly matters.
+ *   Mining speed = vanilla tier speed (stone 4.0, iron 6.0, diamond 8.0, netherite 9.0) x miningSpeedMultiplier (1.2).
+ *   Attack damage = the TOTAL shown in the tooltip (10 / 14 / 18 / 22 paxels, 28 Mega Tool,
+ *   38 / 48 / 60 for the Allthemodium / Vibranium / Unobtainium Mega Tools).
+ *   Attack speed = attacks per second shown in the tooltip (1.6 / 2.0 / 2.5 / 2.5 paxels, 3.0 Mega Tools).
+ * The Mega Tools always mine instantly (MegaToolMining), so their base speed here hardly matters.
+ *
+ * Mega Tool tiers: MEGA plus three upgrades that only exist when the Allthemodium mod is installed
+ * (see ModItems#ALLTHEMODIUM). They are the same tool with more attack damage; the difference is which
+ * Allthemodium ores they can break (see #tooWeakFor).
  */
 public enum ToolTier
 {
@@ -33,7 +40,11 @@ public enum ToolTier
     STONE  (StartupConfig.STONE_PAXEL,   4.0F,  0,      true,   true,  BlockTags.INCORRECT_FOR_STONE_TOOL,     0xFF5E5E5E, () -> Ingredient.of(ItemTags.STONE_TOOL_MATERIALS)),
     IRON   (StartupConfig.IRON_PAXEL,    6.0F,  9,      true,   true,  BlockTags.INCORRECT_FOR_IRON_TOOL,      0xFF6B7782, () -> Ingredient.of(Items.IRON_INGOT)),
     DIAMOND(StartupConfig.DIAMOND_PAXEL, 8.0F,  18,     true,   true,  BlockTags.INCORRECT_FOR_DIAMOND_TOOL,   0xFF1D8A86, () -> Ingredient.of(Items.DIAMOND)),
-    MEGA   (StartupConfig.MEGA_TOOL,     12.0F, 27,     true,   true,  BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF3E2050, () -> Ingredient.EMPTY);
+    NETHERITE(StartupConfig.NETHERITE_PAXEL, 9.0F, 27,  true,   true,  BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF4A3B3D, () -> Ingredient.of(Items.NETHERITE_INGOT)),
+    MEGA   (StartupConfig.MEGA_TOOL,     12.0F, 36,     true,   true,  BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF3E2050, () -> Ingredient.EMPTY),
+    MEGA_ALLTHEMODIUM(StartupConfig.MEGA_TOOL_ALLTHEMODIUM, 12.0F, 36, true, true, BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF9A4A1C, () -> Ingredient.EMPTY),
+    MEGA_VIBRANIUM   (StartupConfig.MEGA_TOOL_VIBRANIUM,    12.0F, 36, true, true, BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF116165, () -> Ingredient.EMPTY),
+    MEGA_UNOBTAINIUM (StartupConfig.MEGA_TOOL_UNOBTAINIUM,  12.0F, 36, true, true, BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 0xFF422992, () -> Ingredient.EMPTY);
 
     private final StartupConfig.ToolValues config;
     private final float vanillaSpeed;
@@ -120,5 +131,26 @@ public enum ToolTier
     /** Colour of the title bar in the GUI, so every tool's GUI looks different. */
     public int accentColor() { return accentColor; }
     public Ingredient repairIngredient() { return repairIngredient.get(); }
-    public boolean isMega() { return this == MEGA; }
+    /** Every Mega Tool tier: instant mining, Delayed Break, poke animation, unbreakable by default. */
+    public boolean isMega()
+    {
+        return this == MEGA || this == MEGA_ALLTHEMODIUM || this == MEGA_VIBRANIUM || this == MEGA_UNOBTAINIUM;
+    }
+
+    /**
+     * Blocks this Mega Tool tier can't break at all (empty unless Allthemodium is installed):
+     *   MEGA              - #megatools:needs_allthemodium_mega_tool (vibranium and unobtainium ores)
+     *   MEGA_ALLTHEMODIUM - #megatools:needs_vibranium_mega_tool (unobtainium ores)
+     *   MEGA_VIBRANIUM / MEGA_UNOBTAINIUM - nothing: they break every block.
+     * Paxels are not affected (they follow the normal tool tiers).
+     */
+    public boolean tooWeakFor(BlockState state)
+    {
+        return switch (this)
+        {
+            case MEGA -> state.is(ModTags.NEEDS_ALLTHEMODIUM_MEGA_TOOL);
+            case MEGA_ALLTHEMODIUM -> state.is(ModTags.NEEDS_VIBRANIUM_MEGA_TOOL);
+            default -> false;
+        };
+    }
 }

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BSB",
+    " H ",
+    "BKB"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:dragon_breath"
+    },
+    "S": {
+      "item": "minecraft:nether_star"
+    },
+    "H": {
+      "item": "minecraft:dragon_head"
+    },
+    "K": {
+      "item": "minecraft:sculk_shrieker"
+    }
+  },
+  "result": {
+    "id": "megatools:mega_tool_core",
+    "count": 1
+  }
+}

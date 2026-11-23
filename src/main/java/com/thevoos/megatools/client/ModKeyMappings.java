@@ -2,6 +2,7 @@ package com.thevoos.megatools.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.thevoos.megatools.KeyNames;
+import com.thevoos.megatools.tool.AbilityToggles;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
@@ -12,6 +13,8 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Four key bindings on the same physical key, separated by NeoForge key modifiers.
  * All four are rebindable under Options > Controls > Key Binds > "Mega Tools".
+ *
+ * Plus one key binding per ability toggle (TOGGLES), unbound by default: players bind the ones they want.
  */
 public final class ModKeyMappings
 {
@@ -33,7 +36,22 @@ public final class ModKeyMappings
     public static final KeyMapping SWAP_LAST = new KeyMapping(KeyNames.SWAP_LAST,
             KeyConflictContext.IN_GAME, KeyModifier.SHIFT, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
 
+    /**
+     * One per ability toggle (index = ToolSettings bit = menu button id, see AbilityToggles), all unbound.
+     * Pressing one while holding a Mega Tools tool switches that toggle on or off.
+     */
+    public static final KeyMapping[] TOGGLES = createToggles();
+
     private ModKeyMappings() {}
+
+    private static KeyMapping[] createToggles()
+    {
+        KeyMapping[] keys = new KeyMapping[AbilityToggles.NAMES.length];
+        for (int i = 0; i < keys.length; i++)
+            keys[i] = new KeyMapping(KeyNames.TOGGLE_PREFIX + AbilityToggles.NAMES[i], KeyConflictContext.IN_GAME,
+                    KeyModifier.NONE, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, CATEGORY);
+        return keys;
+    }
 
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event)
     {
@@ -41,6 +59,8 @@ public final class ModKeyMappings
         event.register(SWITCH_PLATE);
         event.register(SWAP_TOOL);
         event.register(SWAP_LAST);
+        for (KeyMapping toggle : TOGGLES)
+            event.register(toggle);
     }
 
     /**
@@ -53,5 +73,15 @@ public final class ModKeyMappings
         if (modifier == KeyModifier.NONE)
             return !Screen.hasControlDown() && !Screen.hasShiftDown() && !Screen.hasAltDown();
         return modifier.isActive(mapping.getKeyConflictContext());
+    }
+
+    /**
+     * For the toggle keys: a binding with a modifier (e.g. Ctrl + V) needs that modifier held; one without
+     * a modifier works whatever else is held, so it also works while sneaking or sprinting.
+     */
+    public static boolean toggleModifierMatches(KeyMapping mapping)
+    {
+        KeyModifier modifier = mapping.getKeyModifier();
+        return modifier == KeyModifier.NONE || modifier.isActive(mapping.getKeyConflictContext());
     }
 }

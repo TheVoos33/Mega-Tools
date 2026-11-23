@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "minecraft:smithing_transform",
+  "template": {
+    "item": "allthemodium:allthemodium_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "megatools:mega_tool"
+  },
+  "addition": {
+    "item": "allthemodium:allthemodium_ingot"
+  },
+  "result": {
+    "id": "megatools:mega_tool_allthemodium",
+    "count": 1
+  }
+}

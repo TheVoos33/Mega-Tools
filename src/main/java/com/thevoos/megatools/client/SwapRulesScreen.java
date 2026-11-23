@@ -1,5 +1,6 @@
 package com.thevoos.megatools.client;
 
+import com.thevoos.megatools.MegaTools;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.SwapRules;
 import com.thevoos.megatools.menu.SwapRulesMenu;
@@ -18,6 +19,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -34,6 +36,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,6 +67,9 @@ import java.util.Set;
  *    whitelist filter matches too (see AutoSwapClient). Both lists have 18 slots and the same three modes.
  *    Default rules (config/megatools-default-rules.json, see DefaultSwapRules) are copied onto the tool
  *    and show up here as ordinary filters: they can be changed and removed like any other.
+ *  - Save the file (right of the Inventory label): writes all of this tool's rules to
+ *    config/megatools-saved-rules.json, in the format of megatools-default-rules.json (see
+ *    DefaultSwapRules#save). Renamed to that name it replaces the default rules, also in another modpack.
  *  - Copy / Paste (title bar): Copy remembers ALL of this tool's rules, Paste replaces the rules of
  *    the tool whose GUI is open with them (and passes on which default rules the copied tool already
  *    received, so a default removed there doesn't come back here). That is how rules get from one tool to the next: the
@@ -162,9 +168,41 @@ public class SwapRulesScreen extends AbstractContainerScreen<SwapRulesMenu>
                 .bounds(gridRight - listW, topPos + menu.filterLabelY() - 2, listW, 12)
                 .build());
 
+        // Save the file: right end of the Inventory label row
+        Component save = Component.translatable("gui.megatools.swap_rules.save");
+        int saveW = font.width(save) + 8;
+        addRenderableWidget(Button.builder(save, b -> saveFile())
+                .bounds(gridRight - saveW, topPos + menu.invLabelY() - 2, saveW, 12)
+                .tooltip(Tooltip.create(Component.translatable("gui.megatools.swap_rules.save.desc",
+                        DefaultSwapRules.SAVED_FILE_NAME, DefaultSwapRules.FILE_NAME)))
+                .build());
+
         refreshPasteButton();
         refreshListButton();
         refresh();
+    }
+
+    /**
+     * Writes all of this tool's rules to config/megatools-saved-rules.json and says so in chat, with a link
+     * that opens the file.
+     */
+    private void saveFile()
+    {
+        try
+        {
+            Path path = DefaultSwapRules.save(rules);
+            showStatus("gui.megatools.swap_rules.saved");
+            Component link = Component.literal(path.getFileName().toString()).withStyle(style -> style
+                    .withUnderlined(true).withColor(ChatFormatting.GREEN)
+                    .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, path.toAbsolutePath().toString())));
+            minecraft.player.displayClientMessage(Component.translatable("message.megatools.rules_saved",
+                    rules.rules().size(), link, DefaultSwapRules.FILE_NAME), false);
+        }
+        catch (Exception e)
+        {
+            MegaTools.LOGGER.error("Could not save the custom rules to {}", DefaultSwapRules.SAVED_FILE_NAME, e);
+            showStatus("gui.megatools.swap_rules.save_failed");
+        }
     }
 
     private void toggleList()

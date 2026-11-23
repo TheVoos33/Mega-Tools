@@ -4,6 +4,7 @@ import com.thevoos.megatools.KeyNames;
 import com.thevoos.megatools.component.ModDataComponents;
 import com.thevoos.megatools.component.StoredTorches;
 import com.thevoos.megatools.component.ToolSettings;
+import com.thevoos.megatools.tool.Ignitables;
 import com.thevoos.megatools.tool.LightSources;
 import com.thevoos.megatools.tool.MegaToolPoke;
 import com.thevoos.megatools.tool.ToolData;
@@ -37,7 +38,6 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.entity.BrushableBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * One class for all four tools (Stone Paxel, Iron Paxel, Diamond Paxel, Mega Tool).
+ * One class for every tool (Stone / Iron / Diamond / Netherite Paxel, the Mega Tool and its Allthemodium upgrades).
  * Behaviour differences come from {@link ToolTier}.
  *
  * How the vanilla abilities are provided:
@@ -143,6 +143,8 @@ public class MultiToolItem extends Item
 
         if (tier.isMega())
             properties.fireResistant().rarity(Rarity.EPIC); // survives fire and lava as a dropped item
+        else if (tier == ToolTier.NETHERITE)
+            properties.fireResistant();                     // like vanilla netherite tools
 
         return properties;
     }
@@ -236,14 +238,17 @@ public class MultiToolItem extends Item
         return super.getDestroySpeed(stack, state);
     }
 
-    /** The Mega Tool counts as the correct tool for every block except #megatools:not_mineable, so everything else drops. */
+    /**
+     * The Mega Tools count as the correct tool for every block except #megatools:not_mineable (and the
+     * Allthemodium ores their tier is too weak for, see ToolTier#tooWeakFor), so everything else drops.
+     */
     @Override
     public boolean isCorrectToolForDrops(ItemStack stack, BlockState state)
     {
         if (isBroken(stack))
             return false; // broken: no tool drops, like an empty hand
         if (tier.isMega())
-            return !state.is(ModTags.NOT_MINEABLE);
+            return !state.is(ModTags.NOT_MINEABLE) && !tier.tooWeakFor(state);
         return super.isCorrectToolForDrops(stack, state);
     }
 
@@ -317,7 +322,8 @@ public class MultiToolItem extends Item
             return InteractionResult.CONSUME;
         }
 
-        // 2. Flint and steel on TNT: vanilla TNT only accepts the real flint and steel item.
+        // 2. Flint and steel on TNT (also modded TNT, like AE2's Tiny TNT): those blocks only accept the real
+        //    flint and steel item.
         if (support && settings.has(ToolSettings.IGNITE))
         {
             InteractionResult tnt = tryIgniteTnt(context, stack);
@@ -365,13 +371,16 @@ public class MultiToolItem extends Item
         return InteractionResult.PASS;
     }
 
-    /** Lights TNT exactly like flint and steel does (TntBlock checks for the flint and steel item itself). */
+    /**
+     * Lights TNT exactly like flint and steel does (TntBlock and modded TNT check for the flint and steel
+     * item itself). Works for every block that reacts to catching fire (see Ignitables).
+     */
     private static InteractionResult tryIgniteTnt(UseOnContext context, ItemStack tool)
     {
         Level level = context.getLevel();
         BlockPos pos = context.getClickedPos();
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof TntBlock))
+        if (!Ignitables.isTnt(state))
             return InteractionResult.PASS;
 
         Player player = context.getPlayer();
@@ -534,7 +543,8 @@ public class MultiToolItem extends Item
                 case STONE -> Items.COBBLESTONE;
                 case IRON -> Items.IRON_INGOT;
                 case DIAMOND -> Items.DIAMOND;
-                case MEGA -> null; // no built-in repair recipe (unbreakable by default)
+                case NETHERITE -> Items.NETHERITE_INGOT;
+                default -> null; // Mega Tools: no built-in repair recipe (unbreakable by default)
             };
             tooltip.add(Component.translatable("tooltip.megatools.broken").withStyle(ChatFormatting.RED));
             if (material != null)
@@ -552,5 +562,12 @@ public class MultiToolItem extends Item
         if (tier.isMega())  // a modpack can give the Mega Tool durability in megatools-startup.toml
             tooltip.add(Component.translatable(stack.isDamageableItem() ? "tooltip.megatools.mega_breakable" : "tooltip.megatools.mega")
                     .withStyle(ChatFormatting.GOLD));
+        // With Allthemodium: which ores this Mega Tool tier can't break yet.
+        if (ModItems.ALLTHEMODIUM && tier == ToolTier.MEGA)
+            tooltip.add(Component.translatable("tooltip.megatools.mega_tier.mega").withStyle(ChatFormatting.DARK_GRAY));
+        else if (ModItems.ALLTHEMODIUM && tier == ToolTier.MEGA_ALLTHEMODIUM)
+            tooltip.add(Component.translatable("tooltip.megatools.mega_tier.allthemodium").withStyle(ChatFormatting.DARK_GRAY));
+        else if (tier == ToolTier.MEGA_VIBRANIUM || tier == ToolTier.MEGA_UNOBTAINIUM)
+            tooltip.add(Component.translatable("tooltip.megatools.mega_tier.all").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

@@ -24,6 +24,22 @@ public final class ModTags
             TagKey.create(Registries.BLOCK, MegaTools.id("not_mineable"));
 
     /**
+     * Blocks the regular Mega Tool can't break (Allthemodium: vibranium and unobtainium ores). The
+     * Allthemodium Mega Tool and better can. Optional entries only, so the tag is empty without Allthemodium.
+     * JSON: data/megatools/tags/block/needs_allthemodium_mega_tool.json, "replace": false to add blocks.
+     */
+    public static final TagKey<Block> NEEDS_ALLTHEMODIUM_MEGA_TOOL =
+            TagKey.create(Registries.BLOCK, MegaTools.id("needs_allthemodium_mega_tool"));
+
+    /**
+     * Blocks the regular and the Allthemodium Mega Tool can't break (Allthemodium: unobtainium ores).
+     * The Vibranium and Unobtainium Mega Tools break everything.
+     * JSON: data/megatools/tags/block/needs_vibranium_mega_tool.json.
+     */
+    public static final TagKey<Block> NEEDS_VIBRANIUM_MEGA_TOOL =
+            TagKey.create(Registries.BLOCK, MegaTools.id("needs_vibranium_mega_tool"));
+
+    /**
      * The only thing tool storage checks: an item is accepted if and only if it has this tag.
      * JSON: data/megatools/tags/item/storable_item.json, which pulls in other mods' tool tags (wrenches,
      * shears, screwdrivers, crowbars...). Mods and datapacks can add entries by shipping their own file
@@ -34,8 +50,9 @@ public final class ModTags
             TagKey.create(Registries.ITEM, MegaTools.id("storable_item"));
 
     /**
-     * Items accepted in the tool's light slot: torches (minecraft:torch and minecraft:soul_torch by
-     * default). Modded torches can be added: data/megatools/tags/item/torches.json, "replace": false.
+     * Extra items accepted in the tool's light slot. Torches don't need it: LightSources#isTorch already
+     * accepts every torch block item and every block item whose id ends with "_torch". For other
+     * light items: data/megatools/tags/item/torches.json, "replace": false.
      */
     public static final TagKey<Item> TORCHES =
             TagKey.create(Registries.ITEM, MegaTools.id("torches"));

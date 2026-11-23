@@ -8,8 +8,10 @@ item_ids:
 - megatools:stone_paxel
 - megatools:iron_paxel
 - megatools:diamond_paxel
+- megatools:netherite_paxel
 - megatools:iron_head
 - megatools:diamond_head
+- megatools:netherite_head
 ---
 
 # Paxels
@@ -18,17 +20,20 @@ item_ids:
   <ItemImage id="megatools:stone_paxel" scale="2" />
   <ItemImage id="megatools:iron_paxel" scale="2" />
   <ItemImage id="megatools:diamond_paxel" scale="2" />
+  <ItemImage id="megatools:netherite_paxel" scale="2" />
 </Row>
 
 * Mines everything a pickaxe, axe, shovel and hoe can, 20% faster than a pickaxe of the same material.
 * Cuts cobwebs and fights like a sword, with sweeping attacks.
 
-| | Stone | Iron | Diamond |
-|---|---|---|---|
-| Attack damage | 10 | 14 | 18 |
-| Attack speed | 1.6 | 2.0 | 2.5 |
-| Durability | 655 | 1616 | 8171 |
-| Tool storage | none | 9 slots | 18 slots |
+| | Stone | Iron | Diamond | Netherite |
+|---|---|---|---|---|
+| Attack damage | 10 | 14 | 18 | 22 |
+| Attack speed | 1.6 | 2.0 | 2.5 | 3.0 |
+| Durability | 655 | 1616 | 8171 | 10155 |
+| Tool storage | none | 9 slots | 18 slots | 27 slots |
+
+The Netherite Paxel doesn't burn, like netherite tools.
 
 ## Right-click abilities
 
@@ -42,13 +47,24 @@ Each one is switched on or off in the [tool menu](tool_menu.md).
 
 ## Break and Attack
 
-* **Break** off: the tool breaks no blocks.
+* **Break** off: the tool only breaks what your hand breaks in one hit, like torches, crops and sugar cane.
 * **Attack** off: the tool doesn't hurt mobs or players.
 
 ## Crafting
 
-![Stone Paxel](recipes/stone_paxel.png)
+<Recipe id="megatools:stone_paxel" />
 
-![Iron Head and Iron Paxel](recipes/tier_iron.png)
+<Row alignItems="center">
+  <Recipe id="megatools:iron_head" />
+  <Recipe id="megatools:iron_paxel" />
+</Row>
 
-![Diamond Head and Diamond Paxel](recipes/tier_diamond.png)
+<Row alignItems="center">
+  <Recipe id="megatools:diamond_head" />
+  <Recipe id="megatools:diamond_paxel" />
+</Row>
+
+<Row alignItems="center">
+  <Recipe id="megatools:netherite_head" />
+  <Recipe id="megatools:netherite_paxel" />
+</Row>

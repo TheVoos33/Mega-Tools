@@ -10,10 +10,15 @@ navigation:
 
 <ItemImage id="minecraft:torch" scale="2" />
 
-Put torches or soul torches in the torch slot (up to 256).
+Put any torch in the torch slot (up to 256): torches, soul torches, redstone torches and torches
+from other mods. The light is full brightness whichever torch it is.
 
 * **Light**: the area around you is lit while you hold the tool.
 * **Place Torch**: right-click a block to place a torch from the slot.
+* **Picking up torches**: when a paxel or Mega Tool already holds torches, torches of the same kind you
+  pick up go straight into its torch slot instead of your inventory (what doesn't fit goes to the
+  inventory). The tool in your hand fills first, then the off hand, then tools in your inventory. With an
+  empty torch slot, torches are picked up as usual.
 
 ## Light blocks or shader light
 

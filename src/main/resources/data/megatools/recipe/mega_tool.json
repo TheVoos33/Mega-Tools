@@ -1,24 +1,14 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "show_notification": false,
-  "category": "equipment",
-  "pattern": [
-    " A ",
-    " B ",
-    " C "
-  ],
-  "key": {
-    "A": {
-      "item": "megatools:mega_tool_head"
-    },
-    "B": {
-      "item": "minecraft:chest"
-    },
-    "C": {
-      "item": "minecraft:leather"
-    }
+  "type": "minecraft:smithing_transform",
+  "template": [],
+  "base": {
+    "item": "megatools:netherite_paxel"
+  },
+  "addition": {
+    "item": "megatools:mega_tool_core"
   },
   "result": {
-    "id": "megatools:mega_tool"
+    "id": "megatools:mega_tool",
+    "count": 1
   }
 }

@@ -6,6 +6,8 @@ import com.thevoos.megatools.items.ModTags;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.network.MegaToolBreakPayload;
 import com.thevoos.megatools.network.MegaToolPokePayload;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -37,6 +39,8 @@ import java.util.function.BooleanSupplier;
  *  - Zero-hardness blocks (grass, flowers, torches...) follow the same delay. Their speed can't be 0
  *    (see finalDigSpeed), so on the client the delay is applied in onLeftClickBlock instead.
  *  - Blocks in the #megatools:not_mineable tag are mined like with an empty hand (no instant break).
+ *  - With Allthemodium installed, each Mega Tool tier can't break the ores it is too weak for
+ *    (ToolTier#tooWeakFor): no progress at all, and the server refuses the break (DisabledToolHandler).
  *
  * WHO DECIDES: the client. It knows about held vs. fresh clicks and is the side that shows the break
  * (sound, particles). When it decides a block breaks now, it sends MegaToolBreakPayload right before
@@ -101,16 +105,22 @@ public final class MegaToolMining
             return speed;
         if (speed < 0.0F)
             return speed; // another mod cancelled BreakSpeed (NeoForge then returns -1): the block stays protected
-        // Broken (1 durability left) or block breaking switched off: no progress at all, on every tier.
-        if (MultiToolItem.isBroken(held) || ToolData.hasFlag(held, ToolSettings.BREAK_OFF))
+        // Broken (1 durability left): no progress at all, on every tier.
+        if (MultiToolItem.isBroken(held))
             return 0.0F;
+        // Block breaking switched off: only blocks an empty hand breaks in one hit (torches, crops, sugar
+        // cane...) still break, at the normal speed (no instant break or hold delay of the Mega Tool).
+        if (ToolData.hasFlag(held, ToolSettings.BREAK_OFF))
+            return pos != null && DisabledToolHandler.breaksInstantlyByHand(player.level(), pos, state) ? speed : 0.0F;
         if (!multiTool.getTier().isMega())
             return speed; // paxels mine at their normal speed
 
-        if (state.is(ModTags.NOT_MINEABLE))
-            return speed; // not the right tool: mines like an empty hand, no instant break or hold delay
         if (player.getAbilities().instabuild)
             return speed; // creative already breaks instantly
+        if (multiTool.getTier().tooWeakFor(state))
+            return 0.0F; // Allthemodium ore this Mega Tool tier can't break (ToolTier#tooWeakFor)
+        if (state.is(ModTags.NOT_MINEABLE))
+            return speed; // not the right tool: mines like an empty hand, no instant break or hold delay
 
         boolean client = player.level().isClientSide();
         // Zero-hardness blocks (short grass, flowers...): vanilla computes progress as speed / hardness,
@@ -214,6 +224,15 @@ public final class MegaToolMining
         if (!event.getLevel().isClientSide() || player.getAbilities().instabuild
                 || MultiToolItem.isBroken(held) || ToolData.hasFlag(held, ToolSettings.BREAK_OFF))
             return; // broken / breaking switched off: DisabledToolHandler cancels the click
+        if (((MultiToolItem) held.getItem()).getTier().tooWeakFor(state))
+        {
+            // Allthemodium ore this tier can't break: no mining, the block still gets its click (like Break off).
+            event.setUseItem(TriState.FALSE);
+            player.displayClientMessage(Component.translatable(state.is(ModTags.NEEDS_VIBRANIUM_MEGA_TOOL)
+                    ? "message.megatools.needs_vibranium_mega_tool" : "message.megatools.needs_allthemodium_mega_tool")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return;
+        }
         PlayerInteractEvent.LeftClickBlock.Action action = event.getAction();
         if (action != PlayerInteractEvent.LeftClickBlock.Action.START && action != PlayerInteractEvent.LeftClickBlock.Action.CLIENT_HOLD)
             return;

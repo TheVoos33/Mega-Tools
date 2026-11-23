@@ -20,4 +20,4 @@ The tools can't be enchanted directly. Enchant a plate instead and load it into 
 
 ## Crafting
 
-![Enchantment Plate](recipes/enchantment_plate.png)
+<RecipeFor id="megatools:enchantment_plate" />
