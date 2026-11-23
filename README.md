@@ -14,7 +14,7 @@
   <img src="https://i.imgur.com/0degbIM.png" width="64" alt="Stone Paxel">
   <img src="https://i.imgur.com/5805mqO.png" width="64" alt="Iron Paxel">
   <img src="https://i.imgur.com/66WvTai.png" width="64" alt="Diamond Paxel">
-  <img src="https://i.imgur.com/UPLOAD-items_netherite_paxel.png" width="64" alt="Netherite Paxel">
+  <img src="https://i.imgur.com/jj4Thho.png" width="64" alt="Netherite Paxel">
   <img src="https://i.imgur.com/wxQYga8.png" width="64" alt="Mega Tool">
 </p>
 
@@ -47,7 +47,7 @@ With GuideME installed, Mega Tools has an in-game guide with the same pages as t
   <img src="https://i.imgur.com/0degbIM.png" width="64" alt="Stone Paxel">
   <img src="https://i.imgur.com/5805mqO.png" width="64" alt="Iron Paxel">
   <img src="https://i.imgur.com/66WvTai.png" width="64" alt="Diamond Paxel">
-  <img src="https://i.imgur.com/UPLOAD-items_netherite_paxel.png" width="64" alt="Netherite Paxel">
+  <img src="https://i.imgur.com/jj4Thho.png" width="64" alt="Netherite Paxel">
 </p>
 
 - Mines everything a pickaxe, axe, shovel and hoe can, **20% faster** than a pickaxe of the same material. Blocks that need a better tier still drop nothing, just like with vanilla tools.
@@ -104,8 +104,8 @@ Recipes marked *shapeless* can be placed in any arrangement.
     <td align="center"><img src="https://i.imgur.com/fnwJ0zZ.png" width="380"><br><b>Diamond Paxel</b><br>Diamond Head, chest and leather</td>
   </tr>
   <tr>
-    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_netherite_head.png" width="380"><br><b>Netherite Head</b> <i>(shapeless)</i><br>Netherite sword, axe, pickaxe, shovel and hoe</td>
-    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_netherite_paxel.png" width="380"><br><b>Netherite Paxel</b><br>Netherite Head, chest and leather</td>
+    <td align="center"><img src="https://i.imgur.com/0wpBcgq.png" width="380"><br><b>Netherite Head</b> <i>(shapeless)</i><br>Netherite sword, axe, pickaxe, shovel and hoe</td>
+    <td align="center"><img src="https://i.imgur.com/3B47Zza.png" width="380"><br><b>Netherite Paxel</b><br>Netherite Head, chest and leather</td>
   </tr>
 </table>
 
@@ -127,8 +127,8 @@ The Mega Tool is an upgrade of the [Netherite Paxel](#paxels) in a smithing tabl
 
 <table>
   <tr>
-    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_mega_tool_core.png" width="380"><br><b>Mega Tool Core</b><br>Nether Star, Dragon Head and Sculk Shrieker down the middle (top to bottom), Dragon's Breath in the four corners</td>
-    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_mega_tool.png" width="380"><br><b>Mega Tool</b> <i>(smithing table)</i><br>Netherite Paxel and Mega Tool Core, no template</td>
+    <td align="center"><img src="https://i.imgur.com/X7n2LnH.png" width="380"><br><b>Mega Tool Core</b><br>Nether Star, Dragon Head and Sculk Shrieker down the middle (top to bottom), Dragon's Breath in the four corners</td>
+    <td align="center"><img src="https://i.imgur.com/v4rKf4g.png" width="380"><br><b>Mega Tool</b> <i>(smithing table)</i><br>Netherite Paxel and Mega Tool Core, no template</td>
   </tr>
 </table>
 
@@ -370,8 +370,8 @@ Paxels **never break**. At 1 durability a paxel stops working: no mining, fighti
   </tr>
   <tr>
     <td align="center"><b>Netherite Paxel</b></td>
-    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_repair_netherite_paxel_one.png" width="290" alt="Repairing a broken Netherite Paxel with one netherite ingot"></td>
-    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_repair_netherite_paxel_full.png" width="290" alt="Repairing a broken Netherite Paxel with 8 netherite ingots"></td>
+    <td align="center"><img src="https://i.imgur.com/RH7euje.png" width="290" alt="Repairing a broken Netherite Paxel with one netherite ingot"></td>
+    <td align="center"><img src="https://i.imgur.com/kKIu0dV.png" width="290" alt="Repairing a broken Netherite Paxel with 8 netherite ingots"></td>
   </tr>
 </table>
 
@@ -428,7 +428,7 @@ By default, the paxels, the Mega Tools and the heads use **3D models**. To use f
 **Mega Tool animation** under *Mods → Mega Tools → Config* (`megaToolAnimation` in `config/megatools-common.toml`) switches every Mega Tool between its **Poke** animation (the tool turns forward and pokes the block, the default) and the **Vanilla** tool swing. It works with the 3D models and with the flat textures alike.
 
 <p align="center">
-  <img src="https://i.imgur.com/UPLOAD-models_3d_2d.png" width="100%" alt="The 3D models (left) and the flat 2D textures (right)">
+  <img src="https://i.imgur.com/en7NVAc.png" width="100%" alt="The 3D models (left) and the flat 2D textures (right)">
 </p>
 
 ---
