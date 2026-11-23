@@ -1,7 +1,11 @@
 package com.thevoos.megatools;
 
 import com.thevoos.megatools.menu.MenuStyle;
+import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.common.TranslatableEnum;
+
+import java.util.Locale;
 
 /**
  * Mega Tools configuration (config/megatools-common.toml).
@@ -31,6 +35,34 @@ public class Config
                      "ASK shows both the next time a tool menu is opened and lets you pick one.",
                      "A setting of your own game: a server ignores it, every player picks their own.")
             .defineEnum("menuStyle", MenuStyle.ASK);
+
+    // How the Mega Tools look while mining and hitting (first and third person, 3D model and flat textures alike).
+    public static final ModConfigSpec.EnumValue<MegaToolAnimation> MEGA_TOOL_ANIMATION = BUILDER
+            .comment("How the Mega Tools are animated while mining and attacking, with the 3D model and with the flat textures.",
+                     "POKE: the tool turns forward and pokes the block. VANILLA: the normal swing of every other tool.",
+                     "A setting of your own game: a server ignores it, every player picks their own.")
+            .defineEnum("megaToolAnimation", MegaToolAnimation.POKE);
+
+    /** The two Mega Tool animations (config option megaToolAnimation): one button in the config screen. */
+    public enum MegaToolAnimation implements TranslatableEnum
+    {
+        /** The tool turns forward and pokes the block (made for the Mega Tools). */
+        POKE,
+        /** Vanilla's tool swing, like every other tool. */
+        VANILLA;
+
+        @Override
+        public Component getTranslatedName()
+        {
+            return Component.translatable("megatools.mega_tool_animation." + name().toLowerCase(Locale.ROOT));
+        }
+    }
+
+    /** True: the Mega Tool's poke animation. False: vanilla's tool animations. */
+    public static boolean pokeAnimation()
+    {
+        return MEGA_TOOL_ANIMATION.get() == MegaToolAnimation.POKE;
+    }
 
     static final ModConfigSpec SPEC = BUILDER.build();
 }

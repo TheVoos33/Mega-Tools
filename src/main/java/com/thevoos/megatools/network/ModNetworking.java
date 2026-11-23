@@ -16,7 +16,7 @@ public final class ModNetworking
     public static void onRegisterPayloads(RegisterPayloadHandlersEvent event)
     {
         // "1" = protocol version; bump it if packet formats change.
-        PayloadRegistrar registrar = event.registrar("4");
+        PayloadRegistrar registrar = event.registrar("5");
 
         registrar.playToServer(OpenToolGuiPayload.TYPE, OpenToolGuiPayload.STREAM_CODEC, ServerPayloadHandler::handleOpenGui);
         registrar.playToServer(SwitchPlatePayload.TYPE, SwitchPlatePayload.STREAM_CODEC, ServerPayloadHandler::handleSwitchPlate);
@@ -27,6 +27,7 @@ public final class ModNetworking
         registrar.playToServer(SetSwapRulesPayload.TYPE, SetSwapRulesPayload.STREAM_CODEC, ServerPayloadHandler::handleSetSwapRules);
         registrar.playToServer(ApplyDefaultRulesPayload.TYPE, ApplyDefaultRulesPayload.STREAM_CODEC, ServerPayloadHandler::handleApplyDefaultRules);
         registrar.playToServer(ShaderLightPayload.TYPE, ShaderLightPayload.STREAM_CODEC, ServerPayloadHandler::handleShaderLight);
+        registrar.playToServer(ToggleAbilityPayload.TYPE, ToggleAbilityPayload.STREAM_CODEC, ServerPayloadHandler::handleToggleAbility);
 
         // Server -> client: another player's Mega Tool poke (third-person animation).
         // MegaToolPoke has no client-only imports, so this is safe to register on a dedicated server.

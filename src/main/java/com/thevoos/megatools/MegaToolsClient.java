@@ -2,6 +2,8 @@ package com.thevoos.megatools;
 
 import com.thevoos.megatools.client.ClientEvents;
 import com.thevoos.megatools.client.DynamicLightsCompat;
+import com.thevoos.megatools.client.AllthemodiumGuide;
+import com.thevoos.megatools.client.ClientCommands;
 import com.thevoos.megatools.client.FlatTextures;
 import com.thevoos.megatools.client.MegaToolArmPose;
 import com.thevoos.megatools.client.MegaToolClientExtensions;
@@ -57,13 +59,14 @@ public class MegaToolsClient
         modEventBus.addListener(ClientEvents::onRegisterScreens);                       // ToolMenu -> ToolScreen
         modEventBus.addListener(ToolHudOverlay::onRegisterGuiLayers);                   // auto-swap icon near hotbar
         modEventBus.addListener(MegaToolClientExtensions::onRegisterClientExtensions);  // "prodding" animation
+        modEventBus.addListener(AllthemodiumGuide::onAddPackFinders);                   // guide page, only with Allthemodium
         modEventBus.addListener(FlatTextures::onAddPackFinders);                        // built-in flat textures pack
-        modEventBus.addListener(FlatTextures::onRegisterReloadListeners);               // poke animation on/off
         modEventBus.addListener(MegaToolArmPose::onRegisterRenderStateModifiers);       // third-person prod: poke state per player
 
         // ---- Game bus: per-tick / per-input client logic -------------------------------------
         NeoForge.EVENT_BUS.addListener(ClientEvents::onClientTickPre);   // marks "inside the game tick"
         NeoForge.EVENT_BUS.addListener(ClientEvents::onClientTick);
+        NeoForge.EVENT_BUS.addListener(ClientCommands::onRegisterClientCommands); // /megatools animation, menu...
         NeoForge.EVENT_BUS.addListener(ClientEvents::onMouseButton);
         NeoForge.EVENT_BUS.addListener(ClientEvents::onInteractionKey); // Mega Tool right-click swing
         NeoForge.EVENT_BUS.addListener(ClientEvents::onMouseScroll);   // Shift + scroll between pre-selected tools

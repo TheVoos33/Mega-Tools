@@ -41,6 +41,7 @@ public class MegaTools
         //      items are built during registration, so this file must be loaded before that.
         //      config/megatools-startup.toml, restart required after edits.
         modContainer.registerConfig(ModConfig.Type.STARTUP, StartupConfig.SPEC);
+        StartupConfig.update(); // files from Mega Tools 1.2 and older: new Mega Tool attack damage
 
         // ---- Registries (mod event bus) --------------------------------------------------------
         // Data components first: they describe the per-stack data (settings, storage, plates, swap info).

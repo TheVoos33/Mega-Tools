@@ -19,7 +19,7 @@ import com.thevoos.megatools.items.ToolTier;
  *   The last row's buttons share the grid's exact width, so its outer edges line up with the
  *   rows above and the gap between them equals the grid gap.
  *          Tool Storage
- *          [ 9 slots per row, in line with the inventory columns: 1 row iron, 2 rows diamond, 3 rows mega ]
+ *          [ 9 slots per row, in line with the inventory columns: 1 row iron, 2 rows diamond, 3 rows netherite, 4 rows Mega Tool ]
  *          Inventory
  *          [ player inventory 3x9 ]
  *          [ hotbar 1x9 ]   (the held tool's slot is locked)

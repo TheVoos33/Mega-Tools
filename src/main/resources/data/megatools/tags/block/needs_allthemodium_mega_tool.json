@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    "#megatools:needs_vibranium_mega_tool",
+    {
+      "id": "allthemodium:vibranium_ore",
+      "required": false
+    },
+    {
+      "id": "allthemodium:other_vibranium_ore",
+      "required": false
+    }
+  ]
+}

@@ -8,7 +8,7 @@ navigation:
 
 # Tool storage and auto-swap
 
-The Iron Paxel, Diamond Paxel and Mega Tool store **9, 18 and 27** other tools, such as wrenches,
+The Iron, Diamond and Netherite Paxel and the Mega Tool store **9, 18, 27 and 36** other tools, such as wrenches,
 shears and configurators. Only tools are accepted.
 
 ## Auto-swap
@@ -30,3 +30,6 @@ Click **Custom Rule** in the [tool menu](tool_menu.md) to choose which blocks pr
 * Left-click a filter to match this block, a block tag or the whole mod. Right-click to remove it.
 * **Whitelist / Blacklist** (above the filter slots) switches lists. Blacklist filters (red) stop the tool being pre-selected for those blocks. A more exact whitelist filter still wins: blacklist all of a mod, whitelist one block of it.
 * **Copy** and **Paste** move all rules to another tool.
+* **Save the file** (next to Inventory) writes all rules of this tool to `config/megatools-saved-rules.json`.
+  Rename it to `megatools-default-rules.json`, replacing the old file, and every new tool gets these rules
+  once the tool they are for is in its storage. Copy the file to another modpack to take your rules along.

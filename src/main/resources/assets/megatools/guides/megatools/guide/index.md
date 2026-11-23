@@ -10,6 +10,7 @@ navigation:
   <ItemImage id="megatools:stone_paxel" scale="2" />
   <ItemImage id="megatools:iron_paxel" scale="2" />
   <ItemImage id="megatools:diamond_paxel" scale="2" />
+  <ItemImage id="megatools:netherite_paxel" scale="2" />
   <ItemImage id="megatools:mega_tool" scale="2" />
 </Row>
 

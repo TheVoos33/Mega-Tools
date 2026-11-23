@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "show_notification": false,
+  "category": "equipment",
+  "pattern": [
+    " A ",
+    " B ",
+    " C "
+  ],
+  "key": {
+    "A": "megatools:netherite_head",
+    "B": "minecraft:chest",
+    "C": "minecraft:leather"
+  },
+  "result": {
+    "id": "megatools:netherite_paxel"
+  }
+}

@@ -6,7 +6,7 @@ navigation:
   position: 20
 item_ids:
 - megatools:mega_tool
-- megatools:mega_tool_head
+- megatools:mega_tool_core
 ---
 
 # The Mega Tool
@@ -17,9 +17,15 @@ item_ids:
 * **Delayed Break**: a short pause between blocks while you hold left click. A new click always breaks
   at once. Switch it off in the [tool menu](tool_menu.md).
 * Never wears out and doesn't burn.
-* Attack damage 22, attack speed 3.0, 27 slots of [tool storage](tool_storage.md).
+* Attack damage 28, attack speed 3.5, 36 slots of [tool storage](tool_storage.md).
 * Has every paxel ability.
 
 ## Crafting
 
-![Mega Tool Head and Mega Tool](recipes/tier_mega.png)
+The Mega Tool is an upgrade of the [Netherite Paxel](paxels.md). Everything in the paxel moves over: stored
+tools, Enchantment Plates, torches, the Support Tool, settings and custom rules.
+
+<Row alignItems="center">
+  <RecipeFor id="megatools:mega_tool_core" />
+  <RecipeFor id="megatools:mega_tool" />
+</Row>

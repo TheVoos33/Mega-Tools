@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "megatools:item/flat/mega_tool_allthemodium"
+  }
+}

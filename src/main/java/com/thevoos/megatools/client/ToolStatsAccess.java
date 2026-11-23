@@ -20,6 +20,8 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
  *    Server operators edit the server's file instead. ToolStatsCheck warns about mismatches on join.
  *  - The main menu has no world, so no cheat permission either: locked there too.
  * Everything else in the config menu (e.g. the Mega Tool hold delay) works as before.
+ *
+ * The startup file's configVersion ("File format") is hidden from the menu; it stays in the file.
  */
 public final class ToolStatsAccess
 {
@@ -32,7 +34,10 @@ public final class ToolStatsAccess
         if (reason != null)
             return new AlertScreen(() -> Minecraft.getInstance().setScreen(parent),
                     Component.translatable("gui.megatools.tool_stats_locked.title"), reason);
-        return new ConfigurationScreen.ConfigurationSectionScreen(parent, type, config, title);
+        // configVersion ("File format") stays in megatools-startup.toml, where StartupConfig#update uses it,
+        // but isn't shown in the menu, so nobody changes it by accident.
+        return new ConfigurationScreen.ConfigurationSectionScreen(parent, type, config, title,
+                (context, key, element) -> "configVersion".equals(key) ? null : element);
     }
 
     /** Why the tool stats can't be edited right now, or null if they can. */
