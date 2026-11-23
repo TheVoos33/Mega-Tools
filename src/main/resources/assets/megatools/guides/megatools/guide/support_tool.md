@@ -16,8 +16,8 @@ Put it in a tool's Support Tool slot to unlock:
 
 * **Shear**: shear mobs, collect leaves and vines, trim growing plants.
 * **Brush**: brush suspicious sand and gravel.
-* **Ignite**: light fires, portals, campfires, candles and TNT.
+* **Ignite**: light fires, portals, campfires, candles and TNT, also modded TNT such as Applied Energistics 2's Tiny TNT.
 
 ## Crafting
 
-![Support Tool](recipes/support_tool.png)
+<RecipeFor id="megatools:support_tool" />

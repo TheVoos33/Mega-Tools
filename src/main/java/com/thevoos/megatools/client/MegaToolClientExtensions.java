@@ -2,6 +2,7 @@ package com.thevoos.megatools.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.thevoos.megatools.Config;
 import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.tool.MegaToolMining;
 import com.thevoos.megatools.tool.MegaToolPoke;
@@ -13,6 +14,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 
@@ -37,6 +39,9 @@ import net.minecraftforge.client.extensions.common.IClientItemExtensions;
  *
  * The first-person constants below control the look; adjust them if the tips don't line up with
  * the crosshair (they depend on the model's first-person display settings in mega_tool.json).
+ *
+ * Switched on or off with the megaToolAnimation config option (Config). It works the same with the 3D model
+ * and with the flat textures pack: the turn and jab move the hand, so whichever model is drawn follows.
  */
 public final class MegaToolClientExtensions
 {
@@ -87,8 +92,8 @@ public final class MegaToolClientExtensions
                 // Paxels share this item class but keep vanilla's hand rendering.
                 if (!MegaToolMining.isMegaTool(itemInHand))
                     return false;
-                // A resource pack switched the poke animation off (see FlatTextures): vanilla animations.
-                if (!FlatTextures.pokeAnimation())
+                // Poke animation switched off in the config (megaToolAnimation = VANILLA): vanilla animations.
+                if (!Config.pokeAnimation())
                     return false;
                 // While brushing, keep vanilla's brush animation.
                 if (player.isUsingItem() && player.getUseItem() == itemInHand)
@@ -130,8 +135,8 @@ public final class MegaToolClientExtensions
             {
                 if (!MegaToolMining.isMegaTool(itemStack))
                     return null; // paxels: vanilla pose
-                if (!FlatTextures.pokeAnimation())
-                    return null; // poke animation switched off by a resource pack: vanilla pose
+                if (!Config.pokeAnimation())
+                    return null; // poke animation switched off in the config: vanilla pose
                 if (entity.isUsingItem() && entity.getUseItem() == itemStack)
                     return null; // brushing: vanilla brush pose
                 return MegaToolArmPose.poke();

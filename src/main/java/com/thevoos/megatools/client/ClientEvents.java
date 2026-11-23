@@ -11,6 +11,8 @@ import com.thevoos.megatools.menu.ModMenus;
 import com.thevoos.megatools.network.OpenToolGuiPayload;
 import com.thevoos.megatools.network.SwapToolPayload;
 import com.thevoos.megatools.network.SwitchPlatePayload;
+import com.thevoos.megatools.network.ToggleAbilityPayload;
+import com.thevoos.megatools.tool.AbilityToggles;
 import com.thevoos.megatools.tool.MegaToolMining;
 import com.thevoos.megatools.tool.MegaToolPoke;
 import com.thevoos.megatools.tool.ToolSwapper;
@@ -51,7 +53,7 @@ public final class ClientEvents
             MegaToolMining.setClientInTick(true);
     }
 
-    /** Game bus: runs once per client tick. Updates auto-swap pre-selection and handles the R keys. */
+    /** Game bus: runs once per client tick. Updates auto-swap pre-selection and handles the R keys and toggle keys. */
     public static void onClientTick(TickEvent.ClientTickEvent event)
     {
         if (event.phase != TickEvent.Phase.END)
@@ -75,9 +77,18 @@ public final class ClientEvents
         while (ModKeyMappings.SWITCH_PLATE.consumeClick()) switchPlate = true;
         while (ModKeyMappings.SWAP_TOOL.consumeClick()) swapTool = true;
         while (ModKeyMappings.SWAP_LAST.consumeClick()) swapLast = true;
+        int toggles = 0; // bit i = toggle key i was pressed
+        for (int i = 0; i < ModKeyMappings.TOGGLES.length; i++)
+            while (ModKeyMappings.TOGGLES[i].consumeClick()) toggles |= 1 << i;
 
         if (mc.screen != null)
             return;
+
+        // Ability toggle keys (unbound by default): only while a Mega Tools tool is in either hand.
+        if (toggles != 0 && AbilityToggles.toolHand(mc.player) != null)
+            for (int i = 0; i < ModKeyMappings.TOGGLES.length; i++)
+                if ((toggles & 1 << i) != 0 && ModKeyMappings.toggleModifierMatches(ModKeyMappings.TOGGLES[i]))
+                    ModPackets.sendToServer(new ToggleAbilityPayload(i));
 
         ItemStack held = mc.player.getMainHandItem();
 

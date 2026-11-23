@@ -21,7 +21,7 @@ public final class ModNetworking
     private ModNetworking() {}
 
     /** Bump it if packet formats change: clients and servers with a different version can't connect. */
-    private static final String PROTOCOL = "4";
+    private static final String PROTOCOL = "5";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(MegaTools.id("main"),
             () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
@@ -40,6 +40,7 @@ public final class ModNetworking
         toServer(SetSwapRulesPayload.class, SetSwapRulesPayload::read, ServerPayloadHandler::handleSetSwapRules);
         toServer(ApplyDefaultRulesPayload.class, ApplyDefaultRulesPayload::read, ServerPayloadHandler::handleApplyDefaultRules);
         toServer(ShaderLightPayload.class, ShaderLightPayload::read, ServerPayloadHandler::handleShaderLight);
+        toServer(ToggleAbilityPayload.class, ToggleAbilityPayload::read, ServerPayloadHandler::handleToggleAbility);
 
         // Server -> client: another player's Mega Tool poke (third-person animation).
         // MegaToolPoke has no client-only imports, so this is safe to register on a dedicated server.

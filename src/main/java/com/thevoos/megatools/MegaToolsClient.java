@@ -2,6 +2,8 @@ package com.thevoos.megatools;
 
 import com.thevoos.megatools.client.ClientEvents;
 import com.thevoos.megatools.client.DynamicLightsCompat;
+import com.thevoos.megatools.client.AllthemodiumGuide;
+import com.thevoos.megatools.client.ClientCommands;
 import com.thevoos.megatools.client.FlatTextures;
 import com.thevoos.megatools.client.MegaToolArmPose;
 import com.thevoos.megatools.client.ModKeyMappings;
@@ -49,12 +51,13 @@ public final class MegaToolsClient
         modEventBus.addListener(ModKeyMappings::onRegisterKeyMappings);                 // Ctrl+R / Shift+R / R
         modEventBus.addListener(ClientEvents::onClientSetup);                           // ToolMenu -> ToolScreen
         modEventBus.addListener(ToolHudOverlay::onRegisterGuiOverlays);                 // auto-swap icon near hotbar
+        modEventBus.addListener(AllthemodiumGuide::onAddPackFinders);                   // guide page, only with Allthemodium
         modEventBus.addListener(FlatTextures::onAddPackFinders);                        // built-in flat textures pack
-        modEventBus.addListener(FlatTextures::onRegisterReloadListeners);               // poke animation on/off
 
         // ---- Game bus: per-tick / per-input client logic -------------------------------------
         MinecraftForge.EVENT_BUS.addListener(ClientEvents::onClientTickPre);   // marks "inside the game tick"
         MinecraftForge.EVENT_BUS.addListener(ClientEvents::onClientTick);
+        MinecraftForge.EVENT_BUS.addListener(ClientCommands::onRegisterClientCommands); // /megatools animation, menu...
         MinecraftForge.EVENT_BUS.addListener(ClientEvents::onMouseButton);
         MinecraftForge.EVENT_BUS.addListener(ClientEvents::onInteractionKey); // Mega Tool right-click swing
         MinecraftForge.EVENT_BUS.addListener(ClientEvents::onMouseScroll);   // Shift + scroll between pre-selected tools

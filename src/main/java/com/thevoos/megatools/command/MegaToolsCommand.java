@@ -4,13 +4,17 @@ import com.thevoos.megatools.GuideCompat;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.thevoos.megatools.Config;
 import com.thevoos.megatools.MegaTools;
+import net.minecraft.ChatFormatting;
 import com.thevoos.megatools.items.ModItems;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.EnchantedBookItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -29,6 +33,8 @@ import java.util.List;
  *       Mega Tools tool, 64 torches, a Fortune III book, a Silk Touch book, two Enchantment Plates and
  *       one of each vanilla diamond tool. Anything that doesn't fit in the inventory is dropped at
  *       the player's feet.</li>
+ *   <li>{@code /megatools held_light [true|false]} - admins only, like kit. Shows or switches the held tool light
+ *       (Config#HELD_LIGHT) for the whole server and saves it to the server's megatools-common.toml.</li>
  * </ul>
  */
 public final class MegaToolsCommand
@@ -40,7 +46,34 @@ public final class MegaToolsCommand
         event.getDispatcher().register(Commands.literal(MegaTools.MODID)
                 .then(Commands.literal("kit")
                         .requires(source -> source.hasPermission(Commands.LEVEL_ADMINS))
-                        .executes(MegaToolsCommand::giveKit)));
+                        .executes(MegaToolsCommand::giveKit))
+                .then(Commands.literal("held_light")
+                        .requires(source -> source.hasPermission(Commands.LEVEL_ADMINS))
+                        .executes(MegaToolsCommand::showHeldLight)
+                        .then(Commands.argument("on", BoolArgumentType.bool())
+                                .executes(ctx ->
+                                {
+                                    Config.HELD_LIGHT.set(BoolArgumentType.getBool(ctx, "on"));
+                                    Config.HELD_LIGHT.save();
+                                    boolean on = Config.HELD_LIGHT.get();
+                                    MegaTools.LOGGER.info("Held tool light switched {} by {}", on ? "on" : "off", ctx.getSource().getTextName());
+                                    ctx.getSource().sendSuccess(() -> heldLightMessage(), true); // also told to other operators
+                                    return Command.SINGLE_SUCCESS;
+                                }))));
+    }
+
+    /** The server's heldLight (light blocks around players holding a tool with torches), for every player. */
+    private static int showHeldLight(CommandContext<CommandSourceStack> ctx)
+    {
+        ctx.getSource().sendSuccess(MegaToolsCommand::heldLightMessage, false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static Component heldLightMessage()
+    {
+        boolean on = Config.HELD_LIGHT.get();
+        return Component.translatable("command.megatools.held_light",
+                Component.translatable(on ? "options.on" : "options.off").withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED));
     }
 
     private static int giveKit(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException
@@ -69,9 +102,12 @@ public final class MegaToolsCommand
         kit.add(new ItemStack(ModItems.STONE_PAXEL.get()));
         kit.add(new ItemStack(ModItems.IRON_PAXEL.get()));
         kit.add(new ItemStack(ModItems.DIAMOND_PAXEL.get()));
-        kit.add(new ItemStack(ModItems.MEGA_TOOL.get()));
+        kit.add(new ItemStack(ModItems.NETHERITE_PAXEL.get()));
+        for (Item megaTool : ModItems.megaTools())
+            kit.add(new ItemStack(megaTool));
 
         // Support Tools (shears + brush + flint and steel), one per tool
+        kit.add(new ItemStack(ModItems.SUPPORT_TOOL.get()));
         kit.add(new ItemStack(ModItems.SUPPORT_TOOL.get()));
         kit.add(new ItemStack(ModItems.SUPPORT_TOOL.get()));
         kit.add(new ItemStack(ModItems.SUPPORT_TOOL.get()));

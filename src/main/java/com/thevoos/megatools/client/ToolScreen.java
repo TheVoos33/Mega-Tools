@@ -3,6 +3,7 @@ package com.thevoos.megatools.client;
 import com.thevoos.megatools.Config;
 import com.thevoos.megatools.GuideCompat;
 import com.thevoos.megatools.items.ModItems;
+import com.thevoos.megatools.tool.AbilityToggles;
 import com.thevoos.megatools.items.ToolTier;
 import com.thevoos.megatools.menu.GuiLayout;
 import com.thevoos.megatools.menu.MenuStyle;
@@ -60,7 +61,7 @@ import java.util.List;
 public class ToolScreen extends AbstractContainerScreen<ToolMenu>
 {
     // Index i = button id = ToolSettings flag (1 << i)
-    private static final String[] TOGGLE_KEYS = {"strip", "path", "till", "shear", "brush", "ignite", "delayed_break", "place_torch", "light", "break", "attack"};
+    private static final String[] TOGGLE_KEYS = AbilityToggles.NAMES;
     /** Button id of the small light on/off button under the torch slot (flag LIGHT_OFF, stored inverted). */
     private static final int LIGHT_BUTTON = 8;
     /** Button ids of the first row (flags BREAK_OFF / ATTACK_OFF, stored inverted). */
@@ -256,11 +257,11 @@ public class ToolScreen extends AbstractContainerScreen<ToolMenu>
     {
         return new ItemStack(switch (buttonId)
         {
-            case BREAK_BUTTON -> switch (tier) { case STONE -> Items.STONE_PICKAXE; case IRON -> Items.IRON_PICKAXE; case DIAMOND -> Items.DIAMOND_PICKAXE; case MEGA -> Items.NETHERITE_PICKAXE; };
-            case ATTACK_BUTTON -> switch (tier) { case STONE -> Items.STONE_SWORD; case IRON -> Items.IRON_SWORD; case DIAMOND -> Items.DIAMOND_SWORD; case MEGA -> Items.NETHERITE_SWORD; };
-            case 0 -> switch (tier) { case STONE -> Items.STONE_AXE; case IRON -> Items.IRON_AXE; case DIAMOND -> Items.DIAMOND_AXE; case MEGA -> Items.NETHERITE_AXE; };
-            case 1 -> switch (tier) { case STONE -> Items.STONE_SHOVEL; case IRON -> Items.IRON_SHOVEL; case DIAMOND -> Items.DIAMOND_SHOVEL; case MEGA -> Items.NETHERITE_SHOVEL; };
-            case 2 -> switch (tier) { case STONE -> Items.STONE_HOE; case IRON -> Items.IRON_HOE; case DIAMOND -> Items.DIAMOND_HOE; case MEGA -> Items.NETHERITE_HOE; };
+            case BREAK_BUTTON -> switch (tier) { case STONE -> Items.STONE_PICKAXE; case IRON -> Items.IRON_PICKAXE; case DIAMOND -> Items.DIAMOND_PICKAXE; default -> Items.NETHERITE_PICKAXE; };
+            case ATTACK_BUTTON -> switch (tier) { case STONE -> Items.STONE_SWORD; case IRON -> Items.IRON_SWORD; case DIAMOND -> Items.DIAMOND_SWORD; default -> Items.NETHERITE_SWORD; };
+            case 0 -> switch (tier) { case STONE -> Items.STONE_AXE; case IRON -> Items.IRON_AXE; case DIAMOND -> Items.DIAMOND_AXE; default -> Items.NETHERITE_AXE; };
+            case 1 -> switch (tier) { case STONE -> Items.STONE_SHOVEL; case IRON -> Items.IRON_SHOVEL; case DIAMOND -> Items.DIAMOND_SHOVEL; default -> Items.NETHERITE_SHOVEL; };
+            case 2 -> switch (tier) { case STONE -> Items.STONE_HOE; case IRON -> Items.IRON_HOE; case DIAMOND -> Items.DIAMOND_HOE; default -> Items.NETHERITE_HOE; };
             case 3 -> Items.SHEARS;
             case 4 -> Items.BRUSH;
             case 5 -> Items.FLINT_AND_STEEL;

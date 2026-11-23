@@ -25,11 +25,13 @@ public class ModCreativeModeTab
                         output.accept(ModItems.STONE_PAXEL.get());
                         output.accept(ModItems.IRON_PAXEL.get());
                         output.accept(ModItems.DIAMOND_PAXEL.get());
-                        output.accept(ModItems.MEGA_TOOL.get());
+                        output.accept(ModItems.NETHERITE_PAXEL.get());
+                        ModItems.megaTools().forEach(output::accept); // + Allthemodium upgrades when installed
                         // Ingredients
                         output.accept(ModItems.IRON_HEAD.get());
                         output.accept(ModItems.DIAMOND_HEAD.get());
-                        output.accept(ModItems.MEGA_TOOL_HEAD.get());
+                        output.accept(ModItems.NETHERITE_HEAD.get());
+                        output.accept(ModItems.MEGA_TOOL_CORE.get());
                         // Upgrade
                         output.accept(ModItems.ENCHANTMENT_PLATE.get());
                         output.accept(ModItems.SUPPORT_TOOL.get());

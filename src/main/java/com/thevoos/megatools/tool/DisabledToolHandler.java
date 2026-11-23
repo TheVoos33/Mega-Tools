@@ -3,6 +3,9 @@ package com.thevoos.megatools.tool;
 import com.thevoos.megatools.component.ToolSettings;
 import com.thevoos.megatools.items.MultiToolItem;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -20,7 +23,11 @@ import net.minecraftforge.event.level.BlockEvent;
  *    repaired;
  *  - the player switched the Break or Attack button off in the tool GUI (ToolSettings#BREAK_OFF /
  *    ATTACK_OFF). These apply in every game mode, creative included. Attack only covers mobs and
- *    players: item frames, boats, minecarts and the like can still be hit.
+ *    players: item frames, boats, minecarts and the like can still be hit. Break only covers blocks that
+ *    take more than one hit with an empty hand: torches, crops, sugar cane, flowers... (no hardness at all)
+ *    still break, so the player doesn't have to switch tools for them.
+ * A Mega Tool also can't break the Allthemodium ores its tier is too weak for (ToolTier#tooWeakFor); the
+ * server refuses those breaks here, the client side is in MegaToolMining.
  * Right-click abilities are not affected by the two buttons (they have their own); for a broken tool
  * they are blocked inside MultiToolItem itself. The tool's GUI (Ctrl + R), storage, plates and auto-swap
  * always keep working, so stored items can always be taken out.
@@ -41,7 +48,8 @@ public final class DisabledToolHandler
             event.setCanceled(true);
             MultiToolItem.showBrokenMessage(player);
         }
-        else if (isSwitchedOff(held, ToolSettings.BREAK_OFF))
+        else if (isSwitchedOff(held, ToolSettings.BREAK_OFF)
+                && !breaksInstantlyByHand(event.getLevel(), event.getPos(), event.getLevel().getBlockState(event.getPos())))
         {
             // Survival: only the mining is skipped. The block still gets its left click, which other
             // mods use (taking items out of drawers, AE2 parts...). Creative breaks on the click itself,
@@ -61,8 +69,22 @@ public final class DisabledToolHandler
         if (player == null)
             return;
         ItemStack held = player.getMainHandItem();
-        if (MultiToolItem.isBroken(held) || isSwitchedOff(held, ToolSettings.BREAK_OFF))
+        if (MultiToolItem.isBroken(held))
             event.setCanceled(true);
+        else if (isSwitchedOff(held, ToolSettings.BREAK_OFF) && !breaksInstantlyByHand(event.getLevel(), event.getPos(), event.getState()))
+            event.setCanceled(true);
+        else if (held.getItem() instanceof MultiToolItem tool && !player.getAbilities().instabuild
+                && tool.getTier().tooWeakFor(event.getState()))
+            event.setCanceled(true);
+    }
+
+    /**
+     * Blocks an empty hand breaks in one hit: no hardness at all (torches, crops, sugar cane, flowers, short
+     * grass, redstone dust...). These still break while the Break button is off.
+     */
+    public static boolean breaksInstantlyByHand(BlockGetter level, BlockPos pos, BlockState state)
+    {
+        return state.getDestroySpeed(level, pos) == 0.0F;
     }
 
     /** Both sides: no hit at all on a mob or player, so no damage, knockback, sweep or durability loss. */

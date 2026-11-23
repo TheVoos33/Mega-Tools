@@ -12,6 +12,8 @@ public final class KeyNames
     public static final String SWITCH_PLATE = "key.megatools.switch_plate";
     public static final String SWAP_TOOL = "key.megatools.swap_tool";
     public static final String SWAP_LAST = "key.megatools.swap_last";
+    /** + AbilityToggles.NAMES[i]: one key binding per ability toggle, e.g. key.megatools.toggle.strip. */
+    public static final String TOGGLE_PREFIX = "key.megatools.toggle.";
 
     private KeyNames() {}
 }

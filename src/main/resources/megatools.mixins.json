@@ -6,7 +6,10 @@
   "refmap": "megatools.refmap.json",
   "mixins": [
     "PlayerMixin",
+    "ItemEntityAccessor",
+    "ItemCombinerMenuAccessor",
     "RangedAttributeAccessor",
+    "SmithingMenuMixin",
     "TagLoaderMixin"
   ],
   "client": [

@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.3
+
+Clients and servers must both run v1.3.
+
+### Added
+- **Mega Tool Core**: crafted from a Nether Star, a Dragon Head and a Sculk Shrieker down the middle column (top to bottom) with Dragon's Breath in the four corners.
+- **Netherite Paxel** and **Netherite Head.** The Netherite Head is crafted from the five netherite tools (shapeless, like the Diamond Head); the Netherite Paxel from the Netherite Head, a chest and leather. The Netherite Paxel has 27 tool storage slots, the durability of the five netherite tools combined (10,155), mines 20% faster than netherite tools, does 22 attack damage with attack speed 3.0 and doesn't burn. Repaired with netherite ingots like the other paxels. 3D model and flat texture.
+- **Allthemodium Mega Tool upgrades** (only when the Allthemodium mod is installed; without it they don't exist): **Mega Tool – Allthemodium** (38 attack damage), **Mega Tool – Vibranium** (48) and **Mega Tool – Unobtainium** (60), all with attack speed 3.5. Each is made in a smithing table from the tier before it with the matching upgrade smithing template and ingot (Mega Tool → Allthemodium → Vibranium → Unobtainium). The upgrade keeps everything: stored tools, plates, torches, the Support Tool, settings and custom rules. Otherwise they work exactly like the Mega Tool.
+  - With Allthemodium installed, the regular Mega Tool can't break vibranium or unobtainium ore, the Allthemodium Mega Tool can't break unobtainium ore, and the Vibranium and Unobtainium Mega Tools break every block. New block tags `megatools:needs_allthemodium_mega_tool` and `megatools:needs_vibranium_mega_tool` decide which blocks; datapacks can add to them.
+  - The in-game guide (GuideME) has an **Allthemodium upgrades** page, shown only when Allthemodium is installed, with attack damage, what each tier breaks and the upgrade recipes. The recipes are read from the game, so recipes changed by a modpack show as changed. Hold the guide key on any of the three tools to open it.
+- **Save the file** button in the Custom Rules menu (right of *Inventory*). It writes all custom rules of the tool to `config/megatools-saved-rules.json`, in the format of `megatools-default-rules.json`. Rename it to `megatools-default-rules.json` to give those rules to every new tool, also in another modpack. The chat message after saving links to the file.
+- **Mega Tool animation** option (`megaToolAnimation` in `config/megatools-common.toml`): **Poke** or **Vanilla**, for every Mega Tool, with the 3D model and with the flat textures.
+- Torches you pick up go straight into the torch slot of a paxel or Mega Tool that already holds that kind of torch (main hand first, then off hand, then the inventory). What doesn't fit, or any torch while the slot is empty, goes to the inventory as before.
+- **Ability keys**: every switch in the tool menu (Strip, Path, Till, Shear, Brush, Ignite, Delayed Break, Place Torch, Light, Break, Attack) has its own key binding under *Options → Controls → Key Binds → Mega Tools*, named *Toggle Strip* and so on. They are unbound by default. A key only works while a paxel or Mega Tool is in either hand (main hand first); it switches that ability on the held tool and shows the new state above the hotbar.
+- **Chat commands for your own settings**, no operator rights or cheats needed, also on a server: `/megatools animation true|false` (poke animation), `/megatools delayed_break 1-200` (hold delay in ticks), and `/megatools menu classic|compact`. They change `config/megatools-common.toml` right away; without a value they show the current setting. On 1.20.1, which has no config screen, this is the in-game way to change them.
+- `/megatools held_light true|false` for operators (or with cheats enabled), like `/megatools kit`: switches the held tool light on or off for every player and saves it in the server's `megatools-common.toml`, without a restart. Without a value it shows the current setting.
+- Ignite (Support Tool) lights modded TNT too, such as Applied Energistics 2's Tiny TNT: every block that fire can set off.
+
+### Changed
+- **The Mega Tool is now an upgrade of the Netherite Paxel** in a smithing table: Netherite Paxel + Mega Tool Core, no template. Everything in the paxel moves over (stored tools, plates, torches, Support Tool, settings, custom rules, name); like every upgrade, the result is a fresh tool. The recipe keeps the ID `megatools:mega_tool`. The guide shows the Mega Tool Core and Mega Tool recipes as read from the game, so recipe changes by a modpack show up there.
+- The torch slot accepts **any torch**: redstone torches and torches from other mods too, not only torches and soul torches. Modded torches no longer need to be added to the `megatools:torches` tag.
+- The Mega Tool has **4 rows of tool storage (36 slots)** instead of 3, **28 attack damage** instead of 22 and **attack speed 3.5** instead of 3.0. In `megatools-startup.toml`, values that are still the old defaults are raised to the new ones once; any other value is kept.
+- With **Break** switched off, a tool still breaks blocks that an empty hand breaks in one hit, such as torches, crops, sugar cane and flowers.
+- The in-game guide and README show the Netherite Paxel everywhere the other paxels are listed, with the Netherite Head, Netherite Paxel and repair recipes.
+- Every recipe in the in-game guide is now read from the game instead of a picture: paxels and heads, repair, Support Tool and Enchantment Plate, shown side by side like before. Hovering an item shows its tooltip (and its ID with F3+H), clicking it works like elsewhere in GuideME, the flat textures show when that pack is on, and recipes changed by a modpack show as changed.
+- The poke animation now also works with the flat textures pack (before, the pack switched the Mega Tool to the vanilla animations).
+
+### Removed
+- **Mega Tool Head** (`megatools:mega_tool_head`) and its recipe: the Mega Tool no longer needs it. Mega Tool Heads in existing worlds disappear when the world is loaded with v1.3.
+- `assets/megatools/mega_tool_animation.json`: resource packs no longer switch the Mega Tool animation. Use the `megaToolAnimation` config option instead.
+
 ## v1.2
 
 Clients and servers must both run v1.2.

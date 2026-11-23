@@ -14,6 +14,7 @@
   <img src="https://i.imgur.com/0degbIM.png" width="64" alt="Stone Paxel">
   <img src="https://i.imgur.com/5805mqO.png" width="64" alt="Iron Paxel">
   <img src="https://i.imgur.com/66WvTai.png" width="64" alt="Diamond Paxel">
+  <img src="https://i.imgur.com/UPLOAD-items_netherite_paxel.png" width="64" alt="Netherite Paxel">
   <img src="https://i.imgur.com/wxQYga8.png" width="64" alt="Mega Tool">
 </p>
 
@@ -46,17 +47,20 @@ With GuideME installed, Mega Tools has an in-game guide with the same pages as t
   <img src="https://i.imgur.com/0degbIM.png" width="64" alt="Stone Paxel">
   <img src="https://i.imgur.com/5805mqO.png" width="64" alt="Iron Paxel">
   <img src="https://i.imgur.com/66WvTai.png" width="64" alt="Diamond Paxel">
+  <img src="https://i.imgur.com/UPLOAD-items_netherite_paxel.png" width="64" alt="Netherite Paxel">
 </p>
 
 - Mines everything a pickaxe, axe, shovel and hoe can, **20% faster** than a pickaxe of the same material. Blocks that need a better tier still drop nothing, just like with vanilla tools.
 - Cuts cobwebs and fights like a sword, with sweeping attacks.
 
-| | Stone Paxel | Iron Paxel | Diamond Paxel |
-|---|:-:|:-:|:-:|
-| **Attack damage** | 10 | 14 | 18 |
-| **Attack speed** | 1.6 | 2.0 | 2.5 |
-| **Durability** | 655 | 1,616 | 8,171 |
-| **Tool storage** | – | 9 slots | 18 slots |
+| | Stone Paxel | Iron Paxel | Diamond Paxel | Netherite Paxel |
+|---|:-:|:-:|:-:|:-:|
+| **Attack damage** | 10 | 14 | 18 | 22 |
+| **Attack speed** | 1.6 | 2.0 | 2.5 | 3.0 |
+| **Durability** | 655 | 1,616 | 8,171 | 10,155 |
+| **Tool storage** | – | 9 slots | 18 slots | 27 slots |
+
+The Netherite Paxel doesn't burn in fire or lava, like netherite tools.
 
 Every paxel also has a **Support Tool slot**, **two Enchantment Plate slots** and a **torch slot** (up to 64 torches).
 
@@ -72,13 +76,13 @@ Right-click a block to use them. Each one is switched on or off in the [tool men
 | **Till** | Turns grass and dirt into farmland. Sneak while right-clicking to till instead of making a path. |
 | **Shear / Brush / Ignite** | Shears, brush and flint and steel abilities. Need a [Support Tool](#support-tool). |
 
-If more than one ability fits a block, the first one in the table is used, so a switched-on Place Torch comes before Strip, Path and Till. Brushing suspicious blocks and lighting TNT always come first.
+If more than one ability fits a block, the first one in the table is used, so a switched-on Place Torch comes before Strip, Path and Till. Brushing suspicious blocks and lighting TNT (also modded TNT, such as Applied Energistics 2's Tiny TNT) always come first.
 
 ### Break and Attack
 
 Every paxel and the Mega Tool has two more buttons in the [tool menu](#the-tool-menu), both on by default:
 
-- **Break.** Switch it off and the tool breaks no blocks at all, in any game mode. In survival, left-click actions on blocks (such as taking items out of drawers) still work.
+- **Break.** Switch it off and the tool only breaks blocks your empty hand breaks in one hit (torches, crops, sugar cane, flowers...), in any game mode. In survival, left-click actions on blocks (such as taking items out of drawers) still work.
 - **Attack.** Switch it off and the tool does not hit mobs or players, so it does no damage. Things you hit to pick up or remove (item frames, paintings, boats, minecarts, armor stands) can still be hit.
 
 Right-click abilities, tool storage and auto-swap keep working either way, so a tool can be made safe to carry around a base or to use only as a wrench holder.
@@ -99,6 +103,10 @@ Recipes marked *shapeless* can be placed in any arrangement.
     <td align="center"><img src="https://i.imgur.com/BYwzvjK.png" width="380"><br><b>Diamond Head</b> <i>(shapeless)</i><br>Diamond sword, axe, pickaxe, shovel and hoe</td>
     <td align="center"><img src="https://i.imgur.com/fnwJ0zZ.png" width="380"><br><b>Diamond Paxel</b><br>Diamond Head, chest and leather</td>
   </tr>
+  <tr>
+    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_netherite_head.png" width="380"><br><b>Netherite Head</b> <i>(shapeless)</i><br>Netherite sword, axe, pickaxe, shovel and hoe</td>
+    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_netherite_paxel.png" width="380"><br><b>Netherite Paxel</b><br>Netherite Head, chest and leather</td>
+  </tr>
 </table>
 
 ---
@@ -110,17 +118,32 @@ Recipes marked *shapeless* can be placed in any arrangement.
 - **Instant mining.** Breaks every block in one hit, and counts as the right tool for every block, so everything drops. Unbreakable blocks such as bedrock stay unbreakable. Blocks in the `megatools:not_mineable` tag are the exception: there the Mega Tool works like an empty hand. Flying, swimming and other mods' mining speed changes make no difference.
 - **Delayed Break.** While you **hold** left click, the Mega Tool pauses briefly between blocks so you don't dig further than you meant to. Every new click still breaks a block immediately. Switch it off in the [tool menu](#the-tool-menu) to break as fast as you can aim. The pause length can be changed in the [settings](#settings).
 - **Never wears out**, and it doesn't burn in fire or lava.
-- **Attack damage 22**, attack speed 3.0 and **27 slots** of [tool storage](#tool-storage-and-auto-swap).
+- **Attack damage 28**, attack speed 3.5 and **36 slots** of [tool storage](#tool-storage-and-auto-swap).
 - Has every [paxel ability](#right-click-abilities).
 
 ### Crafting
 
+The Mega Tool is an upgrade of the [Netherite Paxel](#paxels) in a smithing table. Everything stored in the paxel moves over: tools, Enchantment Plates, torches, the Support Tool, settings and custom rules.
+
 <table>
   <tr>
-    <td align="center"><img src="https://i.imgur.com/cCWOWso.png" width="380"><br><b>Mega Tool Head</b> <i>(shapeless)</i><br>Netherite sword, axe, pickaxe, shovel, hoe and a Nether Star</td>
-    <td align="center"><img src="https://i.imgur.com/oQdx8MC.png" width="380"><br><b>Mega Tool</b><br>Mega Tool Head, chest and leather</td>
+    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_mega_tool_core.png" width="380"><br><b>Mega Tool Core</b><br>Nether Star, Dragon Head and Sculk Shrieker down the middle (top to bottom), Dragon's Breath in the four corners</td>
+    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_mega_tool.png" width="380"><br><b>Mega Tool</b> <i>(smithing table)</i><br>Netherite Paxel and Mega Tool Core, no template</td>
   </tr>
 </table>
+
+### Allthemodium upgrades
+
+These three tiers only exist when the **Allthemodium** mod is installed; without it they can't be seen or crafted. Upgrade the Mega Tool in a **smithing table**, one tier at a time. The upgrade keeps everything: stored tools, Enchantment Plates, torches, the Support Tool, settings and custom rules. Every tier works exactly like the Mega Tool (attack speed 3.5, 36 slots), with more attack damage.
+
+| Tier | Smithing table | Attack damage | Can break |
+|---|---|:-:|---|
+| **Mega Tool** | – | 28 | everything except vibranium and unobtainium ore |
+| **Mega Tool – Allthemodium** | Mega Tool + Allthemodium Upgrade Smithing Template + Allthemodium Ingot | 38 | everything except unobtainium ore |
+| **Mega Tool – Vibranium** | Mega Tool – Allthemodium + Vibranium Upgrade Smithing Template + Vibranium Ingot | 48 | every block |
+| **Mega Tool – Unobtainium** | Mega Tool – Vibranium + Unobtainium Upgrade Smithing Template + Unobtainium Ingot | 60 | every block |
+
+Which ores need which tier is set by the block tags `megatools:needs_allthemodium_mega_tool` and `megatools:needs_vibranium_mega_tool`.
 
 ---
 
@@ -167,7 +190,7 @@ Craft a Support Tool from a flint and steel, a brush and shears, and put it in a
 
 - **Shear:** shear sheep, mooshrooms and snow golems; collect leaves and vines; trim cave vines, kelp and weeping or twisting vines so they stop growing. Leaves and wool also mine at shears speed.
 - **Brush:** hold right click on suspicious sand or gravel.
-- **Ignite:** light fires and nether portals, campfires, candles and TNT.
+- **Ignite:** light fires and nether portals, campfires, candles and TNT, including modded TNT such as Applied Energistics 2's Tiny TNT (every block that fire sets off).
 
 Taking the Support Tool out removes the abilities again. It works in every paxel and in the Mega Tool.
 
@@ -210,10 +233,11 @@ Plates only accept enchantments for swords, pickaxes, axes, shovels, hoes, shear
 
 ## Torches and light
 
-Put **torches** or **soul torches** in the torch slot (up to 64).
+Put **any torch** in the torch slot (up to 64): torches, soul torches, redstone torches and torches from other mods. The light is full brightness whichever torch it is.
 
 - **Light.** While you hold the tool in either hand, the area around you is lit like a torch at full brightness. Use the small button under the torch slot to switch it off.
 - **Place Torch.** Switch it on in the menu, then right-click a block to place a torch from the slot.
+- **Picking up torches.** While a paxel's or Mega Tool's torch slot holds torches, torches of the same kind you pick up go straight into it instead of your inventory. The tool in your main hand fills first, then the off hand, then tools in your inventory; what doesn't fit goes to the inventory. With an empty torch slot, torches are picked up as usual.
 
 ### Light blocks or shader light
 
@@ -228,7 +252,7 @@ A light block only ever takes the place of air or still water, and it is removed
 
 ## Tool storage and auto-swap
 
-The Iron Paxel, Diamond Paxel and Mega Tool can store **9, 18 and 27** other tools: wrenches, shears, screwdrivers, crowbars, configurators, building gadgets, construction sticks and more. Each slot holds one tool. Only items known to be tools are accepted, so the storage can't be used as a backpack. Modpacks can add more (see [which items can be stored](#which-items-can-be-stored)). Paxels, the Mega Tool and Enchantment Plates can never be stored.
+The Iron, Diamond and Netherite Paxel and the Mega Tool can store **9, 18, 27 and 36** other tools: wrenches, shears, screwdrivers, crowbars, configurators, building gadgets, construction sticks and more. Each slot holds one tool. Only items known to be tools are accepted, so the storage can't be used as a backpack. Modpacks can add more (see [which items can be stored](#which-items-can-be-stored)). Paxels, the Mega Tool and Enchantment Plates can never be stored.
 
 > [!NOTE]
 > If a crafting recipe ever uses up one of these tools, everything stored in it (tools, plates, Support Tool and torches) is given back to you.
@@ -263,6 +287,7 @@ Open the [tool menu](#the-tool-menu) and click **Custom Rule** above the tool st
 | **2** | **Stored tools.** One cell for every kind of tool in the tool storage. Click a tool to select it (gold frame). The small number is how many filters it has. |
 | **3** | **Filters** of the selected tool: up to 18 blocks. The **Whitelist / Blacklist** button above the filter slots switches between the tool's two lists (see [Blacklist](#custom-rules) below). |
 | **4** | **Copy** and **Paste.** Move all rules from one paxel or Mega Tool to another. |
+| | **Save the file** (right of *Inventory*). Writes all rules of this tool to `config/megatools-saved-rules.json`; see [Saving rules to a file](#saving-rules-to-a-file). |
 
 **Setting up a rule**
 
@@ -303,6 +328,10 @@ A tool that a blacklist filter matches is left out of this list (unless a more e
 
 **Copying rules to another tool.** Custom rules belong to **one** paxel or Mega Tool. To bring them over, click **Copy**, open the Custom Rules menu of the other tool and click **Paste**. Paste replaces all rules of that tool. A default rule you removed on the first tool is not added again on the second. The copy is kept until you close the game. Rules name the stored tool by its kind, so they work as soon as the same kind of tool is in the other tool's storage, in any slot.
 
+#### Saving rules to a file
+
+**Save the file** writes every custom rule of the tool to `config/megatools-saved-rules.json` (a newer save replaces it). The file has the format of [`megatools-default-rules.json`](#default-rules): rename it to `megatools-default-rules.json`, replacing the old file, and every new paxel or Mega Tool gets these rules as soon as the tool they are for is in its storage. Copy it into another modpack's `config` folder to take your rules along. The chat message after saving has a link that opens the file.
+
 **Good to know**
 
 - A tool that has filters but is no longer in the tool storage is shown faded. Its filters are kept and work again when the tool is put back.
@@ -316,7 +345,7 @@ A tool that a blacklist filter matches is left out of this list (unless a more e
 
 Paxels **never break**. At 1 durability a paxel stops working: no mining, fighting or abilities until it is repaired. Its menu, storage and plates still work, so nothing is ever lost.
 
-**8 resources of the tier fully repair a paxel**, and a paxel that isn't fully broken uses fewer. The resources are cobblestone, iron ingots and diamonds.
+**8 resources of the tier fully repair a paxel**, and a paxel that isn't fully broken uses fewer. The resources are cobblestone, iron ingots, diamonds and netherite ingots.
 
 <table>
   <tr>
@@ -339,6 +368,11 @@ Paxels **never break**. At 1 durability a paxel stops working: no mining, fighti
     <td align="center"><img src="https://i.imgur.com/lRj0vXm.png" width="290" alt="Repairing a broken Diamond Paxel with one diamond"></td>
     <td align="center"><img src="https://i.imgur.com/xnnDfGo.png" width="290" alt="Repairing a broken Diamond Paxel with 8 diamonds"></td>
   </tr>
+  <tr>
+    <td align="center"><b>Netherite Paxel</b></td>
+    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_repair_netherite_paxel_one.png" width="290" alt="Repairing a broken Netherite Paxel with one netherite ingot"></td>
+    <td align="center"><img src="https://i.imgur.com/UPLOAD-recipes_repair_netherite_paxel_full.png" width="290" alt="Repairing a broken Netherite Paxel with 8 netherite ingots"></td>
+  </tr>
 </table>
 
 Each resource repairs **1/8** of the paxel's durability. Like any crafting, a craft takes one from every slot that has some: 8 around the paxel repair it fully, resources in 2 slots repair 1/4, and a stack in one slot repairs 1/8 per craft, so it works in the 2x2 inventory grid too. Resources the paxel doesn't need any more stay in the grid. It keeps its name, storage, plates and everything else. Repairing in an anvil with the same resources works too, as does Mending from a plate.
@@ -355,12 +389,15 @@ Each resource repairs **1/8** of the paxel's durability. Like any crafting, a cr
 | Swap to the last tool you swapped to | **Shift + R** |
 | Choose between pre-selected tools | **Shift + mouse wheel** |
 | Swap to a stored tool from the menu | Hover it, then **R** |
+| Switch one ability on or off (Strip, Path, Till, Shear, Brush, Ignite, Delayed Break, Place Torch, Light, Break, Attack) | *Not bound* |
 
 All keys can be changed under *Options → Controls → Key Binds → Mega Tools*. Tooltips always show your current keys.
 
+**Ability keys.** Every switch in the tool menu (and the light button) also has its own key, named *Toggle Strip*, *Toggle Break* and so on. They have no key by default: bind the ones you want. The key only does something while you hold a paxel or Mega Tool in either hand (the main hand first). It switches that ability on the held tool, and the message above the hotbar shows the new state, for example *Break: Disabled*. Shear, Brush and Ignite need a Support Tool in the tool, and Delayed Break exists only on the Mega Tools.
+
 ### Settings
 
-Forge 1.20.1 has no in-game config screen: edit the files in your `config` folder (see [Config files](#config-files) below) and restart the game.
+Forge 1.20.1 has no in-game config screen. Change the settings with the chat commands below, or edit the files in your `config` folder (see [Config files](#config-files) below) and restart the game.
 
 | Setting | What it changes |
 |---|---|
@@ -371,15 +408,27 @@ Forge 1.20.1 has no in-game config screen: edit the files in your `config` folde
 
 **Tool Stats** live in `config/megatools-startup.toml`. On a server, the server's own tool stats are always used: server operators change them in the server's `config/megatools-startup.toml` and restart it. If your game's tool stats differ from the server's, you get a chat message when you join, because durability and mining would otherwise look wrong.
 
-**Operators** can use `/megatools kit` to get every tool, Support Tools, Enchantment Plates, torches and enchanted books for testing.
+**Chat commands.** These settings can also be changed in chat. The commands run in your own game: no operator rights or cheats needed, also on a server. They change your `config/megatools-common.toml` right away, without a restart. Type a command without a value to see the current setting.
+
+| Command | What it changes |
+|---|---|
+| `/megatools animation true` or `false` | Mega Tool poke animation (`false`: the normal tool swing) |
+| `/megatools delayed_break <1-200>` | Ticks between blocks while holding left click with Delayed Break on (20 ticks = 1 second) |
+| `/megatools menu classic` or `compact` | Which tool menu opens |
+
+**Operators** can use `/megatools kit` to get every tool, Support Tools, Enchantment Plates, torches and enchanted books for testing, and `/megatools held_light true` or `false` to switch the held tool light on or off for every player on the server (saved in the server's `config/megatools-common.toml`, no restart needed). Both need operator rights, or cheats enabled in singleplayer or on a LAN world.
 
 
 ### 3D models or flat textures
 
-By default, the paxels, the Mega Tool and the heads use **3D models**. To use flat 16×16 textures in the vanilla style instead, enable the built-in resource pack **Mega Tools Flat Textures** under *Options → Resource Packs*. The Mega Tool then uses the vanilla tool animations instead of its poke animation, and the pictures in the in-game guide show the flat textures.
+By default, the paxels, the Mega Tools and the heads use **3D models**. To use flat 16×16 textures in the vanilla style instead, enable the built-in resource pack **Mega Tools Flat Textures** under *Options → Resource Packs*. The pictures in the in-game guide then show the flat textures.
+
+### Mega Tool animation
+
+`megaToolAnimation` in `config/megatools-common.toml` switches every Mega Tool between its **Poke** animation (the tool turns forward and pokes the block, the default) and the **Vanilla** tool swing. It works with the 3D models and with the flat textures alike.
 
 <p align="center">
-  <img src="https://i.imgur.com/0dW6G4w.png" width="100%" alt="The 3D models (left) and the flat 2D textures (right)">
+  <img src="https://i.imgur.com/UPLOAD-models_3d_2d.png" width="100%" alt="The 3D models (left) and the flat 2D textures (right)">
 </p>
 
 ---
@@ -398,6 +447,7 @@ All files are in the `config` folder and are created with their defaults on firs
 | `megatools-common.toml` | Mega Tool hold delay (`megaToolHoldDelayTicks`) | client | at once |
 | `megatools-common.toml` | Tool menu style (`menuStyle`: `ASK`, `CLASSIC` or `ICONS`), each player's own choice | client | the next time a menu opens |
 | `megatools-common.toml` | Held tool light on or off (`heldLight`) | server | at once |
+| `megatools-common.toml` | Mega Tool animation (`megaToolAnimation`: `POKE` or `VANILLA`), each player's own choice | client | at once |
 | `megatools-storage-whitelist.json` | [Items that get the `megatools:storable_item` tag](#which-items-can-be-stored) | server, synced with the tags | on `/reload` |
 | `megatools-tool-aliases.json` | [Auto-swap across mods](#auto-swap-for-tools-from-other-mods) | client | on joining a world |
 | `megatools-default-rules.json` | [Default custom rules](#default-rules) | client | on joining a world |
@@ -408,7 +458,7 @@ The three JSON files skip everything that belongs to a mod that isn't installed,
 
 ### Tool stats
 
-`config/megatools-startup.toml` has one section per tool: `[stone_paxel]`, `[iron_paxel]`, `[diamond_paxel]` and `[mega_tool]`.
+`config/megatools-startup.toml` has one section per tool: `[stone_paxel]`, `[iron_paxel]`, `[diamond_paxel]`, `[netherite_paxel]` and `[mega_tool]`, plus `[mega_tool_allthemodium]`, `[mega_tool_vibranium]` and `[mega_tool_unobtainium]`, which are only used with Allthemodium installed. Values from an older file that are still the old defaults are raised to the new ones once: Mega Tool attack damage 22 → 28, attack speed of the Mega Tools 3.0 → 3.5 and of the Netherite Paxel 2.5 → 3.0. Any other value is kept.
 
 ```toml
 [iron_paxel]
@@ -422,7 +472,7 @@ The three JSON files skip everything that belongs to a mod that isn't installed,
 |---|---|---|
 | `attackDamage` | Total attack damage, as shown in the tooltip. Above 2048 (the game's own limit for attack damage) Mega Tools raises that limit to the value set here. | 1 to 10,000 |
 | `attackSpeed` | Attacks per second, as shown in the tooltip. 1.6 is a sword, 4.0 has no cooldown. | 0.1 to 20 |
-| `durability` | Maximum durability. For the Mega Tool, `0` means unbreakable (the default). | 1 to 1,000,000 (Mega Tool: from 0) |
+| `durability` | Maximum durability. For the Mega Tools, `0` means unbreakable (the default). | 1 to 1,000,000 (Mega Tools: from 0) |
 | `miningSpeedMultiplier` | Mining speed compared to the vanilla pickaxe of the same tier. 1.2 is 20% faster, 0 can't mine. The Mega Tool doesn't have it: it always mines instantly. | 0 to 2 |
 
 The stats are built into the items when the game starts, so the file is not synced: **ship the same file to clients and the server**. A player whose stats differ from the server's gets a chat message on joining. If you give the Mega Tool durability, also add a [repair recipe](#recipes) for it, because it has none by default.
@@ -557,17 +607,23 @@ To take an item out of a tag again, list it under `"remove"`. This also works fo
 | Tag | Type | Use it to |
 |---|---|---|
 | `megatools:storable_item` | item | The only items allowed in tool storage. Already includes `forge:tools/wrench`, `forge:tools/wrenches`, `forge:wrenches` and `forge:shears` (shears and chainsaws), Immersive Engineering's screwdrivers and Railcraft's crowbars. |
-| `megatools:torches` | item | Allow other torches in the torch slot (by default the torch and soul torch). The light is always full brightness, and Place Torch places the item as a block. |
+| `megatools:torches` | item | Allow other items in the torch slot. Torches don't need it: every torch is accepted already (every item that places a torch block, and every block item whose id ends with `_torch`). The light is always full brightness, and Place Torch places the item as a block. |
 | `megatools:mineable/paxel` | block | Decide what paxels mine at tool speed. Contains the vanilla pickaxe, axe, shovel and hoe `mineable` tags; add blocks that no tool tag covers. |
 | `megatools:not_mineable` | block | Blocks the Mega Tool is not the right tool for. It mines them like an empty hand: hand speed and only the drops a hand gets. Empty by default. Replaces `megatools:mega_tool_unbreakable` (removed in v1.2); blocks a datapack still puts in that tag are added to this one. |
+| `megatools:needs_allthemodium_mega_tool` | block | Blocks the regular Mega Tool can't break at all. By default Allthemodium's vibranium and unobtainium ores (empty without Allthemodium). Includes `megatools:needs_vibranium_mega_tool`. |
+| `megatools:needs_vibranium_mega_tool` | block | Blocks the Allthemodium Mega Tool can't break either. By default Allthemodium's unobtainium ores. The Vibranium and Unobtainium Mega Tools break every block. |
 
 Two vanilla tag groups matter as well. Which tier a block needs still follows `minecraft:incorrect_for_stone_tool`, `…_iron_tool` and `…_diamond_tool` (the Mega Tool drops everything). The Enchantment Plate is in the `minecraft:enchantable/…` item tags for swords and mining tools, which is why the enchanting table offers it those enchantments. The paxels and the Mega Tool are deliberately **not** in `minecraft:pickaxes`, `minecraft:swords` and so on, because their enchantments must only come from plates.
 
 ### Recipes
 
-All recipes are normal datapack recipes in `data/megatools/recipe/` and can be replaced or removed like any other: `stone_paxel`, `iron_head`, `diamond_head`, `mega_tool_head`, `iron_paxel`, `diamond_paxel`, `mega_tool`, `support_tool`, `enchantment_plate`, and the repair recipes `stone_paxel_repair`, `iron_paxel_repair` and `diamond_paxel_repair`.
+All recipes are normal datapack recipes in `data/megatools/recipes/` and can be replaced or removed like any other:
 
-The default recipes build each tool from a head, so no tool is ever an ingredient. If you change that, for example so that an Iron Paxel is upgraded into a Diamond Paxel, use one of the **carry-over** recipe types. They are written exactly like `minecraft:crafting_shaped` and `minecraft:crafting_shapeless`, but everything in the ingredient tool moves to the result:
+- **Crafting:** `stone_paxel`, `iron_head`, `diamond_head`, `netherite_head`, `iron_paxel`, `diamond_paxel`, `netherite_paxel`, `mega_tool_core`, `support_tool`, `enchantment_plate`, and `guide` (only with GuideME).
+- **Repair:** `stone_paxel_repair`, `iron_paxel_repair`, `diamond_paxel_repair` and `netherite_paxel_repair`.
+- **Smithing upgrades** (`minecraft:smithing_transform`): `mega_tool` (Netherite Paxel + Mega Tool Core, no template), and only with Allthemodium `mega_tool_allthemodium_smithing`, `mega_tool_vibranium_smithing` and `mega_tool_unobtainium_smithing` (with Allthemodium's upgrade templates).
+
+The crafting recipes build each paxel from a head, so no tool is an ingredient there. The smithing upgrades keep everything in the tool, because the smithing table copies the whole tool; Mega Tools only gives the upgraded tool full durability. If you add a crafting recipe that uses a tool as an ingredient, for example so that an Iron Paxel is upgraded into a Diamond Paxel, use one of the **carry-over** recipe types. They are written exactly like `minecraft:crafting_shaped` and `minecraft:crafting_shapeless`, but everything in the ingredient tool moves to the result:
 
 | Recipe type | Same format as |
 |---|---|
@@ -594,18 +650,14 @@ The default recipes build each tool from a head, so no tool is ever an ingredien
 - **Carried over:** name, ability settings, stored tools, custom rules, torches, the Support Tool and both Enchantment Plates (the loaded plate is applied to the new tool). Durability is not: the result is a fresh tool.
 - **Nothing is ever deleted.** If the result can't hold everything, for example fewer storage slots than stored tools, the recipe doesn't match until the player empties the tool. It also doesn't match if two ingredient tools both hold items.
 - The result has to be a paxel or the Mega Tool.
-- **Repair:** a `megatools:crafting_shapeless_carry_over` recipe whose result is the same item as the tool in the grid repairs that tool instead. Each material repairs 1/n of the tool's durability (n = the number of materials in the recipe), the tool comes out with everything on it untouched, and the recipe only matches a damaged tool. The default repair recipes work this way (8 materials and the paxel). All materials must be accepted by every material ingredient; any number of slots from 1 to n may hold them, and a craft takes one from each slot it needs. Use it to change the repair materials or to add a repair recipe for a Mega Tool with durability. Anvil repair materials are fixed: stone tool materials, iron ingots and diamonds.
+- **Repair:** a `megatools:crafting_shapeless_carry_over` recipe whose result is the same item as the tool in the grid repairs that tool instead. Each material repairs 1/n of the tool's durability (n = the number of materials in the recipe), the tool comes out with everything on it untouched, and the recipe only matches a damaged tool. The default repair recipes work this way (8 materials and the paxel). All materials must be accepted by every material ingredient; any number of slots from 1 to n may hold them, and a craft takes one from each slot it needs. Use it to change the repair materials or to add a repair recipe for a Mega Tool with durability. Anvil repair materials are fixed: stone tool materials, iron ingots, diamonds and netherite ingots.
 - With a plain `minecraft:` recipe type (or another mod's), a tool used as an ingredient is consumed, and everything stored in it is given back to the player instead of being carried over.
 - A stored tool that a player has swapped to carries the paxel inside it. If a recipe uses that tool up, the paxel is given back to the player.
 
 
-### Resource packs
+### Mega Tool animation and resource packs
 
-The flat textures pack switches the Mega Tool to the vanilla animations with `assets/megatools/mega_tool_animation.json`. Other resource packs can do the same:
-
-```json
-{ "poke": false }
-```
+Up to v1.2, resource packs could switch the Mega Tool's animation off with `assets/megatools/mega_tool_animation.json`. Since v1.3 that file is ignored: the animation is the `megaToolAnimation` option of `config/megatools-common.toml`, chosen by each player.
 
 ---
 

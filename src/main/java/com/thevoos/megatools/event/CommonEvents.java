@@ -8,6 +8,7 @@ import com.thevoos.megatools.tool.MegaToolMining;
 import com.thevoos.megatools.tool.ToolLightManager;
 import com.thevoos.megatools.tool.PlateHelper;
 import com.thevoos.megatools.tool.ToolSwapper;
+import com.thevoos.megatools.tool.TorchPickup;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.common.MinecraftForge;
 
@@ -49,6 +50,9 @@ public final class CommonEvents
         MinecraftForge.EVENT_BUS.addListener(ToolLightManager::onChunkSent);       // re-send light to clients still loading chunks
         MinecraftForge.EVENT_BUS.addListener(ToolLightManager::onChunkUnwatch);
         MinecraftForge.EVENT_BUS.addListener(ToolLightManager::onBlockPlaced);     // lights in a portal frame would stop it from lighting
+
+        // Picked-up torches go into the torch slot of a paxel or Mega Tool that already holds them
+        MinecraftForge.EVENT_BUS.addListener(TorchPickup::onItemPickup);
 
         // Give back stored tools/plates if a tool is consumed by a non-carry-over crafting recipe
         MinecraftForge.EVENT_BUS.addListener(ToolCarryOver::onItemCrafted);

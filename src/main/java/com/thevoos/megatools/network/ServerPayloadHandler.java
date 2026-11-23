@@ -7,6 +7,7 @@ import com.thevoos.megatools.items.MultiToolItem;
 import com.thevoos.megatools.menu.SwapRulesMenu;
 import com.thevoos.megatools.menu.ToolMenu;
 import com.thevoos.megatools.tool.MegaToolMining;
+import com.thevoos.megatools.tool.AbilityToggles;
 import com.thevoos.megatools.tool.PlateHelper;
 import com.thevoos.megatools.tool.ToolData;
 import com.thevoos.megatools.tool.ToolLightManager;
@@ -136,6 +137,16 @@ public final class ServerPayloadHandler
         {
             if (context.player() instanceof ServerPlayer player)
                 PlateHelper.switchPlate(player);
+        });
+    }
+
+    /** A toggle key -> switch that ability toggle of the held Mega Tools tool on or off. */
+    public static void handleToggleAbility(ToggleAbilityPayload payload, PayloadContext context)
+    {
+        context.enqueueWork(() ->
+        {
+            if (context.player() instanceof ServerPlayer player)
+                AbilityToggles.toggle(player, payload.bit());
         });
     }
 

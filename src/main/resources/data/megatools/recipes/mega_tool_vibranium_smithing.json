@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:smithing_transform",
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "template": {
+    "item": "allthemodium:vibranium_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "megatools:mega_tool_allthemodium"
+  },
+  "addition": {
+    "item": "allthemodium:vibranium_ingot"
+  },
+  "result": {
+    "item": "megatools:mega_tool_vibranium"
+  }
+}

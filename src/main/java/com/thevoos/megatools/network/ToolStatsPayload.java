@@ -22,8 +22,7 @@ public record ToolStatsPayload(List<Double> stats) implements Payload
     public static ToolStatsPayload local()
     {
         List<Double> stats = new ArrayList<>();
-        for (StartupConfig.ToolValues tool : new StartupConfig.ToolValues[]{
-                StartupConfig.STONE_PAXEL, StartupConfig.IRON_PAXEL, StartupConfig.DIAMOND_PAXEL, StartupConfig.MEGA_TOOL})
+        for (StartupConfig.ToolValues tool : StartupConfig.ALL)
         {
             stats.add(tool.attackDamage.get());
             stats.add(tool.attackSpeed.get());

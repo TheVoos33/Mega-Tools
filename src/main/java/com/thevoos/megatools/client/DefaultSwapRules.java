@@ -67,10 +67,16 @@ import java.util.Optional;
  *
  * The file stays on the client on purpose: every player can tune their own defaults. It is re-read
  * every time you join a world or server.
+ *
+ * "Save the file" (Custom Rules GUI, see #save) writes every custom rule of a tool to
+ * config/megatools-saved-rules.json in exactly this format. Renamed to megatools-default-rules.json it
+ * replaces this file, so a player can take their rules to another modpack or instance.
  */
 public final class DefaultSwapRules
 {
-    private static final String FILE_NAME = "megatools-default-rules.json";
+    public static final String FILE_NAME = "megatools-default-rules.json";
+    /** Written by "Save the file" in the Custom Rules GUI; same format as FILE_NAME. */
+    public static final String SAVED_FILE_NAME = "megatools-saved-rules.json";
     /** Format of the file. 1 (no "version" key): Mega Tools 1.0. */
     private static final int VERSION = 2;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
@@ -326,6 +332,61 @@ public final class DefaultSwapRules
                 if (!existing.contains(rule))
                     existing.add(rule);
         }
+    }
+
+    /**
+     * "Save the file": writes all of a tool's custom rules to config/megatools-saved-rules.json, in the format
+     * of megatools-default-rules.json, so the saved file can replace it (also in another modpack).
+     * Overwrites an older save. Rules are grouped by the mod they need: the mod of the block (or the whole
+     * mod) a rule is for; for a tag rule, whose tag can come from any mod, the mod of the stored tool.
+     *
+     * @return the written file
+     */
+    public static Path save(SwapRules toolRules) throws Exception
+    {
+        JsonObject groups = new JsonObject();
+        for (SwapRules.Rule rule : toolRules.rules())
+        {
+            JsonObject json = new JsonObject();
+            json.addProperty("tool", rule.tool().toString());
+            String group = switch (rule.mode())
+            {
+                case ITEM ->
+                {
+                    json.addProperty("block", rule.target().toString());
+                    yield rule.target().getNamespace();
+                }
+                case TAG ->
+                {
+                    json.addProperty("tag", "#" + rule.tag().orElse(rule.target()));
+                    yield rule.tool().getNamespace();
+                }
+                case MOD ->
+                {
+                    json.addProperty("mod", rule.target().getNamespace());
+                    yield rule.target().getNamespace();
+                }
+            };
+            if (rule.blacklist())
+                json.addProperty("blacklist", true);
+            if (!groups.has(group))
+                groups.add(group, new JsonArray());
+            JsonArray list = groups.getAsJsonArray(group);
+            if (!list.contains(json))
+                list.add(json);
+        }
+
+        JsonObject root = new JsonObject();
+        root.add("_help", defaultFile().get("_help"));
+        root.addProperty("_saved", "Saved with \"Save the file\" in the Custom Rules menu of a Mega Tools tool. Rename "
+                + "this file to " + FILE_NAME + " (replacing the old one) to give these rules to new tools, also in "
+                + "another modpack.");
+        root.addProperty("version", VERSION);
+        root.add("rules", groups);
+        Path path = FMLPaths.CONFIGDIR.get().resolve(SAVED_FILE_NAME);
+        write(path, root);
+        MegaTools.LOGGER.info("[{}] saved {} custom rule(s)", SAVED_FILE_NAME, toolRules.rules().size());
+        return path;
     }
 
     private static JsonObject defaultFile()

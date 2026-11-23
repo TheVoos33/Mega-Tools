@@ -1,0 +1,36 @@
+{
+  "type": "megatools:crafting_shapeless_carry_over",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "minecraft:netherite_ingot"
+    },
+    {
+      "item": "megatools:netherite_paxel"
+    }
+  ],
+  "result": {
+    "item": "megatools:netherite_paxel"
+  }
+}
